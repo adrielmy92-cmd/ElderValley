@@ -397,6 +397,7 @@ export default class WorldScene extends BaseGameScene {
     this.addSilverCharacter();
     this.addBlondCharacter();
     this.addAdventurerCharacter();
+    this.addKnightCharacter();
     this.addNpc();
     this.addCityTransition();
     this.addWorldBounds();
@@ -2583,6 +2584,42 @@ export default class WorldScene extends BaseGameScene {
     this.pickSilverTarget(character, true);
   }
 
+  addKnightCharacter() {
+    this.createKnightAnimations();
+
+    const character = this.physics.add.sprite(1510, 704, "knight-npc-sheet", 16)
+      .setDepth(704 + 120);
+    character.body.setSize(22, 16).setOffset(21, 78);
+    character.body.setCollideWorldBounds(true);
+    character.speed = 48;
+    character.facing = "right";
+    character.animPrefix = "knight";
+    character.framesPerDirection = 8;
+    character.play("knight-walk-right");
+
+    const interaction = {
+      x: character.x,
+      y: character.y + 42,
+      promptY: character.y - 58,
+      promptText: "E Falar",
+      radius: 50,
+      onInteract: () => this.dialog.show("Cavaleiro", "Estou vigiando a estrada ate o centro da cidade.")
+    };
+    this.interactions.add(interaction);
+
+    this.physics.add.collider(character, this.solids, () => this.pickSilverTarget(character, true));
+    this.physics.add.collider(this.player, character);
+    this.silverCharacters?.forEach(({ sprite }) => {
+      if (sprite?.body) {
+        this.physics.add.collider(character, sprite);
+      }
+    });
+
+    this.silverCharacters ??= [];
+    this.silverCharacters.push({ sprite: character, interaction });
+    this.pickSilverTarget(character, true);
+  }
+
   pickSilverTarget(character, immediate = false) {
     character.waitUntil = this.time.now + (immediate ? 0 : Phaser.Math.Between(450, 1200));
     character.walkUntil = character.waitUntil + Phaser.Math.Between(850, 1800);
@@ -2649,6 +2686,10 @@ export default class WorldScene extends BaseGameScene {
 
   createAdventurerAnimations() {
     this.createWandererAnimations("adventurer", "adventurer-sheet");
+  }
+
+  createKnightAnimations() {
+    this.createWandererAnimations("knight", "knight-npc-sheet", 8);
   }
 
   createMage1Animations() {
