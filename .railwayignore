@@ -1,0 +1,5 @@
+node_modules
+.git
+.eldervalley-storage
+.eldervalley-server.log
+*.log

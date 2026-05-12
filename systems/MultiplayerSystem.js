@@ -1,0 +1,198 @@
+export default class MultiplayerSystem {
+  constructor(scene) {
+    this.scene = scene;
+    this.id = null;
+    this.socket = null;
+    this.remotePlayers = new Map();
+    this.lastStateSent = 0;
+    this.connected = false;
+    this.connect();
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy());
+  }
+
+  connect() {
+    if (window.location.protocol === "file:" || !window.WebSocket) {
+      return;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    this.socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    this.socket.addEventListener("open", () => {
+      this.connected = true;
+      this.send({
+        type: "hello",
+        name: this.getPlayerName(),
+        ...this.getLocalState()
+      });
+    });
+    this.socket.addEventListener("message", (event) => this.handleMessage(event));
+    this.socket.addEventListener("close", () => {
+      this.connected = false;
+      this.clearRemotePlayers();
+    });
+    this.socket.addEventListener("error", () => {
+      this.connected = false;
+    });
+  }
+
+  getPlayerName() {
+    let name = localStorage.getItem("eldervalley-player-name");
+    if (!name) {
+      name = `Jogador ${Math.floor(Math.random() * 9000) + 1000}`;
+      localStorage.setItem("eldervalley-player-name", name);
+    }
+    return name;
+  }
+
+  getLocalState() {
+    const player = this.scene.player;
+    return {
+      scene: this.scene.scene.key,
+      x: Math.round(player?.x ?? 0),
+      y: Math.round(player?.y ?? 0),
+      facing: player?.facing ?? "down",
+      moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
+    };
+  }
+
+  send(payload) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    this.socket.send(JSON.stringify(payload));
+  }
+
+  handleMessage(event) {
+    let payload = null;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+
+    if (payload.type === "welcome") {
+      this.id = payload.id;
+      (payload.peers ?? []).forEach((player) => this.upsertRemotePlayer(player));
+      return;
+    }
+    if (payload.type === "playerJoined") {
+      this.upsertRemotePlayer(payload.player);
+      return;
+    }
+    if (payload.type === "playerLeft") {
+      this.removeRemotePlayer(payload.id);
+      return;
+    }
+    if (payload.type === "state") {
+      this.upsertRemotePlayer(payload.player);
+      return;
+    }
+    if (payload.type === "chat") {
+      this.receiveChat(payload);
+    }
+  }
+
+  update(time) {
+    if (!this.connected || time - this.lastStateSent < 90) {
+      this.updateRemotePlayerDepths();
+      return;
+    }
+    this.lastStateSent = time;
+    this.send({ type: "state", ...this.getLocalState() });
+    this.updateRemotePlayerDepths();
+  }
+
+  upsertRemotePlayer(data) {
+    if (!data || data.id === this.id || data.scene !== this.scene.scene.key) {
+      if (data?.id) {
+        this.removeRemotePlayer(data.id);
+      }
+      return;
+    }
+
+    let remote = this.remotePlayers.get(data.id);
+    if (!remote) {
+      const sprite = this.scene.add.sprite(data.x, data.y, "mage-1-idle-sheet", 0)
+        .setOrigin(0.5, 0.5)
+        .setDepth(data.y + 120);
+      const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Jogador", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#fff7d6",
+        stroke: "#111820",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(6100);
+      remote = {
+        id: data.id,
+        name: data.name ?? "Jogador",
+        sprite,
+        nameText,
+        targetX: data.x,
+        targetY: data.y,
+        facing: data.facing ?? "down",
+        moving: false
+      };
+      this.remotePlayers.set(data.id, remote);
+    }
+
+    remote.name = data.name ?? remote.name;
+    remote.targetX = Number(data.x) || remote.targetX;
+    remote.targetY = Number(data.y) || remote.targetY;
+    remote.facing = data.facing ?? remote.facing;
+    remote.moving = Boolean(data.moving);
+    remote.nameText.setText(remote.name);
+    this.playRemoteAnimation(remote);
+  }
+
+  playRemoteAnimation(remote) {
+    const prefix = remote.moving ? "walk" : "idle";
+    const key = `mage-1-${prefix}-${remote.facing ?? "down"}`;
+    remote.sprite.play(key, true);
+  }
+
+  updateRemotePlayerDepths() {
+    for (const remote of this.remotePlayers.values()) {
+      remote.sprite.x = Phaser.Math.Linear(remote.sprite.x, remote.targetX, 0.35);
+      remote.sprite.y = Phaser.Math.Linear(remote.sprite.y, remote.targetY, 0.35);
+      remote.sprite.setDepth(remote.sprite.y + 120);
+      remote.nameText.setPosition(remote.sprite.x, remote.sprite.y - 58);
+    }
+  }
+
+  receiveChat(payload) {
+    if (payload.scene !== this.scene.scene.key) {
+      return;
+    }
+    const remote = this.remotePlayers.get(payload.id);
+    this.scene.chat?.addMessage(payload.name ?? "Jogador", payload.message);
+    if (remote) {
+      this.scene.chat?.showBubbleFor(remote.sprite, payload.message);
+    }
+  }
+
+  sendChat(message) {
+    this.send({ type: "chat", message });
+  }
+
+  removeRemotePlayer(id) {
+    const remote = this.remotePlayers.get(id);
+    if (!remote) {
+      return;
+    }
+    remote.sprite.destroy();
+    remote.nameText.destroy();
+    this.remotePlayers.delete(id);
+  }
+
+  clearRemotePlayers() {
+    [...this.remotePlayers.keys()].forEach((id) => this.removeRemotePlayer(id));
+  }
+
+  destroy() {
+    this.clearRemotePlayers();
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.close();
+    }
+    this.socket = null;
+  }
+}
