@@ -2589,7 +2589,7 @@ export default class WorldScene extends BaseGameScene {
 
     const character = this.physics.add.sprite(1510, 704, "knight-npc-sheet", 16)
       .setDepth(704 + 120);
-    character.body.setSize(22, 16).setOffset(21, 78);
+    character.body.setSize(20, 14).setOffset(18, 68);
     character.body.setCollideWorldBounds(true);
     character.speed = 48;
     character.facing = "right";
@@ -2599,8 +2599,8 @@ export default class WorldScene extends BaseGameScene {
 
     const interaction = {
       x: character.x,
-      y: character.y + 42,
-      promptY: character.y - 58,
+      y: character.y + 34,
+      promptY: character.y - 50,
       promptText: "E Falar",
       radius: 50,
       onInteract: () => this.dialog.show("Cavaleiro", "Estou vigiando a estrada ate o centro da cidade.")
