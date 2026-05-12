@@ -1,3 +1,5 @@
+import { getPlayerCharacterProfile } from "../player/Player.js?v=127";
+
 export default class MultiplayerSystem {
   constructor(scene) {
     this.scene = scene;
@@ -51,6 +53,7 @@ export default class MultiplayerSystem {
       x: Math.round(player?.x ?? 0),
       y: Math.round(player?.y ?? 0),
       facing: player?.facing ?? "down",
+      characterId: player?.characterId ?? localStorage.getItem("eldervalley-selected-character") ?? "mage-1",
       moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
     };
   }
@@ -111,8 +114,11 @@ export default class MultiplayerSystem {
     }
 
     let remote = this.remotePlayers.get(data.id);
+    const characterId = data.characterId ?? "mage-1";
+    const profile = getPlayerCharacterProfile(characterId);
+    this.ensureRemoteAnimations(profile);
     if (!remote) {
-      const sprite = this.scene.add.sprite(data.x, data.y, "mage-1-idle-sheet", 0)
+      const sprite = this.scene.add.sprite(data.x, data.y, profile.idleTexture, 0)
         .setOrigin(0.5, 0.5)
         .setDepth(data.y + 120);
       const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Jogador", {
@@ -125,6 +131,8 @@ export default class MultiplayerSystem {
       remote = {
         id: data.id,
         name: data.name ?? "Jogador",
+        characterId,
+        profile,
         sprite,
         nameText,
         targetX: data.x,
@@ -135,6 +143,11 @@ export default class MultiplayerSystem {
       this.remotePlayers.set(data.id, remote);
     }
 
+    if (remote.characterId !== characterId) {
+      remote.characterId = characterId;
+      remote.profile = profile;
+      remote.sprite.setTexture(profile.idleTexture, 0);
+    }
     remote.name = data.name ?? remote.name;
     remote.targetX = Number(data.x) || remote.targetX;
     remote.targetY = Number(data.y) || remote.targetY;
@@ -145,9 +158,38 @@ export default class MultiplayerSystem {
   }
 
   playRemoteAnimation(remote) {
+    const profile = remote.profile ?? getPlayerCharacterProfile(remote.characterId);
+    this.ensureRemoteAnimations(profile);
     const prefix = remote.moving ? "walk" : "idle";
-    const key = `mage-1-${prefix}-${remote.facing ?? "down"}`;
+    const key = `${profile.id}-${prefix}-${remote.facing ?? "down"}`;
     remote.sprite.play(key, true);
+  }
+
+  ensureRemoteAnimations(profile) {
+    const makeFrames = (row) => Array.from({ length: profile.framesPerDirection }, (_, index) => row * profile.framesPerDirection + index);
+    const makeIdleFrame = (row) => [row * profile.framesPerDirection];
+    const defs = [
+      [`${profile.id}-walk-down`, profile.walkTexture, makeFrames(0), 10],
+      [`${profile.id}-walk-left`, profile.walkTexture, makeFrames(1), 10],
+      [`${profile.id}-walk-right`, profile.walkTexture, makeFrames(2), 10],
+      [`${profile.id}-walk-up`, profile.walkTexture, makeFrames(3), 10],
+      [`${profile.id}-idle-down`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(0) : makeIdleFrame(0), 5],
+      [`${profile.id}-idle-left`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(1) : makeIdleFrame(1), 5],
+      [`${profile.id}-idle-right`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(2) : makeIdleFrame(2), 5],
+      [`${profile.id}-idle-up`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(3) : makeIdleFrame(3), 5]
+    ];
+
+    defs.forEach(([key, textureKey, frames, frameRate]) => {
+      if (this.scene.anims.exists(key)) {
+        return;
+      }
+      this.scene.anims.create({
+        key,
+        frames: frames.map((frame) => ({ key: textureKey, frame })),
+        frameRate,
+        repeat: -1
+      });
+    });
   }
 
   updateRemotePlayerDepths() {

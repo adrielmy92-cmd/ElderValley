@@ -8,6 +8,7 @@ export default class TitleScene extends Phaser.Scene {
     this.spawnKey = data.spawnKey ?? "start";
     this.started = false;
     this.activePanel = "characters";
+    this.selectedCharacter = localStorage.getItem("eldervalley-selected-character") ?? "mage-1";
     this.lamps = [];
     this.fireflies = [];
 
@@ -324,13 +325,19 @@ export default class TitleScene extends Phaser.Scene {
     this.addContentText(x + 28, startY + 42, "Classes iniciais para entrar no vale.", 15, "#d5c29a");
 
     [
-      { name: "Mago Azul", key: "mage-1-idle-sheet", frame: 0, scale: 1.25, desc: "Controle arcano e exploracao." },
-      { name: "Aventureiro", key: "adventurer-sheet", frame: 0, scale: 1.1, desc: "Equilibrado para coleta e combate." },
-      { name: "Guardiao", key: "blond-npc-sheet", frame: 0, scale: 1.1, desc: "Forte para proteger rotas." }
+      { id: "mage-1", name: "Mago 1", key: "mage-1-idle-sheet", frame: 0, scale: 1.15, desc: "Controle arcano e exploracao." },
+      { id: "knight", name: "Cavaleiro", key: "knight-npc-sheet", frame: 0, scale: 1.15, desc: "Armadura pesada e presenca de guarda." }
     ].forEach((card, index) => {
       const cardX = x + 28;
       const cardY = startY + 92 + index * 112;
-      this.addCard(cardX, cardY, width - 56, 92);
+      const selected = this.selectedCharacter === card.id;
+      this.addCard(cardX, cardY, width - 56, 92, selected);
+      const zone = this.add.zone(cardX, cardY, width - 56, 92)
+        .setOrigin(0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(19)
+        .on("pointerdown", () => this.selectCharacter(card.id));
+      this.contentLayer.add(zone);
       const sprite = this.add.sprite(cardX + 54, cardY + 78, card.key, card.frame)
         .setOrigin(0.5, 1)
         .setScale(card.scale)
@@ -338,7 +345,15 @@ export default class TitleScene extends Phaser.Scene {
       this.contentLayer.add(sprite);
       this.addContentText(cardX + 106, cardY + 25, card.name, 21, "#ffd889");
       this.addContentText(cardX + 106, cardY + 57, card.desc, 14, "#d8c6a1");
+      this.addContentText(cardX + width - 142, cardY + 46, selected ? "Selecionado" : "Escolher", 13, selected ? "#9dffb0" : "#ffe0a0");
     });
+  }
+
+  selectCharacter(characterId) {
+    this.selectedCharacter = characterId;
+    localStorage.setItem("eldervalley-selected-character", characterId);
+    this.registry.set("playerCharacter", characterId);
+    this.renderInfoContent();
   }
 
   renderHouseStore() {
@@ -392,15 +407,16 @@ export default class TitleScene extends Phaser.Scene {
     });
   }
 
-  addCard(x, y, width, height) {
+  addCard(x, y, width, height, selected = false) {
     const graphics = this.add.graphics().setDepth(15);
     graphics.fillStyle(0x120b07, 0.78);
     graphics.fillRoundedRect(x, y, width, height, 7);
-    graphics.lineStyle(2, 0x7b4c26, 1);
+    graphics.lineStyle(2, selected ? 0xffd166 : 0x7b4c26, 1);
     graphics.strokeRoundedRect(x, y, width, height, 7);
-    graphics.lineStyle(1, 0xd49a4c, 0.75);
+    graphics.lineStyle(1, selected ? 0x9dffb0 : 0xd49a4c, 0.75);
     graphics.strokeRoundedRect(x + 5, y + 5, width - 10, height - 10, 4);
     this.contentLayer.add(graphics);
+    return graphics;
   }
 
   addContentText(x, y, text, size, color) {
@@ -443,6 +459,8 @@ export default class TitleScene extends Phaser.Scene {
       return;
     }
     this.started = true;
+    this.registry.set("playerCharacter", this.selectedCharacter);
+    localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     this.stopTitleMusic(false);
     this.cameras.main.fadeOut(420, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {

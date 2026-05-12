@@ -1,30 +1,68 @@
+const PLAYER_CHARACTERS = {
+  "mage-1": {
+    id: "mage-1",
+    label: "Mago 1",
+    walkTexture: "mage-1-sheet",
+    idleTexture: "mage-1-idle-sheet",
+    frameWidth: 56,
+    frameHeight: 84,
+    framesPerDirection: 8,
+    body: { width: 18, height: 14, offsetX: 19, offsetY: 68 },
+    speed: 145,
+    depthBias: 120
+  },
+  knight: {
+    id: "knight",
+    label: "Cavaleiro",
+    walkTexture: "knight-npc-sheet",
+    idleTexture: "knight-npc-sheet",
+    frameWidth: 56,
+    frameHeight: 84,
+    framesPerDirection: 8,
+    body: { width: 20, height: 14, offsetX: 18, offsetY: 68 },
+    speed: 136,
+    depthBias: 120
+  }
+};
+
+export function getPlayerCharacterProfile(id) {
+  return PLAYER_CHARACTERS[id] ?? PLAYER_CHARACTERS["mage-1"];
+}
+
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, "mage-1-sheet", 0);
+    const characterId = scene.registry.get("playerCharacter") ?? localStorage.getItem("eldervalley-selected-character") ?? "mage-1";
+    const profile = getPlayerCharacterProfile(characterId);
+    super(scene, x, y, profile.walkTexture, 0);
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.speed = 145;
+    this.characterId = profile.id;
+    this.animPrefix = profile.id;
+    this.profile = profile;
+    this.speed = profile.speed;
     this.facing = "down";
-    this.depthBias = 120;
+    this.depthBias = profile.depthBias;
     this.setScale(1);
-    this.body.setSize(18, 14).setOffset(19, 68);
+    this.body.setSize(profile.body.width, profile.body.height).setOffset(profile.body.offsetX, profile.body.offsetY);
     this.setDepth(y + this.depthBias);
     this.createAnimations(scene);
   }
 
   createAnimations(scene) {
-    const prefix = "mage-1";
-    const makeFrames = (row) => Array.from({ length: 8 }, (_, index) => row * 8 + index);
+    const prefix = this.animPrefix;
+    const profile = this.profile;
+    const makeFrames = (row) => Array.from({ length: profile.framesPerDirection }, (_, index) => row * profile.framesPerDirection + index);
+    const makeIdleFrame = (row) => [row * profile.framesPerDirection];
     const defs = [
-      [`${prefix}-walk-down`, "mage-1-sheet", makeFrames(0), 10],
-      [`${prefix}-walk-left`, "mage-1-sheet", makeFrames(1), 10],
-      [`${prefix}-walk-right`, "mage-1-sheet", makeFrames(2), 10],
-      [`${prefix}-walk-up`, "mage-1-sheet", makeFrames(3), 10],
-      [`${prefix}-idle-down`, "mage-1-idle-sheet", makeFrames(0), 5],
-      [`${prefix}-idle-left`, "mage-1-idle-sheet", makeFrames(1), 5],
-      [`${prefix}-idle-right`, "mage-1-idle-sheet", makeFrames(2), 5],
-      [`${prefix}-idle-up`, "mage-1-idle-sheet", makeFrames(3), 5]
+      [`${prefix}-walk-down`, profile.walkTexture, makeFrames(0), 10],
+      [`${prefix}-walk-left`, profile.walkTexture, makeFrames(1), 10],
+      [`${prefix}-walk-right`, profile.walkTexture, makeFrames(2), 10],
+      [`${prefix}-walk-up`, profile.walkTexture, makeFrames(3), 10],
+      [`${prefix}-idle-down`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(0) : makeIdleFrame(0), 5],
+      [`${prefix}-idle-left`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(1) : makeIdleFrame(1), 5],
+      [`${prefix}-idle-right`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(2) : makeIdleFrame(2), 5],
+      [`${prefix}-idle-up`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(3) : makeIdleFrame(3), 5]
     ];
 
     for (const [key, textureKey, frames, frameRate] of defs) {
@@ -65,7 +103,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.facing = velocity.y < 0 ? "up" : "down";
       }
 
-      this.play(`mage-1-walk-${this.facing}`, true);
+      this.play(`${this.animPrefix}-walk-${this.facing}`, true);
       return;
     }
 
@@ -74,6 +112,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   playIdle() {
-    this.play(`mage-1-idle-${this.facing}`, true);
+    this.play(`${this.animPrefix}-idle-${this.facing}`, true);
   }
 }

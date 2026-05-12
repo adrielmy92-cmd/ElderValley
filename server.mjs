@@ -102,7 +102,8 @@ function publicPlayer(client) {
     x: client.x,
     y: client.y,
     facing: client.facing,
-    moving: client.moving
+    moving: client.moving,
+    characterId: client.characterId
   };
 }
 
@@ -135,6 +136,7 @@ function handleWsPayload(client, payload) {
     client.x = Number(payload.x) || 0;
     client.y = Number(payload.y) || 0;
     client.facing = sanitizeText(payload.facing, 12) || "down";
+    client.characterId = sanitizeText(payload.characterId, 24) || "mage-1";
     client.moving = false;
     client.ready = true;
     sendWs(client.socket, {
@@ -156,6 +158,7 @@ function handleWsPayload(client, payload) {
     client.x = Number(payload.x) || client.x;
     client.y = Number(payload.y) || client.y;
     client.facing = sanitizeText(payload.facing, 12) || client.facing;
+    client.characterId = sanitizeText(payload.characterId, 24) || client.characterId;
     client.moving = Boolean(payload.moving);
     broadcast({ type: "state", player: publicPlayer(client) }, client.id);
     return;
@@ -314,6 +317,7 @@ server.on("upgrade", (req, socket) => {
     x: 0,
     y: 0,
     facing: "down",
+    characterId: "mage-1",
     moving: false,
     ready: false
   };
