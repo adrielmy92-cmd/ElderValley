@@ -64,6 +64,10 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 56,
       frameHeight: 84
     });
+    this.load.spritesheet("knight-npc-idle-sheet", "./assets/sprites/knight-npc-idle-sheet.png?v=127", {
+      frameWidth: 56,
+      frameHeight: 84
+    });
     this.load.spritesheet("mage-1-sheet", "./assets/sprites/blue-mage-sheet.png?v=127", {
       frameWidth: 56,
       frameHeight: 84

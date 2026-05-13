@@ -167,16 +167,16 @@ export default class MultiplayerSystem {
 
   ensureRemoteAnimations(profile) {
     const makeFrames = (row) => Array.from({ length: profile.framesPerDirection }, (_, index) => row * profile.framesPerDirection + index);
-    const makeIdleFrame = (row) => [row * profile.framesPerDirection];
+    const makeIdleFrames = (row) => profile.animatedIdle ? makeFrames(row) : [row * profile.framesPerDirection];
     const defs = [
       [`${profile.id}-walk-down`, profile.walkTexture, makeFrames(0), 10],
       [`${profile.id}-walk-left`, profile.walkTexture, makeFrames(1), 10],
       [`${profile.id}-walk-right`, profile.walkTexture, makeFrames(2), 10],
       [`${profile.id}-walk-up`, profile.walkTexture, makeFrames(3), 10],
-      [`${profile.id}-idle-down`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(0) : makeIdleFrame(0), 5],
-      [`${profile.id}-idle-left`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(1) : makeIdleFrame(1), 5],
-      [`${profile.id}-idle-right`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(2) : makeIdleFrame(2), 5],
-      [`${profile.id}-idle-up`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(3) : makeIdleFrame(3), 5]
+      [`${profile.id}-idle-down`, profile.idleTexture, makeIdleFrames(0), 5],
+      [`${profile.id}-idle-left`, profile.idleTexture, makeIdleFrames(1), 5],
+      [`${profile.id}-idle-right`, profile.idleTexture, makeIdleFrames(2), 5],
+      [`${profile.id}-idle-up`, profile.idleTexture, makeIdleFrames(3), 5]
     ];
 
     defs.forEach(([key, textureKey, frames, frameRate]) => {

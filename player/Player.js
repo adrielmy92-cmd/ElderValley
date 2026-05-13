@@ -4,6 +4,7 @@ const PLAYER_CHARACTERS = {
     label: "Mago 1",
     walkTexture: "mage-1-sheet",
     idleTexture: "mage-1-idle-sheet",
+    animatedIdle: true,
     frameWidth: 56,
     frameHeight: 84,
     framesPerDirection: 8,
@@ -15,7 +16,8 @@ const PLAYER_CHARACTERS = {
     id: "knight",
     label: "Cavaleiro",
     walkTexture: "knight-npc-sheet",
-    idleTexture: "knight-npc-sheet",
+    idleTexture: "knight-npc-idle-sheet",
+    animatedIdle: true,
     frameWidth: 56,
     frameHeight: 84,
     framesPerDirection: 8,
@@ -53,16 +55,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     const prefix = this.animPrefix;
     const profile = this.profile;
     const makeFrames = (row) => Array.from({ length: profile.framesPerDirection }, (_, index) => row * profile.framesPerDirection + index);
-    const makeIdleFrame = (row) => [row * profile.framesPerDirection];
+    const makeIdleFrames = (row) => profile.animatedIdle ? makeFrames(row) : [row * profile.framesPerDirection];
     const defs = [
       [`${prefix}-walk-down`, profile.walkTexture, makeFrames(0), 10],
       [`${prefix}-walk-left`, profile.walkTexture, makeFrames(1), 10],
       [`${prefix}-walk-right`, profile.walkTexture, makeFrames(2), 10],
       [`${prefix}-walk-up`, profile.walkTexture, makeFrames(3), 10],
-      [`${prefix}-idle-down`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(0) : makeIdleFrame(0), 5],
-      [`${prefix}-idle-left`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(1) : makeIdleFrame(1), 5],
-      [`${prefix}-idle-right`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(2) : makeIdleFrame(2), 5],
-      [`${prefix}-idle-up`, profile.idleTexture, profile.id === "mage-1" ? makeFrames(3) : makeIdleFrame(3), 5]
+      [`${prefix}-idle-down`, profile.idleTexture, makeIdleFrames(0), 5],
+      [`${prefix}-idle-left`, profile.idleTexture, makeIdleFrames(1), 5],
+      [`${prefix}-idle-right`, profile.idleTexture, makeIdleFrames(2), 5],
+      [`${prefix}-idle-up`, profile.idleTexture, makeIdleFrames(3), 5]
     ];
 
     for (const [key, textureKey, frames, frameRate] of defs) {
