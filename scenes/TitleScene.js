@@ -21,7 +21,7 @@ export default class TitleScene extends Phaser.Scene {
 
   startTitleMusic() {
     this.stopTitleMusic(true);
-    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=131");
+    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=132");
     this.titleMusic.loop = true;
     this.titleMusic.autoplay = true;
     this.titleMusic.preload = "auto";

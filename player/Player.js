@@ -18,10 +18,10 @@ const PLAYER_CHARACTERS = {
     walkTexture: "knight-npc-sheet",
     idleTexture: "knight-npc-sheet",
     animatedIdle: false,
-    frameWidth: 56,
+    frameWidth: 80,
     frameHeight: 84,
     framesPerDirection: 8,
-    body: { width: 20, height: 14, offsetX: 18, offsetY: 68 },
+    body: { width: 20, height: 14, offsetX: 30, offsetY: 68 },
     speed: 136,
     depthBias: 120
   }

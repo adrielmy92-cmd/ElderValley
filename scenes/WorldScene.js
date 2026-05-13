@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=131";
+import BaseGameScene from "./BaseGameScene.js?v=132";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -2589,7 +2589,7 @@ export default class WorldScene extends BaseGameScene {
 
     const character = this.physics.add.sprite(1510, 704, "knight-npc-sheet", 16)
       .setDepth(704 + 120);
-    character.body.setSize(20, 14).setOffset(18, 68);
+    character.body.setSize(20, 14).setOffset(30, 68);
     character.body.setCollideWorldBounds(true);
     character.speed = 48;
     character.facing = "right";
