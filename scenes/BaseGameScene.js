@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=128";
-import DialogSystem from "../systems/DialogSystem.js?v=128";
-import InteractionSystem from "../systems/InteractionSystem.js?v=128";
-import ChatSystem from "../systems/ChatSystem.js?v=128";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=128";
+import Player from "../player/Player.js?v=129";
+import DialogSystem from "../systems/DialogSystem.js?v=129";
+import InteractionSystem from "../systems/InteractionSystem.js?v=129";
+import ChatSystem from "../systems/ChatSystem.js?v=129";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=129";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {

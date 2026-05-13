@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=128";
+import BaseGameScene from "./BaseGameScene.js?v=129";
 
 const TILE = 32;
 const RIVER_TOP = 832;
