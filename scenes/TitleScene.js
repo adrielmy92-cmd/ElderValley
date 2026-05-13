@@ -21,7 +21,7 @@ export default class TitleScene extends Phaser.Scene {
 
   startTitleMusic() {
     this.stopTitleMusic(true);
-    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=130");
+    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=131");
     this.titleMusic.loop = true;
     this.titleMusic.autoplay = true;
     this.titleMusic.preload = "auto";
@@ -326,7 +326,7 @@ export default class TitleScene extends Phaser.Scene {
 
     [
       { id: "mage-1", name: "Mago 1", key: "mage-1-idle-sheet", frame: 0, scale: 1.15, desc: "Controle arcano e exploracao." },
-      { id: "knight", name: "Cavaleiro", key: "knight-npc-idle-sheet", frame: 0, scale: 1.15, desc: "Armadura pesada e presenca de guarda." }
+      { id: "knight", name: "Cavaleiro", key: "knight-npc-sheet", frame: 0, scale: 1.15, desc: "Armadura pesada e presenca de guarda." }
     ].forEach((card, index) => {
       const cardX = x + 28;
       const cardY = startY + 92 + index * 112;

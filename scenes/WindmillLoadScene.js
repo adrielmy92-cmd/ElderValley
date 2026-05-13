@@ -18,7 +18,7 @@ export default class WindmillLoadScene extends Phaser.Scene {
     }).setDepth(3000);
 
     if (!this.textures.exists("windmill-interior-test")) {
-      this.load.image("windmill-interior-test", "./assets/sprites/windmill-interior-test.png?v=130");
+      this.load.image("windmill-interior-test", "./assets/sprites/windmill-interior-test.png?v=131");
     }
   }
 
