@@ -28,6 +28,10 @@ export default class BaseGameScene extends Phaser.Scene {
 
   isDevMode() {
     try {
+      const profile = this.registry.get("playerProfile");
+      if (profile?.isDeveloper) {
+        return true;
+      }
       return localStorage.getItem("eldervalley-dev-mode") === "1"
         || Boolean(localStorage.getItem("eldervalley-admin-token"));
     } catch {
@@ -44,11 +48,16 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   addAdminStorageHeaders(headers = {}) {
+    const sessionToken = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
     const token = this.getAdminStorageToken();
-    if (token) {
-      return { ...headers, "X-ElderValley-Admin-Token": token };
+    const nextHeaders = { ...headers };
+    if (sessionToken) {
+      nextHeaders.Authorization = `Bearer ${sessionToken}`;
     }
-    return headers;
+    if (token) {
+      nextHeaders["X-ElderValley-Admin-Token"] = token;
+    }
+    return nextHeaders;
   }
 
   showDevOnlyNotice() {

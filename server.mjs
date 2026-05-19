@@ -13,6 +13,16 @@ const storageRoot = path.join(root, ".eldervalley-storage");
 const profileRoot = path.join(storageRoot, "profiles");
 const allowRemoteCreativeWrites = process.env.ELDERVALLEY_ALLOW_CREATIVE_WRITES === "true";
 const adminStorageToken = process.env.ELDERVALLEY_ADMIN_TOKEN ?? "";
+const builtInDevWallets = [
+  "0xae8dc35e7e7eb3b5428429eed044f70fc54bed1a"
+];
+const developerWallets = new Set([
+  ...builtInDevWallets,
+  ...(process.env.ELDERVALLEY_DEV_WALLETS ?? "")
+    .split(",")
+    .map((wallet) => wallet.trim().toLowerCase())
+    .filter(Boolean)
+]);
 const sessionSecret = process.env.ELDERVALLEY_SESSION_SECRET ?? crypto.randomBytes(32).toString("hex");
 const authNonces = new Map();
 const databaseUrl = process.env.DATABASE_URL ?? "";
@@ -116,6 +126,15 @@ function requireProfileSession(req, profileId) {
     return { ok: false, session: null };
   }
   return { ok: true, session };
+}
+
+function isDeveloperWallet(address) {
+  return developerWallets.has(String(address ?? "").toLowerCase());
+}
+
+function hasDeveloperSession(req) {
+  const session = verifySessionToken(readSessionToken(req));
+  return Boolean(session?.address && isDeveloperWallet(session.address));
 }
 
 function sendWs(socket, payload) {
@@ -531,7 +550,7 @@ function canWriteStorageKey(req, key) {
     return true;
   }
 
-  return isLocalRequest(req) || allowRemoteCreativeWrites || hasAdminStorageToken(req);
+  return isLocalRequest(req) || allowRemoteCreativeWrites || hasAdminStorageToken(req) || hasDeveloperSession(req);
 }
 
 function saveReach(data) {
@@ -573,12 +592,14 @@ async function readBody(req) {
 
 function normalizeProfile(profileId, data = {}) {
   const now = new Date().toISOString();
+  const walletAddress = sanitizeText(data.walletAddress, 90);
   return {
     version: 1,
     profileId,
     loginMode: data.loginMode === "wallet" ? "wallet" : "guest",
-    walletAddress: sanitizeText(data.walletAddress, 90),
+    walletAddress,
     walletProvider: sanitizeText(data.walletProvider, 32),
+    isDeveloper: Boolean(data.isDeveloper) || isDeveloperWallet(walletAddress),
     selectedCharacter: sanitizeText(data.selectedCharacter, 32) || "mage-1",
     coins: Math.max(0, Math.floor(Number(data.coins ?? 0) || 0)),
     ownedCharacters: Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : ["mage-1"],
@@ -679,7 +700,8 @@ const server = createServer(async (req, res) => {
       }
       authNonces.delete(key);
       const profileId = walletProfileId(chain, address);
-      const token = createSessionToken({ profileId, address: address.toLowerCase(), chain, provider });
+      const developer = isDeveloperWallet(address);
+      const token = createSessionToken({ profileId, address: address.toLowerCase(), chain, provider, isDeveloper: developer });
       let profile = null;
       try {
         profile = (await readProfile(profileId)).profile;
@@ -688,6 +710,7 @@ const server = createServer(async (req, res) => {
           loginMode: "wallet",
           walletAddress: address,
           walletProvider: provider,
+          isDeveloper: developer,
           selectedCharacter: "mage-1",
           ownedCharacters: ["mage-1"],
           ownedHouses: [],
@@ -699,7 +722,8 @@ const server = createServer(async (req, res) => {
           // A sessao ainda pode iniciar; o proximo save tenta persistir novamente.
         }
       }
-      sendJson(res, 200, { ok: true, token, profileId, profile });
+      profile = normalizeProfile(profileId, { ...profile, walletAddress: address, walletProvider: provider, isDeveloper: developer });
+      sendJson(res, 200, { ok: true, token, profileId, profile, isDeveloper: developer });
       return;
     }
 

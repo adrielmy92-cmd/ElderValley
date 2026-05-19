@@ -147,6 +147,9 @@ export default class WalletSystem {
     this.profile = null;
     this.status = message;
     localStorage.removeItem("eldervalley-session-token");
+    if (!localStorage.getItem("eldervalley-admin-token")) {
+      localStorage.removeItem("eldervalley-dev-mode");
+    }
     this.saveWallet();
     this.scene.refreshWalletDock?.();
   }
@@ -256,6 +259,9 @@ export default class WalletSystem {
     this.scene.registry.set("playerSessionToken", verified.token);
     this.scene.registry.set("playerProfileId", verified.profileId);
     this.scene.registry.set("playerProfile", this.profile);
+    if (this.profile?.isDeveloper || verified.isDeveloper) {
+      localStorage.setItem("eldervalley-dev-mode", "1");
+    }
   }
 
   createDefaultProfile() {
@@ -335,6 +341,7 @@ export default class WalletSystem {
     normalized.ownedCharacters = [...new Set([...(normalized.ownedCharacters ?? []), normalized.selectedCharacter, "mage-1"].filter(Boolean))];
     normalized.ownedHouses = Array.isArray(normalized.ownedHouses) ? normalized.ownedHouses : [];
     normalized.items = Array.isArray(normalized.items) ? normalized.items : [];
+    normalized.isDeveloper = Boolean(normalized.isDeveloper);
     return normalized;
   }
 
