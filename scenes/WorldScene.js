@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=181";
+import BaseGameScene from "./BaseGameScene.js?v=182";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -760,6 +760,66 @@ export default class WorldScene extends BaseGameScene {
     const data = this.getEditableHouseLayoutData();
     this.writeLocalStorageArray(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
     this.setCreativeDirty(true);
+    this.saveSharedStorage(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
+  }
+
+  handleSharedStorageUpdate(payload) {
+    if (super.handleSharedStorageUpdate?.(payload)) {
+      return true;
+    }
+    if (!payload || !Array.isArray(payload.data)) {
+      return false;
+    }
+
+    const { key, data, mtimeMs = Date.now() } = payload;
+    if (key === (this.houseStorageKey ?? HOUSE_STORAGE_KEY)) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.replaceEditableHouseLayouts(data, this.scene.key === "WorldScene");
+      return true;
+    }
+    if (key === this.manualFenceStorageKey) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.clearManualFences();
+      data.forEach((fence) => {
+        if (typeof fence?.x === "number" && typeof fence?.y === "number") {
+          this.placeManualFence(fence.type, fence.x, fence.y, false);
+        }
+      });
+      return true;
+    }
+    if (key === this.manualFloorStorageKey) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.clearManualFloors();
+      data.forEach((floor) => {
+        if (typeof floor?.x === "number" && typeof floor?.y === "number" && this.floorPieces[floor.type]) {
+          this.manualFloors.push({ type: floor.type, x: floor.x, y: floor.y });
+        }
+      });
+      this.redrawManualFloors();
+      this.rebuildWaterCollision();
+      return true;
+    }
+    if (key === this.manualTreeStorageKey) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.clearManualTrees();
+      data.forEach((tree) => {
+        if (typeof tree?.x === "number" && typeof tree?.y === "number") {
+          this.placeManualTree(tree.type, tree.x, tree.y, false);
+        }
+      });
+      return true;
+    }
+    if (key === this.manualStructureStorageKey) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.clearManualStructures();
+      data.forEach((structure) => {
+        if (typeof structure?.x === "number" && typeof structure?.y === "number") {
+          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
+        }
+      });
+      return true;
+    }
+    return false;
   }
 
   createEditableHouse(def, x, y) {
@@ -2373,6 +2433,7 @@ export default class WorldScene extends BaseGameScene {
     const data = this.manualFences.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualFenceStorageKey, data);
     this.setCreativeDirty(true);
+    this.saveSharedStorage(this.manualFenceStorageKey, data);
   }
 
   loadManualFloors() {
@@ -2408,6 +2469,7 @@ export default class WorldScene extends BaseGameScene {
     const data = this.manualFloors.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualFloorStorageKey, data);
     this.setCreativeDirty(true);
+    this.saveSharedStorage(this.manualFloorStorageKey, data);
   }
 
   loadManualTrees() {
@@ -2435,6 +2497,7 @@ export default class WorldScene extends BaseGameScene {
     const data = this.manualTrees.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualTreeStorageKey, data);
     this.setCreativeDirty(true);
+    this.saveSharedStorage(this.manualTreeStorageKey, data);
   }
 
   loadManualStructures() {
@@ -2462,6 +2525,7 @@ export default class WorldScene extends BaseGameScene {
     const data = this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }));
     this.writeLocalStorageArray(this.manualStructureStorageKey, data);
     this.setCreativeDirty(true);
+    this.saveSharedStorage(this.manualStructureStorageKey, data);
   }
 
   addFencedLot({ left, right, top, bottom, gateX, gateWidth = 96 }) {

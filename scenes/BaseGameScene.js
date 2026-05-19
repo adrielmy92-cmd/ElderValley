@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=132";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=181";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=182";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -317,6 +317,15 @@ export default class BaseGameScene extends Phaser.Scene {
     } catch {
       // Continua usando a copia do servidor.
     }
+  }
+
+  handleSharedStorageUpdate(payload) {
+    if (!payload || payload.key !== this.manualCollisionStorageKey || !Array.isArray(payload.data)) {
+      return false;
+    }
+    this.writeLocalManualCollisionLayout(payload.data);
+    this.replaceManualCollisionLayout(payload.data, false);
+    return true;
   }
 
   addManualCollisionRect(rect, shouldSave = true) {

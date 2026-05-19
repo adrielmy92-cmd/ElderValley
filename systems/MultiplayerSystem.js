@@ -126,6 +126,10 @@ export default class MultiplayerSystem {
       this.applyServerClock(payload.clockMinutes);
       return;
     }
+    if (payload.type === "storageUpdated") {
+      this.scene.handleSharedStorageUpdate?.(payload);
+      return;
+    }
     if (payload.type === "playerJoined") {
       this.upsertRemotePlayer(payload.player);
       return;

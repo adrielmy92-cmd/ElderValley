@@ -845,6 +845,13 @@ const server = createServer(async (req, res) => {
           return;
         }
         const result = await writeGameStorage(key, payload);
+        broadcast({
+          type: "storageUpdated",
+          key,
+          data: payload,
+          mtimeMs: result.mtimeMs,
+          source: result.source
+        });
         sendJson(res, 200, { ok: true, key, mtimeMs: result.mtimeMs, source: result.source });
         return;
       }
