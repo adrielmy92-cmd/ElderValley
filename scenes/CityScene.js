@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=132";
+import WorldScene from "./WorldScene.js?v=177";
 
 const TILE = 32;
 
@@ -18,7 +18,7 @@ export default class CityScene extends WorldScene {
     this.manualCollisionStorageKey = "eldervalley-city-manual-collisions-v1";
     this.houseStorageKey = "eldervalley-city-editable-houses-v1";
     this.worldWidth = Math.max(800, Math.ceil(this.scale.width / TILE) * TILE);
-    this.worldHeight = Math.max(960, Math.ceil((this.scale.height + 160) / TILE) * TILE);
+    this.worldHeight = Math.max(1248, Math.ceil((this.scale.height + 320) / TILE) * TILE);
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.drawCityGround();
@@ -32,6 +32,7 @@ export default class CityScene extends WorldScene {
     this.addCityExit();
     this.addCityWorldBounds();
     this.loadManualCollisionLayout([]);
+    this.addCityGuards();
     this.createHud();
     this.createDayNightCycle();
     this.createFenceEditor();
@@ -100,5 +101,193 @@ export default class CityScene extends WorldScene {
     this.addSolidRect(this.worldWidth / 2, this.worldHeight + 8, this.worldWidth, 16);
     this.addSolidRect(-8, this.worldHeight / 2, 16, this.worldHeight);
     this.addSolidRect(this.worldWidth + 8, this.worldHeight / 2, 16, this.worldHeight);
+  }
+
+  addCityGuards() {
+    this.createKnightAnimations();
+    this.cityGuards = [];
+    this.cityGuardPhrases = [
+      "Mantenha a paz dentro das muralhas.",
+      "A guarda esta de olho nas ruas.",
+      "Boa jornada, viajante.",
+      "Sem confusao no centro da cidade.",
+      "As casas daqui estao sob protecao.",
+      "Qualquer movimento estranho, avise a guarda."
+    ];
+
+    const left = 180;
+    const right = Math.max(620, this.worldWidth - 180);
+    const top = 220;
+    const bottom = Math.max(760, this.worldHeight - 180);
+
+    [
+      {
+        x: left,
+        y: top,
+        facing: "down",
+        name: "Guarda Rowan",
+        patrol: [{ x: left, y: top }, { x: left + 90, y: top }, { x: left + 90, y: top + 90 }, { x: left, y: top + 90 }]
+      },
+      {
+        x: right,
+        y: top,
+        facing: "left",
+        name: "Guarda Cedric",
+        patrol: [{ x: right, y: top }, { x: right - 90, y: top }, { x: right - 90, y: top + 90 }, { x: right, y: top + 90 }]
+      },
+      {
+        x: right,
+        y: bottom,
+        facing: "up",
+        name: "Guarda Alden",
+        patrol: [{ x: right, y: bottom }, { x: right - 110, y: bottom }, { x: right - 110, y: bottom - 90 }, { x: right, y: bottom - 90 }]
+      }
+    ].forEach((guardConfig, index) => {
+      const guard = this.physics.add.sprite(guardConfig.x, guardConfig.y, "knight-npc-sheet", this.getGuardIdleFrame(guardConfig.facing))
+        .setDepth(guardConfig.y + 120);
+      guard.body.setSize(20, 14).setOffset(30, 68);
+      guard.body.setCollideWorldBounds(true);
+      guard.speed = 46;
+      guard.facing = guardConfig.facing;
+      guard.guardName = guardConfig.name;
+      guard.patrol = guardConfig.patrol;
+      guard.patrolIndex = 1;
+      guard.pauseUntil = this.time.now + index * 700;
+
+      const interaction = {
+        x: guard.x,
+        y: guard.y + 34,
+        promptY: guard.y - 50,
+        promptText: "E Falar",
+        radius: 52,
+        onInteract: () => this.dialog.show(guardConfig.name, this.cityGuardPhrases[index % this.cityGuardPhrases.length])
+      };
+      this.interactions.add(interaction);
+      this.physics.add.collider(this.player, guard);
+      this.physics.add.collider(guard, this.solids);
+
+      const bubble = this.createGuardBubble(guard);
+      this.cityGuards.push({ sprite: guard, interaction, bubble, nextPhraseAt: this.time.now + 1600 + index * 2100 });
+    });
+  }
+
+  getGuardIdleFrame(facing) {
+    return {
+      down: 0,
+      left: 8,
+      right: 16,
+      up: 24
+    }[facing] ?? 0;
+  }
+
+  createGuardBubble(guard) {
+    const container = this.add.container(guard.x, guard.y - 92).setDepth(1800).setVisible(false);
+    const bg = this.add.graphics();
+    const text = this.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#2a1708",
+      align: "center",
+      wordWrap: { width: 180 }
+    }).setOrigin(0.5);
+    container.add([bg, text]);
+    container.bg = bg;
+    container.label = text;
+    container.skipPerformanceCull = true;
+    return container;
+  }
+
+  showGuardBubble(guardData, phrase) {
+    const { sprite, bubble } = guardData;
+    if (!sprite?.active || !bubble?.active) {
+      return;
+    }
+    const label = bubble.label;
+    const bg = bubble.bg;
+    label.setText(phrase);
+    const bounds = label.getBounds();
+    const width = Math.max(112, bounds.width + 24);
+    const height = Math.max(34, bounds.height + 16);
+    bg.clear();
+    bg.fillStyle(0xffedb0, 0.96);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 6);
+    bg.lineStyle(2, 0x6f4520, 1);
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 6);
+    bg.fillStyle(0xffedb0, 0.96);
+    bg.fillTriangle(-8, height / 2 - 2, 8, height / 2 - 2, 0, height / 2 + 10);
+    bubble.setPosition(sprite.x, sprite.y - 92);
+    bubble.setVisible(true);
+
+    this.tweens.killTweensOf(bubble);
+    bubble.setAlpha(0);
+    this.tweens.add({
+      targets: bubble,
+      alpha: 1,
+      duration: 180,
+      yoyo: true,
+      hold: 2600,
+      onComplete: () => bubble.setVisible(false)
+    });
+  }
+
+  updateCityGuards() {
+    this.cityGuards?.forEach((guardData, index) => {
+      const { sprite, interaction, bubble } = guardData;
+      if (!sprite?.active) {
+        return;
+      }
+      this.updateGuardPatrol(sprite);
+      sprite.setDepth(sprite.y + 120);
+      interaction.x = sprite.x;
+      interaction.y = sprite.y + 34;
+      interaction.promptY = sprite.y - 50;
+      if (bubble?.visible) {
+        bubble.setPosition(sprite.x, sprite.y - 92);
+      }
+      if (this.time.now >= guardData.nextPhraseAt && !this.dialog.active) {
+        const phrase = this.cityGuardPhrases[(index + Math.floor(this.time.now / 7000)) % this.cityGuardPhrases.length];
+        this.showGuardBubble(guardData, phrase);
+        guardData.nextPhraseAt = this.time.now + Phaser.Math.Between(7800, 12800);
+      }
+    });
+  }
+
+  updateGuardPatrol(guard) {
+    if (!guard.patrol?.length || this.dialog.active || this.time.now < (guard.pauseUntil ?? 0)) {
+      guard.setVelocity(0, 0);
+      guard.anims.stop();
+      guard.setFrame(this.getGuardIdleFrame(guard.facing));
+      return;
+    }
+
+    const target = guard.patrol[guard.patrolIndex % guard.patrol.length];
+    const dx = target.x - guard.x;
+    const dy = target.y - guard.y;
+    const distance = Math.hypot(dx, dy);
+
+    const blocked = guard.body.blocked.none === false || guard.body.touching.none === false;
+    if (distance < 8 || blocked) {
+      guard.setVelocity(0, 0);
+      guard.patrolIndex = (guard.patrolIndex + 1) % guard.patrol.length;
+      guard.pauseUntil = this.time.now + Phaser.Math.Between(450, 1100);
+      guard.anims.stop();
+      guard.setFrame(this.getGuardIdleFrame(guard.facing));
+      return;
+    }
+
+    const vx = (dx / distance) * guard.speed;
+    const vy = (dy / distance) * guard.speed;
+    guard.setVelocity(vx, vy);
+    if (Math.abs(vx) > Math.abs(vy)) {
+      guard.facing = vx < 0 ? "left" : "right";
+    } else {
+      guard.facing = vy < 0 ? "up" : "down";
+    }
+    guard.play(`knight-walk-${guard.facing}`, true);
+  }
+
+  update(time, delta) {
+    super.update(time, delta);
+    this.updateCityGuards();
   }
 }

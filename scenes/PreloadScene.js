@@ -8,6 +8,8 @@ export default class PreloadScene extends Phaser.Scene {
   preload() {
     this.load.video("title-intro", "./assets/videos/eldervalley-title.mp4?v=132", "loadeddata", false, true);
     this.load.audio("title-theme", "./assets/audio/title-theme.mp3?v=132");
+    this.load.svg("wallet-metamask", "./assets/ui/metamask-icon.svg?v=161", { width: 128, height: 128 });
+    this.load.svg("wallet-phantom", "./assets/ui/phantom-icon.svg?v=161", { width: 128, height: 128 });
     this.load.image("reference-house", "./assets/sprites/reference-house.png");
     this.load.image("blacksmith-house", "./assets/sprites/blacksmith-house.png?v=132");
     this.load.image("card-shop-house", "./assets/sprites/card-shop-house.png?v=132");
@@ -33,12 +35,22 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("creative-structure-knight-statue", "./assets/sprites/creative-structure-knight-statue-game.png?v=132");
     this.load.image("creative-structure-fountain", "./assets/sprites/creative-structure-fountain-game.png?v=132");
     this.load.image("creative-structure-well", "./assets/sprites/creative-structure-well-game.png?v=132");
+    this.load.spritesheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=176", {
+      frameWidth: 96,
+      frameHeight: 96
+    });
+    this.load.spritesheet("creative-animal-bull", "./assets/sprites/creative-animal-bull-sheet.png?v=176", {
+      frameWidth: 96,
+      frameHeight: 96
+    });
     this.load.image("creative-house-tavern", "./assets/sprites/creative-house-tavern.png?v=132");
     this.load.image("creative-house-manor", "./assets/sprites/creative-house-manor.png?v=132");
     this.load.image("creative-house-cottage", "./assets/sprites/creative-house-cottage.png?v=132");
     this.load.image("creative-house-blue-market", "./assets/sprites/creative-house-blue-market.png?v=132");
     this.load.image("creative-house-red-lodge", "./assets/sprites/creative-house-red-lodge.png?v=132");
     this.load.image("creative-house-green-cottage", "./assets/sprites/creative-house-green-cottage.png?v=132");
+    this.load.image("creative-house-alchemist", "./assets/sprites/creative-house-alchemist.png?v=144");
+    this.load.image("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
       this.load.image(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=132`);
@@ -60,6 +72,10 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 68
     });
+    this.load.spritesheet("hooded-sheet", "./assets/sprites/hooded-sheet.png?v=133", {
+      frameWidth: 48,
+      frameHeight: 68
+    });
     this.load.spritesheet("knight-npc-sheet", "./assets/sprites/knight-npc-sheet.png?v=132", {
       frameWidth: 80,
       frameHeight: 84
@@ -76,14 +92,37 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 56,
       frameHeight: 84
     });
+    this.load.spritesheet("mage-1-attack-normalized", "./assets/sprites/mage-1-attack-normalized.png?v=176", {
+      frameWidth: 56,
+      frameHeight: 84
+    });
+    this.load.spritesheet("mage-1-side-attack-normalized", "./assets/sprites/mage-1-side-attack-normalized.png?v=176", {
+      frameWidth: 56,
+      frameHeight: 84
+    });
     createPixelArtTextures(this);
   }
 
   create() {
     const params = new URLSearchParams(window.location.search);
-    const targetScene = params.get("scene") === "city" ? "CityScene" : "WorldScene";
+    if (params.get("dev") === "1") {
+      try {
+        localStorage.setItem("eldervalley-dev-mode", "1");
+      } catch {
+        // Se o navegador bloquear storage, apenas nao persiste o modo dev.
+      }
+    }
+    const isDev = (() => {
+      try {
+        return localStorage.getItem("eldervalley-dev-mode") === "1";
+      } catch {
+        return false;
+      }
+    })();
+    const requestedScene = params.get("scene") === "city" ? "CityScene" : "WorldScene";
+    const targetScene = isDev ? requestedScene : "WorldScene";
     const spawnKey = params.get("spawnKey") ?? (targetScene === "CityScene" ? "fromVillage" : "start");
-    if (params.get("skipTitle") === "1") {
+    if (isDev && params.get("skipTitle") === "1") {
       this.scene.start(targetScene, { spawnKey });
       return;
     }

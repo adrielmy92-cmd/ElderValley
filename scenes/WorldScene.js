@@ -1,10 +1,11 @@
-import BaseGameScene from "./BaseGameScene.js?v=132";
+import BaseGameScene from "./BaseGameScene.js?v=177";
 
 const TILE = 32;
 const RIVER_TOP = 832;
 const RIVER_BOTTOM = 960;
 const BRIDGE_LEFT = 3680;
 const BRIDGE_RIGHT = 3872;
+const WATER_COLLISION_TILE = 64;
 
 const SPAWNS = {
   start: { x: 1042, y: 420 },
@@ -200,6 +201,19 @@ const HOUSE_DEFS = [
     sceneKey: "HouseInteriorScene",
     doorId: "door_green_cottage_house",
     doorOffset: { x: 0, y: -18 },
+    spawnOffset: { x: 0, y: 34 },
+    colliders: []
+  },
+  {
+    id: "alchemistHouse",
+    label: "Casa arcana",
+    key: "creative-house-alchemist",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "AlchemistHouseInteriorScene",
+    doorId: "door_alchemist_house",
+    doorOffset: { x: 0, y: -28 },
     spawnOffset: { x: 0, y: 34 },
     colliders: []
   }
@@ -408,14 +422,58 @@ export default class WorldScene extends BaseGameScene {
     this.addSolidRect(this.worldWidth / 2, this.worldHeight + 8, this.worldWidth, 16);
     this.addSolidRect(-8, this.worldHeight / 2, 16, this.worldHeight);
     this.addSolidRect(this.worldWidth + 8, this.worldHeight / 2, 16, this.worldHeight);
-    if (BRIDGE_LEFT >= this.worldWidth) {
-      this.addSolidRect(this.worldWidth / 2, (RIVER_TOP + RIVER_BOTTOM) / 2, this.worldWidth, RIVER_BOTTOM - RIVER_TOP);
-      return;
+    this.rebuildWaterCollision();
+  }
+
+  rebuildWaterCollision() {
+    (this.waterCollisionZones ?? []).forEach((zone) => {
+      this.solids?.remove(zone, true, true);
+    });
+    this.waterCollisionZones = [];
+
+    for (let y = RIVER_TOP; y < RIVER_BOTTOM; y += WATER_COLLISION_TILE) {
+      const height = Math.min(WATER_COLLISION_TILE, RIVER_BOTTOM - y);
+      for (let x = 0; x < this.worldWidth; x += WATER_COLLISION_TILE) {
+        const width = Math.min(WATER_COLLISION_TILE, this.worldWidth - x);
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        if (this.isBuiltInBridgeArea(centerX, centerY) || this.isCoveredByManualFloor(centerX, centerY)) {
+          continue;
+        }
+        this.waterCollisionZones.push(this.addWaterCollisionZone(centerX, centerY, width, height));
+      }
     }
-    this.addSolidRect(BRIDGE_LEFT / 2, (RIVER_TOP + RIVER_BOTTOM) / 2, BRIDGE_LEFT, RIVER_BOTTOM - RIVER_TOP);
-    if (BRIDGE_RIGHT < this.worldWidth) {
-      this.addSolidRect((BRIDGE_RIGHT + this.worldWidth) / 2, (RIVER_TOP + RIVER_BOTTOM) / 2, this.worldWidth - BRIDGE_RIGHT, RIVER_BOTTOM - RIVER_TOP);
-    }
+
+    this.redrawCollisionDebug();
+  }
+
+  addWaterCollisionZone(x, y, width, height) {
+    const zone = this.add.zone(x, y, width, height);
+    this.physics.add.existing(zone, true);
+    this.solids.add(zone);
+    return zone;
+  }
+
+  isBuiltInBridgeArea(x, y) {
+    return x >= BRIDGE_LEFT && x <= BRIDGE_RIGHT && y >= 768 && y <= 1024;
+  }
+
+  isCoveredByManualFloor(x, y) {
+    return (this.manualFloors ?? []).some((floor) => {
+      const piece = this.floorPieces?.[floor.type];
+      if (!piece) {
+        return false;
+      }
+      const source = this.textures.get(piece.key)?.getSourceImage();
+      const width = source?.width ?? WATER_COLLISION_TILE;
+      const height = source?.height ?? WATER_COLLISION_TILE;
+      return (
+        x >= floor.x - width / 2
+        && x <= floor.x + width / 2
+        && y >= floor.y - height / 2
+        && y <= floor.y + height / 2
+      );
+    });
   }
 
   addHouses() {
@@ -492,16 +550,18 @@ export default class WorldScene extends BaseGameScene {
   async syncEditableHouseLayouts(includeDefaults, localData) {
     const key = this.houseStorageKey ?? HOUSE_STORAGE_KEY;
     const hasLocalSave = this.hasLocalStorageKey(key);
-    if (hasLocalSave && Array.isArray(localData)) {
-      this.saveSharedStorage(key, localData);
+    const remote = await this.loadSharedStorage(key);
+    if (Array.isArray(remote?.data)) {
+      if (this.shouldKeepLocalCreativeSave(key, localData, remote.data, hasLocalSave, remote.mtimeMs)) {
+        return;
+      }
+      this.writeLocalStorageArray(key, remote.data, remote.mtimeMs);
+      this.replaceEditableHouseLayouts(remote.data, includeDefaults);
       return;
     }
 
-    const remote = await this.loadSharedStorage(key);
-    if (Array.isArray(remote)) {
-      this.writeLocalStorageArray(key, remote);
-      this.replaceEditableHouseLayouts(remote, includeDefaults);
-      return;
+    if (hasLocalSave && Array.isArray(localData)) {
+      this.writeLocalStorageArray(key, localData, this.readLocalStorageMtime(key) || Date.now());
     }
   }
 
@@ -519,68 +579,52 @@ export default class WorldScene extends BaseGameScene {
       const parsed = JSON.parse(raw ?? "[]");
       return {
         hasLocalSave: raw !== null,
-        data: Array.isArray(parsed) ? parsed : []
+        data: Array.isArray(parsed) ? parsed : [],
+        mtimeMs: this.readLocalStorageMtime(key)
       };
     } catch {
-      return { hasLocalSave: false, data: [] };
+      return { hasLocalSave: false, data: [], mtimeMs: 0 };
     }
   }
 
-  writeLocalStorageArray(key, data) {
+  localStorageMetaKey(key) {
+    return `${key}:meta`;
+  }
+
+  readLocalStorageMtime(key) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.localStorageMetaKey(key)) ?? "{}");
+      return Number(parsed?.mtimeMs ?? 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  writeLocalStorageArray(key, data, mtimeMs = Date.now()) {
     try {
       localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem(this.localStorageMetaKey(key), JSON.stringify({ mtimeMs }));
     } catch {
       // O jogo continua usando a copia do servidor.
     }
   }
 
-  async loadSharedStorage(key) {
-    if (!key || window.location.protocol === "file:") {
-      return null;
-    }
-
-    try {
-      const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, { cache: "no-store" });
-      const payload = await response.json();
-      return payload?.data;
-    } catch {
-      return null;
-    }
+  setCreativeDirty(value = true) {
+    this.creativeDirty = value;
+    this.updateCreativeSaveButton();
   }
 
-  async saveSharedStorage(key, data) {
-    if (!key || window.location.protocol === "file:") {
+  updateCreativeSaveButton() {
+    if (!this.creativeSaveButtonText) {
       return;
     }
 
-    try {
-      await fetch(`/api/storage/${encodeURIComponent(key)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        keepalive: true
-      });
-    } catch {
-      // LocalStorage fica como fallback.
-    }
+    this.creativeSaveButtonText.setText(this.creativeDirty ? "Salvar Mundo *" : "Mundo Salvo");
+    this.creativeSaveButtonBg?.setFillStyle(this.creativeDirty ? 0x6b3b16 : 0x25462d, 0.96);
+    this.creativeSaveButtonBg?.setStrokeStyle(2, this.creativeDirty ? 0xffd56c : 0x7ed98a, 0.95);
   }
 
-  async syncCreativeCollection(key, localData, hasLocalSave, clearFn, applyFn) {
-    if (hasLocalSave && Array.isArray(localData)) {
-      this.saveSharedStorage(key, localData);
-      return;
-    }
-
-    const remote = await this.loadSharedStorage(key);
-    if (Array.isArray(remote)) {
-      this.writeLocalStorageArray(key, remote);
-      clearFn();
-      remote.forEach((item) => applyFn(item));
-      return;
-    }
-  }
-
-  saveEditableHouseLayouts() {
+  getEditableHouseLayoutData() {
     const previousLayouts = this.loadEditableHouseLayouts();
     const visible = this.editableHouses.map(({ def, x, y }) => ({ id: def.id, x, y }));
     const hidden = [...(this.hiddenEditableHouseIds ?? new Set())].map((id) => {
@@ -593,13 +637,129 @@ export default class WorldScene extends BaseGameScene {
         hidden: true
       };
     });
-    const data = [...visible, ...hidden];
-    try {
-      localStorage.setItem(this.houseStorageKey ?? HOUSE_STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      // O jogo continua funcionando mesmo se o navegador bloquear storage.
+    return [...visible, ...hidden];
+  }
+
+  async saveCreativeWorld() {
+    if (!this.isDevMode()) {
+      this.showDevOnlyNotice();
+      return;
     }
-    this.saveSharedStorage(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
+
+    const saves = [
+      [this.houseStorageKey ?? HOUSE_STORAGE_KEY, this.getEditableHouseLayoutData()],
+      [this.manualFenceStorageKey, this.manualFences.map(({ type, x, y }) => ({ type, x, y }))],
+      [this.manualFloorStorageKey, this.manualFloors.map(({ type, x, y }) => ({ type, x, y }))],
+      [this.manualTreeStorageKey, this.manualTrees.map(({ type, x, y }) => ({ type, x, y }))],
+      [this.manualStructureStorageKey, this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }))],
+      [this.manualCollisionStorageKey, (this.manualCollisionRects ?? []).map(({ type = "rect", x, y, w, h, r }) => (
+        type === "circle" ? { type, x, y, r } : { type: "rect", x, y, w, h }
+      ))]
+    ].filter(([key]) => Boolean(key));
+
+    this.creativeSaveButtonText?.setText("Salvando...");
+    const results = await Promise.allSettled(saves.map(([key, data]) => this.saveSharedStorage(key, data)));
+    const failed = results.some((result) => result.status === "rejected");
+    this.setCreativeDirty(failed);
+    this.fenceEditorText?.setText(failed ? "Erro ao salvar mundo" : "Mundo salvo no servidor");
+  }
+
+  creativeSaveReach(data) {
+    if (!Array.isArray(data)) {
+      return { count: 0, maxY: -Infinity };
+    }
+
+    return data.reduce((reach, item) => {
+      const y = Number(item?.y ?? 0);
+      return {
+        count: reach.count + 1,
+        maxY: Number.isFinite(y) ? Math.max(reach.maxY, y) : reach.maxY
+      };
+    }, { count: 0, maxY: -Infinity });
+  }
+
+  shouldKeepLocalCreativeSave(key, localData, remoteData, hasLocalSave, remoteMtimeMs = 0) {
+    if (!hasLocalSave || !Array.isArray(localData) || localData.length === 0 || !Array.isArray(remoteData)) {
+      return false;
+    }
+
+    const localMtimeMs = this.readLocalStorageMtime(key);
+    if (localMtimeMs > 0 && remoteMtimeMs > 0) {
+      return localMtimeMs > remoteMtimeMs;
+    }
+
+    const localReach = this.creativeSaveReach(localData);
+    const remoteReach = this.creativeSaveReach(remoteData);
+    return localReach.count > remoteReach.count || localReach.maxY > remoteReach.maxY;
+  }
+
+  async loadSharedStorage(key) {
+    if (!key || window.location.protocol === "file:") {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, { cache: "no-store" });
+      const payload = await response.json();
+      return {
+        data: payload?.data,
+        mtimeMs: Number(payload?.mtimeMs ?? 0)
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async saveSharedStorage(key, data) {
+    if (!key || window.location.protocol === "file:") {
+      return;
+    }
+
+    try {
+      const localMtimeMs = this.readLocalStorageMtime(key) || Date.now();
+      const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-ElderValley-Client-Mtime": String(localMtimeMs)
+        },
+        body: JSON.stringify(data),
+        keepalive: true
+      });
+      if (!response.ok) {
+        throw new Error(`Falha ao salvar ${key}: ${response.status}`);
+      }
+      if (response.ok) {
+        const payload = await response.json();
+        const mtimeMs = Number(payload?.mtimeMs ?? Date.now());
+        this.writeLocalStorageArray(key, data, mtimeMs);
+      }
+    } catch {
+      // LocalStorage fica como fallback.
+    }
+  }
+
+  async syncCreativeCollection(key, localData, hasLocalSave, clearFn, applyFn) {
+    const remote = await this.loadSharedStorage(key);
+    if (Array.isArray(remote?.data)) {
+      if (this.shouldKeepLocalCreativeSave(key, localData, remote.data, hasLocalSave, remote.mtimeMs)) {
+        return;
+      }
+      this.writeLocalStorageArray(key, remote.data, remote.mtimeMs);
+      clearFn();
+      remote.data.forEach((item) => applyFn(item));
+      return;
+    }
+
+    if (hasLocalSave && Array.isArray(localData)) {
+      this.writeLocalStorageArray(key, localData, this.readLocalStorageMtime(key) || Date.now());
+    }
+  }
+
+  saveEditableHouseLayouts() {
+    const data = this.getEditableHouseLayoutData();
+    this.writeLocalStorageArray(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
+    this.setCreativeDirty(true);
   }
 
   createEditableHouse(def, x, y) {
@@ -921,6 +1081,7 @@ export default class WorldScene extends BaseGameScene {
     this.selectedTreeType = "pine";
     this.selectedFloorType = "stoneA";
     this.selectedStructureType = "fruitStall";
+    this.selectedStructureFlipX = false;
     this.selectedHouseType = HOUSE_DEFS[0]?.id ?? null;
     this.selectedEditableHouse = null;
     this.draggedEditableHouse = null;
@@ -1127,6 +1288,30 @@ export default class WorldScene extends BaseGameScene {
         colliders: [[0, -58, 112, 96]],
         depthOffset: 100,
         snap: 16
+      },
+      cat: {
+        key: "creative-animal-cat",
+        label: "Gato",
+        scale: 0.52,
+        colliders: [[0, -8, 26, 14]],
+        depthOffset: 32,
+        snap: 8,
+        flipable: true,
+        animated: true,
+        frames: 6,
+        frameRate: 7
+      },
+      bull: {
+        key: "creative-animal-bull",
+        label: "Boi",
+        scale: 0.82,
+        colliders: [[0, -20, 54, 32]],
+        depthOffset: 50,
+        snap: 8,
+        flipable: true,
+        animated: true,
+        frames: 8,
+        frameRate: 6
       }
     };
 
@@ -1152,6 +1337,7 @@ export default class WorldScene extends BaseGameScene {
       zero: Phaser.Input.Keyboard.KeyCodes.ZERO,
       redMaple: Phaser.Input.Keyboard.KeyCodes.R,
       palm: Phaser.Input.Keyboard.KeyCodes.M,
+      invert: Phaser.Input.Keyboard.KeyCodes.I,
       remove: Phaser.Input.Keyboard.KeyCodes.DELETE,
       backspace: Phaser.Input.Keyboard.KeyCodes.BACKSPACE
     });
@@ -1178,6 +1364,23 @@ export default class WorldScene extends BaseGameScene {
       stroke: "#1a202b",
       strokeThickness: 3
     }).setScrollFactor(0).setDepth(3000);
+    this.creativeSaveButtonBg = this.add.rectangle(this.creativePanelPosition.x + 680, this.creativePanelPosition.y + 13, 132, 30, 0x25462d, 0.96)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(3001)
+      .setStrokeStyle(2, 0x7ed98a, 0.95)
+      .setInteractive({ useHandCursor: true });
+    this.creativeSaveButtonBg.on("pointerdown", (pointer, localX, localY, event) => {
+      event?.stopPropagation();
+      this.saveCreativeWorld();
+    });
+    this.creativeSaveButtonText = this.add.text(this.creativePanelPosition.x + 746, this.creativePanelPosition.y + 28, "Mundo Salvo", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#fff3c4",
+      stroke: "#1a202b",
+      strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3002);
     this.fenceEditorText = this.add.text(18, this.scale.height - 34, "", {
       fontFamily: "monospace",
       fontSize: "13px",
@@ -1196,6 +1399,7 @@ export default class WorldScene extends BaseGameScene {
         this.scale.off("resize", this.handleFenceEditorResize);
       }
       this.creativePanel?.off("pointerdown");
+      this.creativeSaveButtonBg?.off("pointerdown");
       this.input.off("pointerdown", this.handleFenceEditorPointerDown, this);
       this.input.off("pointermove", this.handleCreativePointerMove, this);
       this.input.off("pointerup", this.handleCreativePointerUp, this);
@@ -1217,6 +1421,13 @@ export default class WorldScene extends BaseGameScene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.toggleCreative)) {
+      if (!this.isDevMode()) {
+        this.creativeModeEnabled = false;
+        this.syncCreativeModeState();
+        this.updateCreativeHud();
+        this.showDevOnlyNotice();
+        return;
+      }
       this.creativeModeEnabled = !this.creativeModeEnabled;
       if (this.creativeModeEnabled) {
         this.activeCreativeMode = this.activeCreativeMode ?? "tree";
@@ -1316,7 +1527,7 @@ export default class WorldScene extends BaseGameScene {
       }
     });
 
-    const structureSelectionKeys = ["horizontal", "vertical", "post", "gate"];
+    const structureSelectionKeys = ["horizontal", "vertical", "post", "gate", "openGate", "six", "seven", "eight", "nine", "zero"];
     const structureTypes = Object.keys(this.structurePieces);
     structureSelectionKeys.forEach((keyName, index) => {
       const structureType = structureTypes[index];
@@ -1325,6 +1536,11 @@ export default class WorldScene extends BaseGameScene {
         this.updateCreativeHud();
       }
     });
+
+    if (this.isStructureEditorActive() && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.invert)) {
+      this.selectedStructureFlipX = !this.selectedStructureFlipX;
+      this.updateCreativeHud();
+    }
 
     const removePressed = Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.remove)
       || Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.backspace);
@@ -1347,6 +1563,9 @@ export default class WorldScene extends BaseGameScene {
   }
 
   syncCreativeModeState() {
+    if (!this.isDevMode()) {
+      this.creativeModeEnabled = false;
+    }
     this.fenceEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "fence";
     this.treeEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "tree";
     this.floorEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "floor";
@@ -1386,6 +1605,8 @@ export default class WorldScene extends BaseGameScene {
     this.creativePanel.setVisible(this.creativeModeEnabled);
     this.creativeTitleText?.setVisible(this.creativeModeEnabled);
     this.creativeModesText?.setVisible(this.creativeModeEnabled);
+    this.creativeSaveButtonBg?.setVisible(this.creativeModeEnabled);
+    this.creativeSaveButtonText?.setVisible(this.creativeModeEnabled);
 
     if (!this.creativeModeEnabled) {
       this.fenceEditorText.setText("Tab Criativo");
@@ -1399,6 +1620,8 @@ export default class WorldScene extends BaseGameScene {
     this.creativePanel.setPosition(this.creativePanelPosition.x, this.creativePanelPosition.y);
     this.creativeTitleText?.setPosition(this.creativePanelPosition.x + 14, this.creativePanelPosition.y + 12);
     this.creativeModesText?.setPosition(this.creativePanelPosition.x + 14, this.creativePanelPosition.y + 40);
+    this.creativeSaveButtonBg?.setPosition(this.creativePanelPosition.x + panelWidth - 150, this.creativePanelPosition.y + 13);
+    this.creativeSaveButtonText?.setPosition(this.creativePanelPosition.x + panelWidth - 84, this.creativePanelPosition.y + 28);
     this.creativeInventoryBounds = new Phaser.Geom.Rectangle(this.creativePanelPosition.x, this.creativePanelPosition.y, panelWidth, 188);
     const activeLabel = {
       fence: "Cercas",
@@ -1409,6 +1632,7 @@ export default class WorldScene extends BaseGameScene {
     }[this.activeCreativeMode] ?? "Nenhum";
     this.creativeTitleText?.setText("Modo Criativo");
     this.creativeModesText?.setText(`Modo: ${activeLabel}  |  P Pisos  |  F Cercas  |  T Arvores  |  H Casas  |  B Estruturas`);
+    this.updateCreativeSaveButton();
 
     if (this.isFenceEditorActive()) {
       const label = this.fencePieces[this.selectedFenceType]?.label ?? "Horizontal";
@@ -1425,7 +1649,8 @@ export default class WorldScene extends BaseGameScene {
       this.fenceEditorText.setText(`Casa: ${label} | clique coloca/move | direito/Delete remove do mapa`);
     } else if (this.isStructureEditorActive()) {
       const label = this.structurePieces[this.selectedStructureType]?.label ?? "Banca frutas";
-      this.fenceEditorText.setText(`Estrutura: ${label} | clique coloca | direito/Delete apaga`);
+      const side = this.selectedStructureFlipX ? "invertido" : "normal";
+      this.fenceEditorText.setText(`Estrutura: ${label} | I inverte (${side}) | clique coloca | direito/Delete apaga`);
     } else {
       this.fenceEditorText.setText("Escolha um modo criativo");
     }
@@ -1615,6 +1840,9 @@ export default class WorldScene extends BaseGameScene {
         .setDepth(3001);
       const iconScale = Math.min(46 / icon.width, 46 / icon.height, 1.4);
       icon.setScale(iconScale);
+      if (this.isStructureEditorActive() && entry.type === this.selectedStructureType && this.selectedStructureFlipX) {
+        icon.setFlipX(true);
+      }
 
       const keyText = this.add.text(x + 6, y + 4, entry.hotkey, {
         fontFamily: "monospace",
@@ -1687,7 +1915,7 @@ export default class WorldScene extends BaseGameScene {
         this.removeManualStructureAt(point.x, point.y);
         return;
       }
-      this.placeManualStructure(this.selectedStructureType, point.x, point.y);
+      this.placeManualStructure(this.selectedStructureType, point.x, point.y, true, this.selectedStructureFlipX);
       return;
     }
 
@@ -1957,7 +2185,7 @@ export default class WorldScene extends BaseGameScene {
     this.saveManualTrees();
   }
 
-  placeManualStructure(type, x, y, shouldSave = true) {
+  placeManualStructure(type, x, y, shouldSave = true, flipX = false) {
     const piece = this.structurePieces[type];
     if (!piece) {
       return;
@@ -1968,14 +2196,27 @@ export default class WorldScene extends BaseGameScene {
       return;
     }
 
-    const image = this.add.image(x, y, piece.key)
+    if (piece.animated && !this.anims.exists(`${piece.key}-idle`)) {
+      this.anims.create({
+        key: `${piece.key}-idle`,
+        frames: Array.from({ length: piece.frames ?? 1 }, (_, frame) => ({ key: piece.key, frame })),
+        frameRate: piece.frameRate ?? 6,
+        repeat: -1
+      });
+    }
+
+    const image = (piece.animated ? this.add.sprite(x, y, piece.key, 0) : this.add.image(x, y, piece.key))
       .setOrigin(0.5, 1)
       .setDepth(y + piece.depthOffset)
       .setScale(piece.scale ?? 1);
+    image.setFlipX(Boolean(flipX));
+    if (piece.animated) {
+      image.play(`${piece.key}-idle`);
+    }
     const colliders = (piece.colliders ?? [])
       .map(([dx, dy, width, height]) => this.addSolidRect(x + dx, y + dy, width, height));
 
-    this.manualStructures.push({ type, x, y, image, colliders });
+    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders });
     if (shouldSave) {
       this.saveManualStructures();
     }
@@ -2037,6 +2278,7 @@ export default class WorldScene extends BaseGameScene {
 
     this.manualFloors.push({ type, x, y });
     this.redrawManualFloors();
+    this.rebuildWaterCollision();
     if (shouldSave) {
       this.saveManualFloors();
     }
@@ -2071,6 +2313,7 @@ export default class WorldScene extends BaseGameScene {
 
     const [floor] = this.manualFloors.splice(index, 1);
     this.redrawManualFloors();
+    this.rebuildWaterCollision();
     this.saveManualFloors();
   }
 
@@ -2085,6 +2328,7 @@ export default class WorldScene extends BaseGameScene {
   clearManualFloors() {
     this.manualFloors = [];
     this.redrawManualFloors();
+    this.rebuildWaterCollision();
   }
 
   clearManualTrees() {
@@ -2128,7 +2372,7 @@ export default class WorldScene extends BaseGameScene {
   saveManualFences() {
     const data = this.manualFences.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualFenceStorageKey, data);
-    this.saveSharedStorage(this.manualFenceStorageKey, data);
+    this.setCreativeDirty(true);
   }
 
   loadManualFloors() {
@@ -2143,6 +2387,7 @@ export default class WorldScene extends BaseGameScene {
       }
     });
     this.redrawManualFloors();
+    this.rebuildWaterCollision();
     this.syncCreativeCollection(
       this.manualFloorStorageKey,
       saved,
@@ -2153,13 +2398,16 @@ export default class WorldScene extends BaseGameScene {
           this.manualFloors.push({ type: floor.type, x: floor.x, y: floor.y });
         }
       }
-    ).then(() => this.redrawManualFloors());
+    ).then(() => {
+      this.redrawManualFloors();
+      this.rebuildWaterCollision();
+    });
   }
 
   saveManualFloors() {
     const data = this.manualFloors.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualFloorStorageKey, data);
-    this.saveSharedStorage(this.manualFloorStorageKey, data);
+    this.setCreativeDirty(true);
   }
 
   loadManualTrees() {
@@ -2186,7 +2434,7 @@ export default class WorldScene extends BaseGameScene {
   saveManualTrees() {
     const data = this.manualTrees.map(({ type, x, y }) => ({ type, x, y }));
     this.writeLocalStorageArray(this.manualTreeStorageKey, data);
-    this.saveSharedStorage(this.manualTreeStorageKey, data);
+    this.setCreativeDirty(true);
   }
 
   loadManualStructures() {
@@ -2194,7 +2442,7 @@ export default class WorldScene extends BaseGameScene {
 
     saved.forEach((structure) => {
       if (typeof structure?.x === "number" && typeof structure?.y === "number") {
-        this.placeManualStructure(structure.type, structure.x, structure.y, false);
+        this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
       }
     });
     this.syncCreativeCollection(
@@ -2204,16 +2452,16 @@ export default class WorldScene extends BaseGameScene {
       () => this.clearManualStructures(),
       (structure) => {
         if (typeof structure?.x === "number" && typeof structure?.y === "number") {
-          this.placeManualStructure(structure.type, structure.x, structure.y, false);
+          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
         }
       }
     );
   }
 
   saveManualStructures() {
-    const data = this.manualStructures.map(({ type, x, y }) => ({ type, x, y }));
+    const data = this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }));
     this.writeLocalStorageArray(this.manualStructureStorageKey, data);
-    this.saveSharedStorage(this.manualStructureStorageKey, data);
+    this.setCreativeDirty(true);
   }
 
   addFencedLot({ left, right, top, bottom, gateX, gateWidth = 96 }) {
@@ -2377,8 +2625,6 @@ export default class WorldScene extends BaseGameScene {
   }
 
   createDayNightCycle() {
-    this.dayNightDuration = 180000;
-    this.dayNightTime = this.registry.get("dayNightTime") ?? this.dayNightDuration * 0.24;
     const width = this.scale.width;
     const height = this.scale.height;
 
@@ -2413,12 +2659,9 @@ export default class WorldScene extends BaseGameScene {
       return;
     }
 
-    this.dayNightTime = (this.dayNightTime + delta) % this.dayNightDuration;
-    this.registry.set("dayNightTime", this.dayNightTime);
-
-    const phase = this.dayNightTime / this.dayNightDuration;
-    const nightAlpha = this.getNightAlpha(phase);
-    const sunsetAlpha = this.getSunsetAlpha(phase);
+    const minutes = Math.floor(this.registry.get("worldClockMinutes") ?? 8 * 60) % 1440;
+    const nightAlpha = this.getNightAlpha(minutes);
+    const sunsetAlpha = this.getSunsetAlpha(minutes);
     const glowAlpha = Math.min(1, Math.max(0, (nightAlpha - 0.02) / 0.38));
 
     this.nightOverlay.setAlpha(nightAlpha);
@@ -2429,28 +2672,28 @@ export default class WorldScene extends BaseGameScene {
     });
   }
 
-  getNightAlpha(phase) {
-    if (phase < 0.2) {
-      return 0;
+  getNightAlpha(minutes) {
+    const time = ((minutes % 1440) + 1440) % 1440;
+    const maxNight = 0.46;
+    if (time >= 22 * 60 || time < 5 * 60) {
+      return maxNight;
     }
-    if (phase < 0.42) {
-      return Phaser.Math.Easing.Sine.InOut((phase - 0.2) / 0.22) * 0.54;
+    if (time >= 20 * 60 && time < 22 * 60) {
+      return Phaser.Math.Easing.Sine.InOut((time - 20 * 60) / 120) * maxNight;
     }
-    if (phase < 0.7) {
-      return 0.54;
-    }
-    if (phase < 0.94) {
-      return (1 - Phaser.Math.Easing.Sine.InOut((phase - 0.7) / 0.24)) * 0.54;
+    if (time >= 5 * 60 && time < 7 * 60) {
+      return (1 - Phaser.Math.Easing.Sine.InOut((time - 5 * 60) / 120)) * maxNight;
     }
     return 0;
   }
 
-  getSunsetAlpha(phase) {
-    if (phase >= 0.14 && phase < 0.42) {
-      return Math.sin(((phase - 0.14) / 0.28) * Math.PI) * 0.24;
+  getSunsetAlpha(minutes) {
+    const time = ((minutes % 1440) + 1440) % 1440;
+    if (time >= 5 * 60 && time < 7 * 60) {
+      return Math.sin(((time - 5 * 60) / 120) * Math.PI) * 0.14;
     }
-    if (phase >= 0.76 && phase < 0.98) {
-      return Math.sin(((phase - 0.76) / 0.22) * Math.PI) * 0.12;
+    if (time >= 17 * 60 + 30 && time < 20 * 60) {
+      return Math.sin(((time - (17 * 60 + 30)) / 150) * Math.PI) * 0.18;
     }
     return 0;
   }

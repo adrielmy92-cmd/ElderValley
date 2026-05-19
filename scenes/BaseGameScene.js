@@ -1,13 +1,37 @@
-import Player from "../player/Player.js?v=132";
+import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=132";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=132";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=152";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
     this.entryData = data;
     this.isTransitioning = false;
+    this.captureDevModeFromUrl();
+  }
+
+  captureDevModeFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("dev") === "1") {
+      try {
+        localStorage.setItem("eldervalley-dev-mode", "1");
+      } catch {
+        // O jogo continua, apenas sem persistir o acesso dev.
+      }
+    }
+  }
+
+  isDevMode() {
+    try {
+      return localStorage.getItem("eldervalley-dev-mode") === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  showDevOnlyNotice() {
+    this.dialog?.show("DEV", "Esse recurso e exclusivo do desenvolvedor.");
   }
 
   createControls() {
@@ -22,7 +46,8 @@ export default class BaseGameScene extends Phaser.Scene {
       e: Phaser.Input.Keyboard.KeyCodes.E,
       space: Phaser.Input.Keyboard.KeyCodes.SPACE,
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
-      chat: Phaser.Input.Keyboard.KeyCodes.T
+      chat: Phaser.Input.Keyboard.KeyCodes.T,
+      attack: Phaser.Input.Keyboard.KeyCodes.Q
     });
   }
 
@@ -153,6 +178,10 @@ export default class BaseGameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.manualCollisionEditorKeys.toggle)) {
+      if (!this.isDevMode()) {
+        this.showDevOnlyNotice();
+        return;
+      }
       this.manualCollisionEditorEnabled = !this.manualCollisionEditorEnabled;
       this.collisionDebugEnabled = this.manualCollisionEditorEnabled || this.collisionDebugEnabled;
       this.registry.set("collisionDebugEnabled", this.collisionDebugEnabled);
@@ -202,7 +231,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.addManualCollisionRect(shape, false);
     });
     if (shouldSave) {
-      this.saveManualCollisionLayout({ syncRemote: true });
+      this.saveManualCollisionLayout();
     }
     this.redrawCollisionDebug();
     this.redrawManualCollisionEditor();
@@ -237,7 +266,7 @@ export default class BaseGameScene extends Phaser.Scene {
         return;
       }
       if (hasLocalSave && Array.isArray(localShapes)) {
-        this.saveRemoteManualCollisionLayout(localShapes);
+        this.writeLocalManualCollisionLayout(localShapes);
       }
     } catch {
       // Sem API remota, fica so no localStorage.
@@ -342,7 +371,8 @@ export default class BaseGameScene extends Phaser.Scene {
     } catch {
       // O editor continua funcionando mesmo se o storage estiver bloqueado.
     }
-    if (options.syncRemote !== false) {
+    this.setCreativeDirty?.(true);
+    if (options.syncRemote === true) {
       this.saveRemoteManualCollisionLayout(data);
     }
   }
@@ -501,6 +531,26 @@ export default class BaseGameScene extends Phaser.Scene {
       stroke: "#1a202b",
       strokeThickness: 4
     }).setScrollFactor(0).setDepth(3000);
+    this.clockText = this.add.text(0, 0, "08:00", {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: "#ffe6a8",
+      stroke: "#1a202b",
+      strokeThickness: 4
+    }).setScrollFactor(0).setDepth(3000);
+    this.coinText = this.add.text(0, 0, "Moedas: 0", {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: "#ffd66b",
+      stroke: "#1a202b",
+      strokeThickness: 4
+    }).setScrollFactor(0).setDepth(3000);
+    if (typeof this.registry.get("worldClockMinutes") !== "number") {
+      this.registry.set("worldClockMinutes", 8 * 60);
+    }
+    this.clockMinutesPerSecond = 5;
+    this.clockMinuteCarry = 0;
+    this.lastClockTick = this.time.now;
     this.layoutHud(this.scale.width);
     this.handleHudResize = (gameSize) => this.layoutHud(gameSize.width);
     this.scale.on("resize", this.handleHudResize);
@@ -510,8 +560,11 @@ export default class BaseGameScene extends Phaser.Scene {
       }
     });
     this.updateInventoryHud();
+    this.updateClockHud();
+    this.updateCurrencyHud();
     this.chat ??= new ChatSystem(this);
     this.multiplayer ??= new MultiplayerSystem(this);
+    this.createProfilePersistence();
   }
 
   layoutHud(width) {
@@ -520,11 +573,189 @@ export default class BaseGameScene extends Phaser.Scene {
     }
     this.cardIcon.setPosition(width - 72, 28);
     this.inventoryText.setPosition(width - 52, 18);
+    this.clockText?.setPosition(width - 152, 18);
+    this.coinText?.setPosition(width - 292, 18);
+  }
+
+  updateClockHud() {
+    const minutes = Math.floor(this.registry.get("worldClockMinutes") ?? 0) % 1440;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    this.clockText?.setText(`${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`);
+  }
+
+  updateWorldClock() {
+    if (!this.clockText) {
+      return;
+    }
+    const now = this.time.now;
+    if (!this.lastClockTick) {
+      this.lastClockTick = now;
+      return;
+    }
+    const elapsed = now - this.lastClockTick;
+    if (elapsed < 200) {
+      return;
+    }
+    this.lastClockTick = now;
+    const addFloat = (elapsed / 1000) * (this.clockMinutesPerSecond ?? 5) + (this.clockMinuteCarry ?? 0);
+    const addMinutes = Math.floor(addFloat);
+    this.clockMinuteCarry = addFloat - addMinutes;
+    if (addMinutes <= 0) {
+      return;
+    }
+    const current = this.registry.get("worldClockMinutes") ?? 0;
+    this.registry.set("worldClockMinutes", (current + addMinutes) % 1440);
+    this.updateClockHud();
   }
 
   updateInventoryHud() {
     const inventory = this.registry.get("inventory") ?? [];
     this.inventoryText?.setText(`x${inventory.length}`);
+  }
+
+  getPlayerProfileId() {
+    const registryProfileId = this.registry.get("playerProfileId") ?? localStorage.getItem("eldervalley-profile-id");
+    if (registryProfileId) {
+      return registryProfileId;
+    }
+
+    const login = this.registry.get("playerLogin");
+    if (login?.mode === "wallet" && login.address) {
+      const profileId = `wallet:${String(login.chain ?? "evm").toLowerCase()}:${String(login.address).toLowerCase()}`;
+      this.registry.set("playerProfileId", profileId);
+      try {
+        localStorage.setItem("eldervalley-profile-id", profileId);
+      } catch {
+        // Sem persistencia local, segue pelo registry.
+      }
+      return profileId;
+    }
+
+    const wallet = this.registry.get("walletAddress")
+      ?? this.registry.get("wallet")
+      ?? localStorage.getItem("eldervalley-wallet-address")
+      ?? localStorage.getItem("eldervalley-wallet");
+    if (wallet) {
+      return `wallet:${String(wallet).toLowerCase()}`;
+    }
+
+    let guestId = localStorage.getItem("eldervalley-guest-id");
+    if (!guestId) {
+      guestId = `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      try {
+        localStorage.setItem("eldervalley-guest-id", guestId);
+      } catch {
+        // O jogo segue com o id em memoria quando o navegador bloqueia storage.
+      }
+    }
+    return `guest:${guestId}`;
+  }
+
+  getCurrencyStorageKey() {
+    return `eldervalley-coins-${this.getPlayerProfileId()}`;
+  }
+
+  getCoins() {
+    const profileId = this.getPlayerProfileId();
+    const registryCoins = this.registry.get("coins");
+    if (typeof registryCoins === "number" && this.registry.get("coinsProfileId") === profileId) {
+      return registryCoins;
+    }
+    const saved = Number(localStorage.getItem(`eldervalley-coins-${profileId}`) ?? 0);
+    const coins = Number.isFinite(saved) ? Math.max(0, Math.floor(saved)) : 0;
+    this.registry.set("coins", coins);
+    this.registry.set("coinsProfileId", profileId);
+    return coins;
+  }
+
+  setCoins(amount) {
+    const coins = Math.max(0, Math.floor(amount));
+    const profileId = this.getPlayerProfileId();
+    this.registry.set("coins", coins);
+    this.registry.set("coinsProfileId", profileId);
+    try {
+      localStorage.setItem(`eldervalley-coins-${profileId}`, String(coins));
+    } catch {
+      // Continua salvo no registry da sessao.
+    }
+    this.updateCurrencyHud();
+    return coins;
+  }
+
+  addCoins(amount) {
+    const coins = this.setCoins(this.getCoins() + amount);
+    this.savePlayerProfileSoon();
+    return coins;
+  }
+
+  updateCurrencyHud() {
+    this.coinText?.setText(`Moedas: ${this.getCoins()}`);
+  }
+
+  createProfilePersistence() {
+    this.profileSaveTimer?.remove(false);
+    this.profileSaveTimer = this.time.addEvent({
+      delay: 3500,
+      loop: true,
+      callback: () => this.savePlayerProfile()
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.savePlayerProfile({ keepalive: true });
+      this.profileSaveTimer?.remove(false);
+    });
+  }
+
+  buildPlayerProfilePayload() {
+    const profileId = this.getPlayerProfileId();
+    const login = this.registry.get("playerLogin") ?? { mode: "guest" };
+    const previous = this.registry.get("playerProfile") ?? {};
+    return {
+      ...previous,
+      profileId,
+      loginMode: login.mode ?? previous.loginMode ?? "guest",
+      walletAddress: login.address ?? previous.walletAddress ?? "",
+      walletProvider: login.provider ?? previous.walletProvider ?? "",
+      selectedCharacter: this.player?.characterId ?? this.registry.get("playerCharacter") ?? previous.selectedCharacter ?? "mage-1",
+      coins: this.getCoins(),
+      ownedCharacters: [...new Set([...(previous.ownedCharacters ?? []), "mage-1", this.player?.characterId].filter(Boolean))],
+      ownedHouses: Array.isArray(previous.ownedHouses) ? previous.ownedHouses : [],
+      items: Array.isArray(previous.items) ? previous.items : [],
+      position: this.player ? {
+        scene: this.scene.key,
+        x: Math.round(this.player.x),
+        y: Math.round(this.player.y)
+      } : previous.position ?? null
+    };
+  }
+
+  async savePlayerProfile(options = {}) {
+    const profileId = this.getPlayerProfileId();
+    if (!profileId || window.location.protocol === "file:") {
+      return;
+    }
+    const now = this.time?.now ?? Date.now();
+    if (!options.keepalive && now - (this.lastProfileSaveAt ?? 0) < 2800) {
+      return;
+    }
+    this.lastProfileSaveAt = now;
+    const profile = this.buildPlayerProfilePayload();
+    this.registry.set("playerProfile", profile);
+    try {
+      await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile),
+        keepalive: options.keepalive === true
+      });
+    } catch {
+      // O servidor pode estar offline; o localStorage segue como fallback.
+    }
+  }
+
+  savePlayerProfileSoon() {
+    this.profileSaveSoonTimer?.remove(false);
+    this.profileSaveSoonTimer = this.time.delayedCall(250, () => this.savePlayerProfile());
   }
 
   addCardToInventory(cardName) {
@@ -541,10 +772,239 @@ export default class BaseGameScene extends Phaser.Scene {
 
     this.isTransitioning = true;
     this.player?.setVelocity(0, 0);
+    this.savePlayerProfile({ keepalive: true });
     this.input.keyboard.resetKeys();
     this.time.delayedCall(0, () => {
       this.scene.start(sceneKey, data);
     });
+  }
+
+  startTimedWork({
+    label = "Trabalhando",
+    durationMs,
+    totalGameMinutes,
+    coinsPerGameHour = 0,
+    rewardText = "Trabalho concluido.",
+    cancelText = "Voce saiu do trabalho mais cedo.",
+    allowCancel = true
+  } = {}) {
+    if (this.isWorking || !this.player) {
+      return false;
+    }
+
+    this.isWorking = true;
+    const clockSpeed = this.clockMinutesPerSecond ?? 5;
+    const workGameMinutes = totalGameMinutes ?? Math.max(1, Math.round(((durationMs ?? 9000) / 1000) * clockSpeed));
+    const workDurationMs = durationMs ?? (workGameMinutes / clockSpeed) * 1000;
+    const start = this.time.now;
+    const end = start + workDurationMs;
+    const maxCoins = Math.floor((workGameMinutes / 60) * coinsPerGameHour);
+    let finished = false;
+    this.player.setVelocity(0, 0);
+    this.player.setVisible(false);
+    if (this.player.body) {
+      this.player.body.enable = false;
+    }
+
+    const width = Math.min(460, Math.max(260, this.scale.width * 0.42));
+    const x = this.scale.width / 2;
+    const y = this.scale.height - 92;
+    const container = this.add.container(x, y).setScrollFactor(0).setDepth(3200);
+    const bg = this.add.rectangle(0, 0, width, 86, 0x121821, 0.94)
+      .setStrokeStyle(2, 0xf0c15d, 0.95);
+    const barBack = this.add.rectangle(0, 20, width - 40, 14, 0x253241, 1);
+    const barFill = this.add.rectangle(-(width - 40) / 2, 20, 1, 14, 0x7fe08a, 1)
+      .setOrigin(0, 0.5);
+    const text = this.add.text(0, -24, `${label} 0%`, {
+      fontFamily: "monospace",
+      fontSize: "15px",
+      color: "#fff2c4",
+      stroke: "#1a202b",
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    const detailText = this.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#d9e5ef",
+      stroke: "#1a202b",
+      strokeThickness: 3,
+      align: "center"
+    }).setOrigin(0.5);
+    const cancelHint = this.add.text(0, 39, allowCancel ? "ESC sair antes" : "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#ffd66b",
+      stroke: "#1a202b",
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    container.add([bg, barBack, barFill, text, detailText, cancelHint]);
+    this.workUi = container;
+    this.workCancelKey = allowCancel ? this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC) : null;
+
+    const formatHours = (minutes) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = Math.floor(minutes % 60);
+      return `${hours}h${String(mins).padStart(2, "0")}`;
+    };
+
+    const earnedCoinsFor = (elapsedGameMinutes) => Math.floor((elapsedGameMinutes / 60) * coinsPerGameHour);
+
+    const finishWork = (cancelled = false) => {
+      if (!this.isWorking || finished) {
+        return;
+      }
+      finished = true;
+      const elapsedMs = Phaser.Math.Clamp(this.time.now - start, 0, workDurationMs);
+      const elapsedGameMinutes = Math.min(workGameMinutes, (elapsedMs / 1000) * clockSpeed);
+      const earnedCoins = Math.min(maxCoins, earnedCoinsFor(elapsedGameMinutes));
+      if (earnedCoins > 0) {
+        this.addCoins(earnedCoins);
+      }
+      this.isWorking = false;
+      this.workTimer?.remove(false);
+      this.workTimer = null;
+      this.workUi?.destroy();
+      this.workUi = null;
+      this.workCancelKey = null;
+      this.finishTimedWork = null;
+      if (this.player?.body) {
+        this.player.body.enable = true;
+      }
+      this.player?.setVisible(true);
+      this.player?.playIdle?.();
+      const summary = earnedCoins > 0
+        ? `${cancelled ? cancelText : rewardText}\nTempo: ${formatHours(elapsedGameMinutes)} | +${earnedCoins} moedas`
+        : `${cancelled ? cancelText : rewardText}\nTempo: ${formatHours(elapsedGameMinutes)} | sem moedas ainda`;
+      const doneText = this.add.text(this.scale.width / 2, this.scale.height - 150, summary, {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#fff2c4",
+        backgroundColor: "#1b2430",
+        padding: { left: 10, right: 10, top: 6, bottom: 6 },
+        align: "center",
+        wordWrap: { width: Math.min(520, this.scale.width - 80) }
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(3200);
+      this.tweens.add({
+        targets: doneText,
+        alpha: 0,
+        delay: 1400,
+        duration: 400,
+        onComplete: () => doneText.destroy()
+      });
+    };
+    this.finishTimedWork = finishWork;
+
+    this.workTimer = this.time.addEvent({
+      delay: 60,
+      loop: true,
+      callback: () => {
+        const progress = Phaser.Math.Clamp((this.time.now - start) / workDurationMs, 0, 1);
+        const elapsedGameMinutes = Math.min(workGameMinutes, progress * workGameMinutes);
+        const earnedCoins = Math.min(maxCoins, earnedCoinsFor(elapsedGameMinutes));
+        barFill.width = Math.max(1, (width - 40) * progress);
+        text.setText(`${label} ${Math.floor(progress * 100)}%`);
+        detailText.setText(`${formatHours(elapsedGameMinutes)} / ${formatHours(workGameMinutes)} | ${coinsPerGameHour} moedas/h | +${earnedCoins}/${maxCoins} moedas`);
+        if (this.time.now >= end) {
+          finishWork();
+        }
+      }
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.workTimer?.remove(false);
+      this.workUi?.destroy();
+      this.workCancelKey = null;
+      this.finishTimedWork = null;
+      this.isWorking = false;
+    });
+
+    return true;
+  }
+
+  ensureFireballTextures() {
+    if (this.textures.exists("spell-fireball-0")) {
+      return;
+    }
+
+    const frames = [
+      { core: "#fff4a3", mid: "#ffb629", edge: "#f05a16" },
+      { core: "#fff9c7", mid: "#ff8f18", edge: "#d83b0e" },
+      { core: "#ffe172", mid: "#ff6f12", edge: "#b92b0a" }
+    ];
+
+    frames.forEach((colors, index) => {
+      const texture = this.textures.createCanvas(`spell-fireball-${index}`, 40, 24);
+      const ctx = texture.getContext();
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 40, 24);
+      ctx.fillStyle = colors.edge;
+      ctx.fillRect(4, 9, 26, 7);
+      ctx.fillRect(9, 5, 20, 15);
+      ctx.fillRect(28, 7, 6, 3);
+      ctx.fillRect(30, 15, 5, 3);
+      ctx.fillStyle = colors.mid;
+      ctx.fillRect(6, 10, 22, 5);
+      ctx.fillRect(11, 7, 16, 11);
+      ctx.fillRect(1 + index * 2, 11, 7, 3);
+      ctx.fillStyle = colors.core;
+      ctx.fillRect(11, 11, 13, 3);
+      ctx.fillRect(14, 9, 8, 7);
+      ctx.fillStyle = "#ff7a1b";
+      ctx.fillRect(32 - index, 4, 3, 3);
+      ctx.fillRect(35, 18 - index, 3, 2);
+      texture.refresh();
+    });
+  }
+
+  spawnFireball(x, y, facing = "down") {
+    if (!this.physics || this.isTransitioning) {
+      return null;
+    }
+
+    this.ensureFireballTextures();
+    const vectors = {
+      down: { x: 0, y: 1, angle: Math.PI / 2, offsetX: 0, offsetY: 30 },
+      up: { x: 0, y: -1, angle: -Math.PI / 2, offsetX: 0, offsetY: -36 },
+      left: { x: -1, y: 0, angle: Math.PI, offsetX: -34, offsetY: -6 },
+      right: { x: 1, y: 0, angle: 0, offsetX: 34, offsetY: -6 }
+    };
+    const vector = vectors[facing] ?? vectors.down;
+    const fireball = this.physics.add.sprite(x + vector.offsetX, y + vector.offsetY, "spell-fireball-0")
+      .setDepth(y + 1800)
+      .setRotation(vector.angle);
+    fireball.body.setAllowGravity(false);
+    fireball.body.setSize(18, 12);
+    fireball.setVelocity(vector.x * 300, vector.y * 300);
+    fireball.skipPerformanceCull = true;
+
+    let frame = 0;
+    const animation = this.time.addEvent({
+      delay: 70,
+      repeat: 10,
+      callback: () => {
+        if (!fireball.active) {
+          animation.remove(false);
+          return;
+        }
+        frame = (frame + 1) % 3;
+        fireball.setTexture(`spell-fireball-${frame}`);
+        fireball.setDepth(fireball.y + 1800);
+      }
+    });
+
+    const destroyFireball = () => {
+      animation.remove(false);
+      fireball.destroy();
+    };
+    if (this.solids) {
+      this.physics.add.collider(fireball, this.solids, destroyFireball);
+    }
+    this.time.delayedCall(720, () => {
+      if (fireball.active) {
+        destroyFireball();
+      }
+    });
+    return fireball;
   }
 
   updateBase() {
@@ -558,8 +1018,18 @@ export default class BaseGameScene extends Phaser.Scene {
 
     this.updateCollisionDebugControls();
     this.updateManualCollisionEditorControls();
+    this.updateWorldClock();
     this.chat?.update();
     this.multiplayer?.update(this.time.now);
+
+    if (this.isWorking) {
+      this.player.setVelocity(0, 0);
+      this.interactions.prompt?.setVisible(false);
+      if (this.workCancelKey && Phaser.Input.Keyboard.JustDown(this.workCancelKey)) {
+        this.finishTimedWork?.(true);
+      }
+      return;
+    }
 
     if (this.manualCollisionEditorEnabled) {
       this.player.setVelocity(0, 0);
@@ -579,6 +1049,12 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
 
+    if (!this.dialog.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.attack)) {
+      this.player.attack?.();
+      this.player.update(this.cursors, this.wasd, true);
+      return;
+    }
+
     const enterPressed = Phaser.Input.Keyboard.JustDown(this.interactKeys.enter);
     if (!this.dialog.active && enterPressed && !this.interactions.nearest) {
       this.chat?.open();
@@ -591,7 +1067,7 @@ export default class BaseGameScene extends Phaser.Scene {
       || enterPressed;
 
     if (pressedInteract) {
-      this.interactions.interact();
+      const interacted = this.interactions.interact();
       if (this.isTransitioning) {
         return;
       }

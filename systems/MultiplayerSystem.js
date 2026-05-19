@@ -1,4 +1,4 @@
-import { getPlayerCharacterProfile } from "../player/Player.js?v=132";
+import { getPlayerCharacterProfile } from "../player/Player.js?v=141";
 
 export default class MultiplayerSystem {
   constructor(scene) {
@@ -50,12 +50,45 @@ export default class MultiplayerSystem {
     const player = this.scene.player;
     return {
       scene: this.scene.scene.key,
+      sceneChannel: this.getSceneChannel(),
       x: Math.round(player?.x ?? 0),
       y: Math.round(player?.y ?? 0),
       facing: player?.facing ?? "down",
       characterId: player?.characterId ?? localStorage.getItem("eldervalley-selected-character") ?? "mage-1",
+      loginMode: localStorage.getItem("eldervalley-login-mode") ?? "guest",
+      walletAddress: this.getWalletAddress(),
+      walletProvider: this.getWalletProvider(),
       moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
     };
+  }
+
+  getWalletAddress() {
+    try {
+      const wallet = JSON.parse(localStorage.getItem("eldervalley-wallet") || "null");
+      return wallet?.address ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  getWalletProvider() {
+    try {
+      const wallet = JSON.parse(localStorage.getItem("eldervalley-wallet") || "null");
+      return wallet?.provider ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  getSceneChannel() {
+    const key = this.scene.scene.key;
+    if (this.scene.entryData?.exitSpawnKey) {
+      return `${key}:${this.scene.entryData.exitSpawnKey}`;
+    }
+    if (this.scene.entryData?.doorId) {
+      return `${key}:${this.scene.entryData.doorId}`;
+    }
+    return key;
   }
 
   send(payload) {
@@ -106,7 +139,7 @@ export default class MultiplayerSystem {
   }
 
   upsertRemotePlayer(data) {
-    if (!data || data.id === this.id || data.scene !== this.scene.scene.key) {
+    if (!data || data.id === this.id || this.getRemoteSceneChannel(data) !== this.getSceneChannel()) {
       if (data?.id) {
         this.removeRemotePlayer(data.id);
       }
@@ -120,6 +153,7 @@ export default class MultiplayerSystem {
     if (!remote) {
       const sprite = this.scene.add.sprite(data.x, data.y, profile.idleTexture, 0)
         .setOrigin(0.5, 0.5)
+        .setScale(this.getRemoteScale())
         .setDepth(data.y + 120);
       const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Jogador", {
         fontFamily: "monospace",
@@ -147,6 +181,7 @@ export default class MultiplayerSystem {
       remote.characterId = characterId;
       remote.profile = profile;
       remote.sprite.setTexture(profile.idleTexture, 0);
+      remote.sprite.setScale(this.getRemoteScale());
     }
     remote.name = data.name ?? remote.name;
     remote.targetX = Number(data.x) || remote.targetX;
@@ -155,6 +190,14 @@ export default class MultiplayerSystem {
     remote.moving = Boolean(data.moving);
     remote.nameText.setText(remote.name);
     this.playRemoteAnimation(remote);
+  }
+
+  getRemoteScale() {
+    return this.scene.player?.scaleX || 1;
+  }
+
+  getRemoteSceneChannel(data) {
+    return data.sceneChannel ?? data.scene;
   }
 
   playRemoteAnimation(remote) {
@@ -202,7 +245,7 @@ export default class MultiplayerSystem {
   }
 
   receiveChat(payload) {
-    if (payload.scene !== this.scene.scene.key) {
+    if ((payload.sceneChannel ?? payload.scene) !== this.getSceneChannel()) {
       return;
     }
     const remote = this.remotePlayers.get(payload.id);

@@ -4,6 +4,14 @@ const PLAYER_CHARACTERS = {
     label: "Mago 1",
     walkTexture: "mage-1-sheet",
     idleTexture: "mage-1-idle-sheet",
+    attackTexture: "mage-1-attack-normalized",
+    attackFrameWidth: 56,
+    attackFrameHeight: 84,
+    attackFrames: 8,
+    sideAttackTexture: "mage-1-side-attack-normalized",
+    sideAttackFrameWidth: 56,
+    sideAttackFrameHeight: 84,
+    sideAttackFrames: 8,
     animatedIdle: true,
     frameWidth: 56,
     frameHeight: 84,
@@ -12,22 +20,25 @@ const PLAYER_CHARACTERS = {
     speed: 145,
     depthBias: 120
   },
-  knight: {
-    id: "knight",
-    label: "Cavaleiro",
-    walkTexture: "knight-npc-sheet",
-    idleTexture: "knight-npc-sheet",
+  adventurer: {
+    id: "adventurer",
+    label: "Aventureiro",
+    walkTexture: "adventurer-sheet",
+    idleTexture: "adventurer-sheet",
     animatedIdle: false,
-    frameWidth: 80,
-    frameHeight: 84,
-    framesPerDirection: 8,
-    body: { width: 20, height: 14, offsetX: 30, offsetY: 68 },
-    speed: 136,
+    frameWidth: 48,
+    frameHeight: 68,
+    framesPerDirection: 3,
+    body: { width: 18, height: 14, offsetX: 15, offsetY: 52 },
+    speed: 145,
     depthBias: 120
   }
 };
 
 export function getPlayerCharacterProfile(id) {
+  if (id === "archer") {
+    return PLAYER_CHARACTERS.adventurer;
+  }
   return PLAYER_CHARACTERS[id] ?? PLAYER_CHARACTERS["mage-1"];
 }
 
@@ -45,6 +56,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.speed = profile.speed;
     this.facing = "down";
     this.depthBias = profile.depthBias;
+    this.isAttacking = false;
+    this.attackSprite = null;
     this.setScale(1);
     this.body.setSize(profile.body.width, profile.body.height).setOffset(profile.body.offsetX, profile.body.offsetY);
     this.setDepth(y + this.depthBias);
@@ -78,14 +91,33 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         repeat: -1
       });
     }
+
+    const makeAttackAnimation = (key, textureKey, frames) => {
+      if (textureKey && scene.textures.exists(textureKey) && !scene.anims.exists(key)) {
+        scene.anims.create({
+          key,
+          frames: Array.from({ length: frames ?? 1 }, (_, frame) => ({
+            key: textureKey,
+            frame
+          })),
+          frameRate: 14,
+          repeat: 0
+        });
+      }
+    };
+
+    makeAttackAnimation(`${prefix}-attack-front`, profile.attackTexture, profile.attackFrames);
+    makeAttackAnimation(`${prefix}-attack-side`, profile.sideAttackTexture, profile.sideAttackFrames);
   }
 
   update(cursors, wasd, frozen = false) {
     this.setDepth(this.y + this.depthBias);
 
-    if (frozen) {
+    if (frozen || this.isAttacking) {
       this.setVelocity(0, 0);
-      this.playIdle();
+      if (!this.isAttacking) {
+        this.playIdle();
+      }
       return;
     }
 
@@ -115,5 +147,54 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   playIdle() {
     this.play(`${this.animPrefix}-idle-${this.facing}`, true);
+  }
+
+  attack() {
+    const profile = this.profile;
+    const useSideAttack = (this.facing === "left" || this.facing === "right")
+      && profile.sideAttackTexture
+      && this.scene.textures.exists(profile.sideAttackTexture);
+    const textureKey = useSideAttack ? profile.sideAttackTexture : profile.attackTexture;
+    const animationKey = useSideAttack ? `${this.animPrefix}-attack-side` : `${this.animPrefix}-attack-front`;
+
+    if (this.isAttacking || !textureKey || !this.scene.textures.exists(textureKey)) {
+      return false;
+    }
+
+    this.isAttacking = true;
+    this.setVelocity(0, 0);
+    this.setTexture(textureKey, 0);
+    this.setFlipX(useSideAttack && this.facing === "left");
+    this.setScale(1);
+    this.setDepth(this.y + this.depthBias + 4);
+    this.play(animationKey, true);
+
+    this.scene.time.delayedCall(170, () => {
+      if (this.active && this.isAttacking) {
+        this.scene.spawnFireball?.(this.x, this.y, this.facing);
+      }
+    });
+
+    const finishAttack = () => {
+      if (!this.active) {
+        return;
+      }
+      this.isAttacking = false;
+      this.setFlipX(false);
+      this.setScale(1);
+      this.playIdle();
+    };
+
+    this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, finishAttack);
+
+    this.scene.time.delayedCall(720, () => {
+      if (!this.isAttacking) {
+        return;
+      }
+      this.off(Phaser.Animations.Events.ANIMATION_COMPLETE, finishAttack);
+      finishAttack();
+    });
+
+    return true;
   }
 }
