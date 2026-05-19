@@ -21,6 +21,7 @@ const dbPool = databaseUrl ? new pg.Pool({
   ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false }
 }) : null;
 let dbReadyPromise = null;
+let storageSeedPromise = null;
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -315,6 +316,12 @@ async function ensureDatabase() {
         data JSONB NOT NULL DEFAULT '{}'::jsonb
       );
       CREATE INDEX IF NOT EXISTS profiles_wallet_address_idx ON profiles (wallet_address);
+      CREATE TABLE IF NOT EXISTS game_storage (
+        storage_key TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `).then(() => true).catch((error) => {
       dbReadyPromise = null;
       console.error("[database] profile init failed:", error.message);
@@ -322,6 +329,72 @@ async function ensureDatabase() {
     });
   }
   return dbReadyPromise;
+}
+
+async function seedGameStorage() {
+  if (!dbPool || storageSeedPromise) {
+    return storageSeedPromise;
+  }
+  storageSeedPromise = (async () => {
+    if (!(await ensureDatabase())) {
+      return false;
+    }
+    try {
+      const seedPath = path.join(root, "data", "storage-seed.json");
+      const seed = JSON.parse(await readFile(seedPath, "utf8"));
+      for (const [key, value] of Object.entries(seed)) {
+        await dbPool.query(`
+          INSERT INTO game_storage (storage_key, data)
+          VALUES ($1, $2::jsonb)
+          ON CONFLICT (storage_key) DO NOTHING
+        `, [key, JSON.stringify(value)]);
+      }
+      return true;
+    } catch (error) {
+      console.error("[database] storage seed skipped:", error.message);
+      return false;
+    }
+  })();
+  return storageSeedPromise;
+}
+
+async function readGameStorage(key) {
+  if (await ensureDatabase()) {
+    await seedGameStorage();
+    const result = await dbPool.query("SELECT data, updated_at FROM game_storage WHERE storage_key = $1", [key]);
+    const row = result.rows[0];
+    return {
+      data: row?.data ?? null,
+      mtimeMs: row?.updated_at ? new Date(row.updated_at).getTime() : 0,
+      source: "postgres"
+    };
+  }
+
+  const storagePath = storagePathFor(key);
+  const data = JSON.parse(await readFile(storagePath, "utf8"));
+  const info = await stat(storagePath);
+  return { data, mtimeMs: info.mtimeMs, source: "json" };
+}
+
+async function writeGameStorage(key, data) {
+  if (await ensureDatabase()) {
+    await seedGameStorage();
+    const result = await dbPool.query(`
+      INSERT INTO game_storage (storage_key, data, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (storage_key) DO UPDATE SET
+        data = EXCLUDED.data,
+        updated_at = NOW()
+      RETURNING updated_at
+    `, [key, JSON.stringify(data)]);
+    return { mtimeMs: new Date(result.rows[0].updated_at).getTime(), source: "postgres" };
+  }
+
+  await mkdir(storageRoot, { recursive: true });
+  const storagePath = storagePathFor(key);
+  await writeFile(storagePath, JSON.stringify(data, null, 2), "utf8");
+  const info = await stat(storagePath);
+  return { mtimeMs: info.mtimeMs, source: "json" };
 }
 
 function rowToProfile(row) {
@@ -652,10 +725,8 @@ const server = createServer(async (req, res) => {
 
       if (req.method === "GET") {
         try {
-          const storagePath = storagePathFor(key);
-          const data = JSON.parse(await readFile(storagePath, "utf8"));
-          const info = await stat(storagePath);
-          sendJson(res, 200, { ok: true, key, data, mtimeMs: info.mtimeMs });
+          const result = await readGameStorage(key);
+          sendJson(res, 200, { ok: true, key, data: result.data, mtimeMs: result.mtimeMs, source: result.source });
         } catch {
           sendJson(res, 200, { ok: true, key, data: null, mtimeMs: 0 });
         }
@@ -675,16 +746,16 @@ const server = createServer(async (req, res) => {
 
         const body = await readBody(req);
         const payload = JSON.parse(body || "null");
-        await mkdir(storageRoot, { recursive: true });
-        const storagePath = storagePathFor(key);
         let previousData = null;
         let previousMtimeMs = 0;
         try {
-          const previous = await readFile(storagePath, "utf8");
-          previousData = JSON.parse(previous);
-          previousMtimeMs = (await stat(storagePath)).mtimeMs;
-          await mkdir(path.join(storageRoot, "backups"), { recursive: true });
-          await writeFile(backupPathFor(key), previous, "utf8");
+          const previous = await readGameStorage(key);
+          previousData = previous.data;
+          previousMtimeMs = previous.mtimeMs;
+          if (previousData !== null) {
+            await mkdir(path.join(storageRoot, "backups"), { recursive: true });
+            await writeFile(backupPathFor(key), JSON.stringify(previousData, null, 2), "utf8");
+          }
         } catch {
           // Primeiro save desse arquivo, sem backup anterior.
         }
@@ -692,9 +763,8 @@ const server = createServer(async (req, res) => {
           sendJson(res, 409, { ok: false, key, ignored: true, reason: "stale creative save" });
           return;
         }
-        await writeFile(storagePath, JSON.stringify(payload, null, 2), "utf8");
-        const info = await stat(storagePath);
-        sendJson(res, 200, { ok: true, key, mtimeMs: info.mtimeMs });
+        const result = await writeGameStorage(key, payload);
+        sendJson(res, 200, { ok: true, key, mtimeMs: result.mtimeMs, source: result.source });
         return;
       }
 
