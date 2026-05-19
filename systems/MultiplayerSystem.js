@@ -50,6 +50,7 @@ export default class MultiplayerSystem {
   getLocalState() {
     const player = this.scene.player;
     return {
+      presenceId: this.getPresenceId(),
       scene: this.scene.scene.key,
       sceneChannel: this.getSceneChannel(),
       x: Math.round(player?.x ?? 0),
@@ -61,6 +62,15 @@ export default class MultiplayerSystem {
       walletProvider: this.getWalletProvider(),
       moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
     };
+  }
+
+  getPresenceId() {
+    let presenceId = localStorage.getItem("eldervalley-presence-id");
+    if (!presenceId) {
+      presenceId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem("eldervalley-presence-id", presenceId);
+    }
+    return presenceId;
   }
 
   getWalletAddress() {
@@ -135,7 +145,7 @@ export default class MultiplayerSystem {
       return;
     }
     if (payload.type === "playerLeft") {
-      this.removeRemotePlayer(payload.id);
+      this.removeRemotePlayer(payload.presenceId ?? payload.id);
       return;
     }
     if (payload.type === "state") {
@@ -162,19 +172,19 @@ export default class MultiplayerSystem {
   }
 
   applySnapshot(peers) {
-    const visibleIds = new Set();
+    const visibleKeys = new Set();
     peers.forEach((player) => {
       if (!player || player.id === this.id) {
         return;
       }
       if (this.getRemoteSceneChannel(player) === this.getSceneChannel()) {
-        visibleIds.add(player.id);
+        visibleKeys.add(this.getRemoteKey(player));
         this.upsertRemotePlayer(player);
       }
     });
 
     [...this.remotePlayers.keys()].forEach((id) => {
-      if (!visibleIds.has(id)) {
+      if (!visibleKeys.has(id)) {
         this.removeRemotePlayer(id);
       }
     });
@@ -196,12 +206,13 @@ export default class MultiplayerSystem {
   upsertRemotePlayer(data) {
     if (!data || data.id === this.id || this.getRemoteSceneChannel(data) !== this.getSceneChannel()) {
       if (data?.id) {
-        this.removeRemotePlayer(data.id);
+        this.removeRemotePlayer(this.getRemoteKey(data));
       }
       return;
     }
 
-    let remote = this.remotePlayers.get(data.id);
+    const remoteKey = this.getRemoteKey(data);
+    let remote = this.remotePlayers.get(remoteKey);
     const characterId = data.characterId ?? "mage-1";
     const profile = getPlayerCharacterProfile(characterId);
     this.ensureRemoteAnimations(profile);
@@ -229,9 +240,10 @@ export default class MultiplayerSystem {
         facing: data.facing ?? "down",
         moving: false
       };
-      this.remotePlayers.set(data.id, remote);
+      this.remotePlayers.set(remoteKey, remote);
     }
 
+    remote.id = data.id ?? remote.id;
     if (remote.characterId !== characterId) {
       remote.characterId = characterId;
       remote.profile = profile;
@@ -259,6 +271,10 @@ export default class MultiplayerSystem {
 
   getRemoteSceneChannel(data) {
     return data.sceneChannel ?? data.scene;
+  }
+
+  getRemoteKey(data) {
+    return data?.presenceId ?? data?.id;
   }
 
   playRemoteAnimation(remote) {
@@ -309,7 +325,7 @@ export default class MultiplayerSystem {
     if ((payload.sceneChannel ?? payload.scene) !== this.getSceneChannel()) {
       return;
     }
-    const remote = this.remotePlayers.get(payload.id);
+    const remote = this.remotePlayers.get(payload.presenceId ?? payload.id) ?? this.findRemoteBySocketId(payload.id);
     this.scene.chat?.addMessage(payload.name ?? "Jogador", payload.message);
     if (remote) {
       this.scene.chat?.showBubbleFor(remote.sprite, payload.message);
@@ -321,13 +337,32 @@ export default class MultiplayerSystem {
   }
 
   removeRemotePlayer(id) {
-    const remote = this.remotePlayers.get(id);
+    const key = this.remotePlayers.has(id) ? id : this.findRemoteKeyBySocketId(id);
+    const remote = this.remotePlayers.get(key);
     if (!remote) {
       return;
     }
     remote.sprite.destroy();
     remote.nameText.destroy();
-    this.remotePlayers.delete(id);
+    this.remotePlayers.delete(key);
+  }
+
+  findRemoteBySocketId(id) {
+    for (const remote of this.remotePlayers.values()) {
+      if (remote.id === id) {
+        return remote;
+      }
+    }
+    return null;
+  }
+
+  findRemoteKeyBySocketId(id) {
+    for (const [key, remote] of this.remotePlayers.entries()) {
+      if (remote.id === id) {
+        return key;
+      }
+    }
+    return id;
   }
 
   clearRemotePlayers() {

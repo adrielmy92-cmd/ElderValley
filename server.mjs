@@ -209,6 +209,7 @@ function readWsMessages(buffer) {
 function publicPlayer(client) {
   return {
     id: client.id,
+    presenceId: client.presenceId,
     name: client.name,
     scene: client.scene,
     sceneChannel: client.sceneChannel,
@@ -234,9 +235,14 @@ function getServerClockMinutes() {
 }
 
 function publicPeers(exceptId = null) {
-  return [...clients.values()]
-    .filter((peer) => peer.id !== exceptId && peer.ready)
-    .map(publicPlayer);
+  const latestByPresence = new Map();
+  for (const peer of clients.values()) {
+    if (peer.id === exceptId || !peer.ready) {
+      continue;
+    }
+    latestByPresence.set(peer.presenceId || peer.id, peer);
+  }
+  return [...latestByPresence.values()].map(publicPlayer);
 }
 
 function broadcast(payload, exceptId = null) {
@@ -263,6 +269,7 @@ function handleWsPayload(client, payload) {
 
   if (payload.type === "hello") {
     const wasReady = client.ready;
+    client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
     client.scene = sanitizeText(payload.scene, 48) || "WorldScene";
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.scene;
@@ -293,6 +300,7 @@ function handleWsPayload(client, payload) {
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
+    client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     client.x = finiteNumber(payload.x, client.x);
     client.y = finiteNumber(payload.y, client.y);
     client.facing = sanitizeText(payload.facing, 12) || client.facing;
@@ -311,6 +319,7 @@ function handleWsPayload(client, payload) {
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
+    client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     client.x = finiteNumber(payload.x, client.x);
     client.y = finiteNumber(payload.y, client.y);
     sendWs(client.socket, {
@@ -332,6 +341,7 @@ function handleWsPayload(client, payload) {
     broadcast({
       type: "chat",
       id: client.id,
+      presenceId: client.presenceId,
       name: client.name,
       scene: client.scene,
       sceneChannel: client.sceneChannel,
@@ -911,6 +921,7 @@ server.on("upgrade", (req, socket) => {
   nextClientId += 1;
   const client = {
     id,
+    presenceId: id,
     socket,
     name: `Jogador ${id}`,
     scene: "WorldScene",
@@ -941,12 +952,20 @@ server.on("upgrade", (req, socket) => {
   });
 
   socket.on("close", () => {
+    const presenceId = client.presenceId || id;
     clients.delete(id);
-    broadcast({ type: "playerLeft", id });
+    const hasReplacement = [...clients.values()].some((peer) => peer.ready && (peer.presenceId || peer.id) === presenceId);
+    if (!hasReplacement) {
+      broadcast({ type: "playerLeft", id, presenceId });
+    }
   });
   socket.on("error", () => {
+    const presenceId = client.presenceId || id;
     clients.delete(id);
-    broadcast({ type: "playerLeft", id });
+    const hasReplacement = [...clients.values()].some((peer) => peer.ready && (peer.presenceId || peer.id) === presenceId);
+    if (!hasReplacement) {
+      broadcast({ type: "playerLeft", id, presenceId });
+    }
   });
 });
 
