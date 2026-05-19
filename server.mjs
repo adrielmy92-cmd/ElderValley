@@ -22,6 +22,7 @@ const dbPool = databaseUrl ? new pg.Pool({
 }) : null;
 let dbReadyPromise = null;
 let storageSeedPromise = null;
+let storageSeedCache = null;
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -340,8 +341,7 @@ async function seedGameStorage() {
       return false;
     }
     try {
-      const seedPath = path.join(root, "data", "storage-seed.json");
-      const seed = JSON.parse(await readFile(seedPath, "utf8"));
+      const seed = await loadStorageSeed();
       for (const [key, value] of Object.entries(seed)) {
         await dbPool.query(`
           INSERT INTO game_storage (storage_key, data)
@@ -358,6 +358,19 @@ async function seedGameStorage() {
   return storageSeedPromise;
 }
 
+async function loadStorageSeed() {
+  if (storageSeedCache) {
+    return storageSeedCache;
+  }
+  try {
+    const seedPath = path.join(root, "data", "storage-seed.json");
+    storageSeedCache = JSON.parse(await readFile(seedPath, "utf8"));
+  } catch {
+    storageSeedCache = {};
+  }
+  return storageSeedCache;
+}
+
 async function readGameStorage(key) {
   if (await ensureDatabase()) {
     await seedGameStorage();
@@ -371,9 +384,17 @@ async function readGameStorage(key) {
   }
 
   const storagePath = storagePathFor(key);
-  const data = JSON.parse(await readFile(storagePath, "utf8"));
-  const info = await stat(storagePath);
-  return { data, mtimeMs: info.mtimeMs, source: "json" };
+  try {
+    const data = JSON.parse(await readFile(storagePath, "utf8"));
+    const info = await stat(storagePath);
+    return { data, mtimeMs: info.mtimeMs, source: "json" };
+  } catch {
+    const seed = await loadStorageSeed();
+    if (Object.prototype.hasOwnProperty.call(seed, key)) {
+      return { data: seed[key], mtimeMs: 0, source: "seed" };
+    }
+    return { data: null, mtimeMs: 0, source: "empty" };
+  }
 }
 
 async function writeGameStorage(key, data) {
