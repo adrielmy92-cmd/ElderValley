@@ -234,24 +234,44 @@ function getServerClockMinutes() {
   return (worldClockStartMinutes + elapsedSeconds * worldClockMinutesPerSecond) % 1440;
 }
 
-function publicPeers(exceptId = null) {
+function publicPeers(exceptClient = null) {
+  const exceptId = typeof exceptClient === "object" ? exceptClient?.id : exceptClient;
+  const exceptPresenceId = typeof exceptClient === "object" ? exceptClient?.presenceId : null;
   const latestByPresence = new Map();
   for (const peer of clients.values()) {
-    if (peer.id === exceptId || !peer.ready) {
+    const peerPresenceId = peer.presenceId || peer.id;
+    if (peer.id === exceptId || peer.superseded || !peer.ready || (exceptPresenceId && peerPresenceId === exceptPresenceId)) {
       continue;
     }
-    latestByPresence.set(peer.presenceId || peer.id, peer);
+    latestByPresence.set(peerPresenceId, peer);
   }
   return [...latestByPresence.values()].map(publicPlayer);
 }
 
-function broadcast(payload, exceptId = null) {
+function broadcast(payload, exceptId = null, exceptPresenceId = null) {
   for (const client of clients.values()) {
-    if (client.id === exceptId || !client.ready) {
+    const clientPresenceId = client.presenceId || client.id;
+    if (client.id === exceptId || client.superseded || !client.ready || (exceptPresenceId && clientPresenceId === exceptPresenceId)) {
       continue;
     }
     sendWs(client.socket, payload);
   }
+}
+
+function supersedeOlderPresenceClients(activeClient) {
+  const presenceId = activeClient.presenceId || activeClient.id;
+  for (const peer of clients.values()) {
+    if (peer.id === activeClient.id || (peer.presenceId || peer.id) !== presenceId) {
+      continue;
+    }
+    peer.superseded = true;
+    sendWs(peer.socket, { type: "presenceReplaced" });
+    peer.socket.end();
+  }
+}
+
+function hasActivePresence(presenceId) {
+  return [...clients.values()].some((peer) => peer.ready && !peer.superseded && (peer.presenceId || peer.id) === presenceId);
 }
 
 function sanitizeText(value, maxLength = 120) {
@@ -270,6 +290,7 @@ function handleWsPayload(client, payload) {
   if (payload.type === "hello") {
     const wasReady = client.ready;
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
+    supersedeOlderPresenceClients(client);
     client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
     client.scene = sanitizeText(payload.scene, 48) || "WorldScene";
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.scene;
@@ -286,16 +307,16 @@ function handleWsPayload(client, payload) {
       type: "welcome",
       id: client.id,
       clockMinutes: getServerClockMinutes(),
-      peers: publicPeers(client.id)
+      peers: publicPeers(client)
     });
     if (!wasReady) {
-      broadcast({ type: "playerJoined", player: publicPlayer(client) }, client.id);
+      broadcast({ type: "playerJoined", player: publicPlayer(client) }, client.id, client.presenceId);
     }
     return;
   }
 
   if (payload.type === "state") {
-    if (!client.ready) {
+    if (!client.ready || client.superseded) {
       return;
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
@@ -309,12 +330,12 @@ function handleWsPayload(client, payload) {
     client.walletAddress = sanitizeText(payload.walletAddress, 80) || client.walletAddress || "";
     client.walletProvider = sanitizeText(payload.walletProvider, 32) || client.walletProvider || "";
     client.moving = Boolean(payload.moving);
-    broadcast({ type: "state", player: publicPlayer(client) }, client.id);
+    broadcast({ type: "state", player: publicPlayer(client) }, client.id, client.presenceId);
     return;
   }
 
   if (payload.type === "sync") {
-    if (!client.ready) {
+    if (!client.ready || client.superseded) {
       return;
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
@@ -325,13 +346,13 @@ function handleWsPayload(client, payload) {
     sendWs(client.socket, {
       type: "snapshot",
       clockMinutes: getServerClockMinutes(),
-      peers: publicPeers(client.id)
+      peers: publicPeers(client)
     });
     return;
   }
 
   if (payload.type === "chat") {
-    if (!client.ready) {
+    if (!client.ready || client.superseded) {
       return;
     }
     const message = sanitizeText(payload.message);
@@ -346,7 +367,7 @@ function handleWsPayload(client, payload) {
       scene: client.scene,
       sceneChannel: client.sceneChannel,
       message
-    }, client.id);
+    }, client.id, client.presenceId);
   }
 }
 
@@ -930,7 +951,9 @@ server.on("upgrade", (req, socket) => {
     facing: "down",
     characterId: "mage-1",
     moving: false,
-    ready: false
+    ready: false,
+    superseded: false,
+    closed: false
   };
   clients.set(id, client);
 
@@ -951,22 +974,20 @@ server.on("upgrade", (req, socket) => {
     }
   });
 
-  socket.on("close", () => {
+  const removeClient = () => {
+    if (client.closed) {
+      return;
+    }
+    client.closed = true;
     const presenceId = client.presenceId || id;
     clients.delete(id);
-    const hasReplacement = [...clients.values()].some((peer) => peer.ready && (peer.presenceId || peer.id) === presenceId);
-    if (!hasReplacement) {
+    if (!client.superseded && !hasActivePresence(presenceId)) {
       broadcast({ type: "playerLeft", id, presenceId });
     }
-  });
-  socket.on("error", () => {
-    const presenceId = client.presenceId || id;
-    clients.delete(id);
-    const hasReplacement = [...clients.values()].some((peer) => peer.ready && (peer.presenceId || peer.id) === presenceId);
-    if (!hasReplacement) {
-      broadcast({ type: "playerLeft", id, presenceId });
-    }
-  });
+  };
+
+  socket.on("close", removeClient);
+  socket.on("error", removeClient);
 });
 
 server.listen(port, host, () => {

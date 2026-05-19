@@ -140,6 +140,12 @@ export default class MultiplayerSystem {
       this.scene.handleSharedStorageUpdate?.(payload);
       return;
     }
+    if (payload.type === "presenceReplaced") {
+      this.connected = false;
+      this.clearRemotePlayers();
+      this.socket?.close();
+      return;
+    }
     if (payload.type === "playerJoined") {
       this.upsertRemotePlayer(payload.player);
       return;
@@ -174,7 +180,7 @@ export default class MultiplayerSystem {
   applySnapshot(peers) {
     const visibleKeys = new Set();
     peers.forEach((player) => {
-      if (!player || player.id === this.id) {
+      if (!player || player.id === this.id || player.presenceId === this.getPresenceId()) {
         return;
       }
       if (this.getRemoteSceneChannel(player) === this.getSceneChannel()) {
@@ -204,7 +210,7 @@ export default class MultiplayerSystem {
   }
 
   upsertRemotePlayer(data) {
-    if (!data || data.id === this.id || this.getRemoteSceneChannel(data) !== this.getSceneChannel()) {
+    if (!data || data.id === this.id || data.presenceId === this.getPresenceId() || this.getRemoteSceneChannel(data) !== this.getSceneChannel()) {
       if (data?.id) {
         this.removeRemotePlayer(this.getRemoteKey(data));
       }
