@@ -26,6 +26,7 @@ export default class MultiplayerSystem {
         name: this.getPlayerName(),
         ...this.getLocalState()
       });
+      this.requestSnapshot();
     });
     this.socket.addEventListener("message", (event) => this.handleMessage(event));
     this.socket.addEventListener("close", () => {
@@ -82,11 +83,14 @@ export default class MultiplayerSystem {
 
   getSceneChannel() {
     const key = this.scene.scene.key;
-    if (this.scene.entryData?.exitSpawnKey) {
-      return `${key}:${this.scene.entryData.exitSpawnKey}`;
+    if (key === "WorldScene" || key === "CityScene") {
+      return key;
     }
-    if (this.scene.entryData?.doorId) {
-      return `${key}:${this.scene.entryData.doorId}`;
+    const interiorId = this.scene.entryData?.doorId
+      ?? this.scene.entryData?.exitSpawnKey
+      ?? this.scene.entryData?.spawnKey;
+    if (interiorId) {
+      return `${key}:${interiorId}`;
     }
     return key;
   }
@@ -108,7 +112,18 @@ export default class MultiplayerSystem {
 
     if (payload.type === "welcome") {
       this.id = payload.id;
-      (payload.peers ?? []).forEach((player) => this.upsertRemotePlayer(player));
+      this.applyServerClock(payload.clockMinutes);
+      this.applySnapshot(payload.peers ?? []);
+      this.requestSnapshot();
+      return;
+    }
+    if (payload.type === "snapshot") {
+      this.applyServerClock(payload.clockMinutes);
+      this.applySnapshot(payload.peers ?? []);
+      return;
+    }
+    if (payload.type === "timeSync") {
+      this.applyServerClock(payload.clockMinutes);
       return;
     }
     if (payload.type === "playerJoined") {
@@ -138,6 +153,42 @@ export default class MultiplayerSystem {
     this.updateRemotePlayerDepths();
   }
 
+  requestSnapshot() {
+    this.send({ type: "sync", ...this.getLocalState() });
+  }
+
+  applySnapshot(peers) {
+    const visibleIds = new Set();
+    peers.forEach((player) => {
+      if (!player || player.id === this.id) {
+        return;
+      }
+      if (this.getRemoteSceneChannel(player) === this.getSceneChannel()) {
+        visibleIds.add(player.id);
+        this.upsertRemotePlayer(player);
+      }
+    });
+
+    [...this.remotePlayers.keys()].forEach((id) => {
+      if (!visibleIds.has(id)) {
+        this.removeRemotePlayer(id);
+      }
+    });
+  }
+
+  applyServerClock(clockMinutes) {
+    const minutes = Number(clockMinutes);
+    if (!Number.isFinite(minutes)) {
+      return;
+    }
+    const normalized = ((minutes % 1440) + 1440) % 1440;
+    this.scene.registry.set("worldClockServerMinutes", normalized);
+    this.scene.registry.set("worldClockSyncedAt", performance.now());
+    this.scene.registry.set("worldClockMinutes", normalized);
+    this.scene.updateClockHud?.();
+    this.scene.updateDayNightCycle?.(0);
+  }
+
   upsertRemotePlayer(data) {
     if (!data || data.id === this.id || this.getRemoteSceneChannel(data) !== this.getSceneChannel()) {
       if (data?.id) {
@@ -153,7 +204,7 @@ export default class MultiplayerSystem {
     if (!remote) {
       const sprite = this.scene.add.sprite(data.x, data.y, profile.idleTexture, 0)
         .setOrigin(0.5, 0.5)
-        .setScale(this.getRemoteScale())
+        .setScale(this.getRemoteScale(profile))
         .setDepth(data.y + 120);
       const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Jogador", {
         fontFamily: "monospace",
@@ -181,19 +232,25 @@ export default class MultiplayerSystem {
       remote.characterId = characterId;
       remote.profile = profile;
       remote.sprite.setTexture(profile.idleTexture, 0);
-      remote.sprite.setScale(this.getRemoteScale());
+      remote.sprite.setScale(this.getRemoteScale(profile));
     }
     remote.name = data.name ?? remote.name;
-    remote.targetX = Number(data.x) || remote.targetX;
-    remote.targetY = Number(data.y) || remote.targetY;
+    const nextX = Number(data.x);
+    const nextY = Number(data.y);
+    if (Number.isFinite(nextX)) {
+      remote.targetX = nextX;
+    }
+    if (Number.isFinite(nextY)) {
+      remote.targetY = nextY;
+    }
     remote.facing = data.facing ?? remote.facing;
     remote.moving = Boolean(data.moving);
     remote.nameText.setText(remote.name);
     this.playRemoteAnimation(remote);
   }
 
-  getRemoteScale() {
-    return this.scene.player?.scaleX || 1;
+  getRemoteScale(profile) {
+    return profile?.scale ?? 1;
   }
 
   getRemoteSceneChannel(data) {

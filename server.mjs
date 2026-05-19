@@ -44,6 +44,9 @@ const types = {
 };
 const clients = new Map();
 let nextClientId = 1;
+const worldClockStartedAt = Date.now();
+const worldClockStartMinutes = 8 * 60;
+const worldClockMinutesPerSecond = 5;
 
 function sendJson(res, status, value) {
   res.writeHead(status, {
@@ -220,6 +223,22 @@ function publicPlayer(client) {
   };
 }
 
+function finiteNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function getServerClockMinutes() {
+  const elapsedSeconds = (Date.now() - worldClockStartedAt) / 1000;
+  return (worldClockStartMinutes + elapsedSeconds * worldClockMinutesPerSecond) % 1440;
+}
+
+function publicPeers(exceptId = null) {
+  return [...clients.values()]
+    .filter((peer) => peer.id !== exceptId && peer.ready)
+    .map(publicPlayer);
+}
+
 function broadcast(payload, exceptId = null) {
   for (const client of clients.values()) {
     if (client.id === exceptId || !client.ready) {
@@ -247,8 +266,8 @@ function handleWsPayload(client, payload) {
     client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
     client.scene = sanitizeText(payload.scene, 48) || "WorldScene";
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.scene;
-    client.x = Number(payload.x) || 0;
-    client.y = Number(payload.y) || 0;
+    client.x = finiteNumber(payload.x, 0);
+    client.y = finiteNumber(payload.y, 0);
     client.facing = sanitizeText(payload.facing, 12) || "down";
     client.characterId = sanitizeText(payload.characterId, 24) || "mage-1";
     client.loginMode = sanitizeText(payload.loginMode, 16) || "guest";
@@ -259,7 +278,8 @@ function handleWsPayload(client, payload) {
     sendWs(client.socket, {
       type: "welcome",
       id: client.id,
-      peers: [...clients.values()].filter((peer) => peer.id !== client.id && peer.ready).map(publicPlayer)
+      clockMinutes: getServerClockMinutes(),
+      peers: publicPeers(client.id)
     });
     if (!wasReady) {
       broadcast({ type: "playerJoined", player: publicPlayer(client) }, client.id);
@@ -273,8 +293,8 @@ function handleWsPayload(client, payload) {
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
     client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
-    client.x = Number(payload.x) || client.x;
-    client.y = Number(payload.y) || client.y;
+    client.x = finiteNumber(payload.x, client.x);
+    client.y = finiteNumber(payload.y, client.y);
     client.facing = sanitizeText(payload.facing, 12) || client.facing;
     client.characterId = sanitizeText(payload.characterId, 24) || client.characterId;
     client.loginMode = sanitizeText(payload.loginMode, 16) || client.loginMode || "guest";
@@ -282,6 +302,22 @@ function handleWsPayload(client, payload) {
     client.walletProvider = sanitizeText(payload.walletProvider, 32) || client.walletProvider || "";
     client.moving = Boolean(payload.moving);
     broadcast({ type: "state", player: publicPlayer(client) }, client.id);
+    return;
+  }
+
+  if (payload.type === "sync") {
+    if (!client.ready) {
+      return;
+    }
+    client.scene = sanitizeText(payload.scene, 48) || client.scene;
+    client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
+    client.x = finiteNumber(payload.x, client.x);
+    client.y = finiteNumber(payload.y, client.y);
+    sendWs(client.socket, {
+      type: "snapshot",
+      clockMinutes: getServerClockMinutes(),
+      peers: publicPeers(client.id)
+    });
     return;
   }
 
@@ -910,6 +946,10 @@ server.on("upgrade", (req, socket) => {
 server.listen(port, host, () => {
   console.log(`ElderValley server listening on ${host}:${port}`);
 });
+
+setInterval(() => {
+  broadcast({ type: "timeSync", clockMinutes: getServerClockMinutes() });
+}, 5000).unref();
 
 function shutdown(signal) {
   console.log(`Received ${signal}, shutting down ElderValley server...`);

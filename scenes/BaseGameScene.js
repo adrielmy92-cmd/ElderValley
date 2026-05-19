@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=132";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=152";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=181";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -616,6 +616,15 @@ export default class BaseGameScene extends Phaser.Scene {
 
   updateWorldClock() {
     if (!this.clockText) {
+      return;
+    }
+    const serverMinutes = this.registry.get("worldClockServerMinutes");
+    const syncedAt = this.registry.get("worldClockSyncedAt");
+    if (typeof serverMinutes === "number" && typeof syncedAt === "number") {
+      const elapsedSeconds = Math.max(0, (performance.now() - syncedAt) / 1000);
+      const minutes = (serverMinutes + elapsedSeconds * (this.clockMinutesPerSecond ?? 5)) % 1440;
+      this.registry.set("worldClockMinutes", minutes);
+      this.updateClockHud();
       return;
     }
     const now = this.time.now;
