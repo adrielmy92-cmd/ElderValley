@@ -87,6 +87,7 @@ export default class WalletSystem {
       chainId,
       address: accounts[0]
     };
+    await this.authenticateEvmWallet(provider);
     await this.loadProfile();
     this.status = "MetaMask conectada.";
     this.saveWallet();
@@ -108,6 +109,7 @@ export default class WalletSystem {
         chainId,
         address: accounts[0]
       };
+      await this.authenticateEvmWallet(evmProvider);
       await this.loadProfile();
       this.status = "Phantom EVM conectada.";
       this.saveWallet();
@@ -144,6 +146,7 @@ export default class WalletSystem {
     this.wallet = null;
     this.profile = null;
     this.status = message;
+    localStorage.removeItem("eldervalley-session-token");
     this.saveWallet();
     this.scene.refreshWalletDock?.();
   }
@@ -193,6 +196,68 @@ export default class WalletSystem {
     return `wallet-profile-${chain}-${address}`;
   }
 
+  getProfileId() {
+    if (!this.wallet?.address) {
+      return "";
+    }
+    if (this.wallet.profileId) {
+      return this.wallet.profileId;
+    }
+    return `wallet:${String(this.wallet.chain ?? "evm").toLowerCase()}:${this.wallet.address.toLowerCase()}`;
+  }
+
+  getAuthHeaders() {
+    const token = this.wallet?.sessionToken ?? localStorage.getItem("eldervalley-session-token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async authenticateEvmWallet(provider) {
+    if (!this.wallet?.address || !provider?.request) {
+      throw new Error("Carteira EVM invalida.");
+    }
+    const challengeResponse = await fetch("/api/auth/nonce", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: this.wallet.address,
+        chain: this.wallet.chain,
+        provider: this.wallet.provider
+      })
+    });
+    const challenge = await challengeResponse.json();
+    if (!challengeResponse.ok || !challenge?.message) {
+      throw new Error(challenge?.error ?? "Nao foi possivel criar o desafio da carteira.");
+    }
+    const signature = await provider.request({
+      method: "personal_sign",
+      params: [challenge.message, this.wallet.address]
+    });
+    const verifyResponse = await fetch("/api/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: this.wallet.address,
+        chain: this.wallet.chain,
+        provider: this.wallet.provider,
+        nonce: challenge.nonce,
+        message: challenge.message,
+        signature
+      })
+    });
+    const verified = await verifyResponse.json();
+    if (!verifyResponse.ok || !verified?.token) {
+      throw new Error(verified?.error ?? "Assinatura da carteira nao foi validada.");
+    }
+    this.wallet.sessionToken = verified.token;
+    this.wallet.profileId = verified.profileId;
+    this.profile = this.normalizeProfile(verified.profile);
+    localStorage.setItem("eldervalley-session-token", verified.token);
+    localStorage.setItem("eldervalley-profile-id", verified.profileId);
+    this.scene.registry.set("playerSessionToken", verified.token);
+    this.scene.registry.set("playerProfileId", verified.profileId);
+    this.scene.registry.set("playerProfile", this.profile);
+  }
+
   createDefaultProfile() {
     return {
       version: 1,
@@ -221,12 +286,15 @@ export default class WalletSystem {
     }
 
     const cacheKey = this.getProfileKey();
-    const storageKey = this.getStorageKey();
+    const profileId = this.getProfileId();
     let profile = null;
     try {
-      const response = await fetch(`/api/storage/${encodeURIComponent(storageKey)}`, { cache: "no-store" });
+      const response = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+        cache: "no-store",
+        headers: this.getAuthHeaders()
+      });
       const result = await response.json();
-      profile = result?.data ?? null;
+      profile = response.ok ? result?.profile ?? null : null;
     } catch {
       profile = null;
     }
@@ -244,6 +312,14 @@ export default class WalletSystem {
     if (this.profile.selectedCharacter) {
       localStorage.setItem("eldervalley-selected-character", this.profile.selectedCharacter);
       this.scene.selectedCharacter = this.profile.selectedCharacter;
+    }
+    if (profileId) {
+      localStorage.setItem("eldervalley-profile-id", profileId);
+      this.scene.registry.set("playerProfileId", profileId);
+      this.scene.registry.set("playerProfile", this.profile);
+      if (this.wallet?.sessionToken) {
+        this.scene.registry.set("playerSessionToken", this.wallet.sessionToken);
+      }
     }
     return this.profile;
   }
@@ -269,9 +345,9 @@ export default class WalletSystem {
     this.profile.updatedAt = new Date().toISOString();
     localStorage.setItem(this.getProfileKey(), JSON.stringify(this.profile));
     try {
-      await fetch(`/api/storage/${encodeURIComponent(this.getStorageKey())}`, {
+      await fetch(`/api/profile/${encodeURIComponent(this.getProfileId())}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...this.getAuthHeaders() },
         body: JSON.stringify(this.profile)
       });
     } catch {

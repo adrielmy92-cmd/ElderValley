@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=161";
+import WalletSystem from "../systems/WalletSystem.js?v=180";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -1004,7 +1004,13 @@ export default class TitleScene extends Phaser.Scene {
     }
     this.started = true;
     this.applyLoginIdentity();
-    await this.loadProfileBeforeGame();
+    const profileReady = await this.loadProfileBeforeGame();
+    if (!profileReady) {
+      this.started = false;
+      this.walletSystem.status = "Assine a carteira novamente para carregar seu perfil.";
+      this.showLoginOverlay(true);
+      return;
+    }
     this.registry.set("playerCharacter", this.selectedCharacter);
     localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     this.stopTitleMusic(false);
@@ -1020,8 +1026,12 @@ export default class TitleScene extends Phaser.Scene {
       const wallet = this.walletSystem.wallet;
       const name = `Holder ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
       localStorage.setItem("eldervalley-player-name", name);
-      const profileId = `wallet:${String(wallet.chain ?? "evm").toLowerCase()}:${wallet.address.toLowerCase()}`;
+      const profileId = wallet.profileId ?? `wallet:${String(wallet.chain ?? "evm").toLowerCase()}:${wallet.address.toLowerCase()}`;
       localStorage.setItem("eldervalley-profile-id", profileId);
+      if (wallet.sessionToken) {
+        localStorage.setItem("eldervalley-session-token", wallet.sessionToken);
+        this.registry.set("playerSessionToken", wallet.sessionToken);
+      }
       this.registry.set("playerLogin", {
         mode: "wallet",
         provider: wallet.provider,
@@ -1050,16 +1060,23 @@ export default class TitleScene extends Phaser.Scene {
   async loadProfileBeforeGame() {
     const profileId = this.registry.get("playerProfileId") ?? localStorage.getItem("eldervalley-profile-id");
     if (!profileId || window.location.protocol === "file:") {
-      return;
+      return true;
     }
 
     try {
-      const response = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, { cache: "no-store" });
+      const token = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
+      const response = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+        cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) {
+        return !profileId.startsWith("wallet:");
+      }
       const payload = await response.json();
       const profile = payload?.profile;
       if (!profile) {
         await this.saveInitialProfile(profileId);
-        return;
+        return true;
       }
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
@@ -1070,6 +1087,7 @@ export default class TitleScene extends Phaser.Scene {
     } catch {
       // Se o servidor nao responder, entra com o cache local.
     }
+    return true;
   }
 
   async saveInitialProfile(profileId) {
@@ -1087,9 +1105,10 @@ export default class TitleScene extends Phaser.Scene {
     };
     this.registry.set("playerProfile", profile);
     try {
+      const token = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
       await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(profile)
       });
     } catch {

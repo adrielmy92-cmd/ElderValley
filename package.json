@@ -8,5 +8,9 @@
   },
   "scripts": {
     "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0",
+    "pg": "^8.21.0"
   }
 }

@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyMessage } from "ethers";
+import pg from "pg";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 5188);
@@ -11,6 +13,14 @@ const storageRoot = path.join(root, ".eldervalley-storage");
 const profileRoot = path.join(storageRoot, "profiles");
 const allowRemoteCreativeWrites = process.env.ELDERVALLEY_ALLOW_CREATIVE_WRITES === "true";
 const adminStorageToken = process.env.ELDERVALLEY_ADMIN_TOKEN ?? "";
+const sessionSecret = process.env.ELDERVALLEY_SESSION_SECRET ?? crypto.randomBytes(32).toString("hex");
+const authNonces = new Map();
+const databaseUrl = process.env.DATABASE_URL ?? "";
+const dbPool = databaseUrl ? new pg.Pool({
+  connectionString: databaseUrl,
+  ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false }
+}) : null;
+let dbReadyPromise = null;
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -29,6 +39,81 @@ function sendJson(res, status, value) {
     "Cache-Control": "no-store"
   });
   res.end(JSON.stringify(value));
+}
+
+function base64Url(input) {
+  return Buffer.from(input)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function fromBase64Url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function signSessionPayload(payloadBase64) {
+  return base64Url(crypto.createHmac("sha256", sessionSecret).update(payloadBase64).digest());
+}
+
+function createSessionToken(session) {
+  const payload = {
+    ...session,
+    exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+  };
+  const payloadBase64 = base64Url(JSON.stringify(payload));
+  return `${payloadBase64}.${signSessionPayload(payloadBase64)}`;
+}
+
+function readSessionToken(req) {
+  const auth = String(req.headers.authorization ?? "");
+  if (auth.toLowerCase().startsWith("bearer ")) {
+    return auth.slice(7).trim();
+  }
+  return String(req.headers["x-eldervalley-session"] ?? "").trim();
+}
+
+function verifySessionToken(token) {
+  if (!token || !token.includes(".")) {
+    return null;
+  }
+  const [payloadBase64, signature] = token.split(".");
+  const expected = signSessionPayload(payloadBase64);
+  const left = Buffer.from(signature);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(fromBase64Url(payloadBase64));
+    if (!payload?.profileId || !payload?.exp || Date.now() > Number(payload.exp)) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function isWalletProfile(profileId) {
+  return String(profileId).toLowerCase().startsWith("wallet:");
+}
+
+function walletProfileId(chain, address) {
+  return `wallet:${String(chain ?? "evm").toLowerCase()}:${String(address ?? "").toLowerCase()}`;
+}
+
+function requireProfileSession(req, profileId) {
+  if (!isWalletProfile(profileId)) {
+    return { ok: true, session: null };
+  }
+  const session = verifySessionToken(readSessionToken(req));
+  if (!session || session.profileId !== profileId) {
+    return { ok: false, session: null };
+  }
+  return { ok: true, session };
 }
 
 function sendWs(socket, payload) {
@@ -208,6 +293,127 @@ function profilePathFor(profileId) {
   return path.join(profileRoot, `${safeProfileId}.json`);
 }
 
+async function ensureDatabase() {
+  if (!dbPool) {
+    return false;
+  }
+  if (!dbReadyPromise) {
+    dbReadyPromise = dbPool.query(`
+      CREATE TABLE IF NOT EXISTS profiles (
+        profile_id TEXT PRIMARY KEY,
+        login_mode TEXT NOT NULL DEFAULT 'guest',
+        wallet_address TEXT NOT NULL DEFAULT '',
+        wallet_provider TEXT NOT NULL DEFAULT '',
+        selected_character TEXT NOT NULL DEFAULT 'mage-1',
+        coins INTEGER NOT NULL DEFAULT 0,
+        owned_characters JSONB NOT NULL DEFAULT '[]'::jsonb,
+        owned_houses JSONB NOT NULL DEFAULT '[]'::jsonb,
+        items JSONB NOT NULL DEFAULT '[]'::jsonb,
+        position JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        data JSONB NOT NULL DEFAULT '{}'::jsonb
+      );
+      CREATE INDEX IF NOT EXISTS profiles_wallet_address_idx ON profiles (wallet_address);
+    `).then(() => true).catch((error) => {
+      dbReadyPromise = null;
+      console.error("[database] profile init failed:", error.message);
+      return false;
+    });
+  }
+  return dbReadyPromise;
+}
+
+function rowToProfile(row) {
+  if (!row) {
+    return null;
+  }
+  return normalizeProfile(row.profile_id, {
+    ...(row.data ?? {}),
+    loginMode: row.login_mode,
+    walletAddress: row.wallet_address,
+    walletProvider: row.wallet_provider,
+    selectedCharacter: row.selected_character,
+    coins: row.coins,
+    ownedCharacters: row.owned_characters,
+    ownedHouses: row.owned_houses,
+    items: row.items,
+    position: row.position,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined
+  });
+}
+
+async function readProfile(profileId) {
+  if (await ensureDatabase()) {
+    const result = await dbPool.query("SELECT * FROM profiles WHERE profile_id = $1", [profileId]);
+    return { profile: rowToProfile(result.rows[0]), mtimeMs: result.rows[0]?.updated_at ? new Date(result.rows[0].updated_at).getTime() : 0, source: "postgres" };
+  }
+
+  const profilePath = profilePathFor(profileId);
+  const data = JSON.parse(await readFile(profilePath, "utf8"));
+  const info = await stat(profilePath);
+  return { profile: normalizeProfile(profileId, data), mtimeMs: info.mtimeMs, source: "json" };
+}
+
+async function writeProfile(profileId, data) {
+  const profile = normalizeProfile(profileId, data);
+  if (await ensureDatabase()) {
+    const result = await dbPool.query(`
+      INSERT INTO profiles (
+        profile_id,
+        login_mode,
+        wallet_address,
+        wallet_provider,
+        selected_character,
+        coins,
+        owned_characters,
+        owned_houses,
+        items,
+        position,
+        created_at,
+        updated_at,
+        data
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, COALESCE($11::timestamptz, NOW()), NOW(), $12::jsonb)
+      ON CONFLICT (profile_id) DO UPDATE SET
+        login_mode = EXCLUDED.login_mode,
+        wallet_address = EXCLUDED.wallet_address,
+        wallet_provider = EXCLUDED.wallet_provider,
+        selected_character = EXCLUDED.selected_character,
+        coins = EXCLUDED.coins,
+        owned_characters = EXCLUDED.owned_characters,
+        owned_houses = EXCLUDED.owned_houses,
+        items = EXCLUDED.items,
+        position = EXCLUDED.position,
+        updated_at = NOW(),
+        data = EXCLUDED.data
+      RETURNING *
+    `, [
+      profile.profileId,
+      profile.loginMode,
+      profile.walletAddress,
+      profile.walletProvider,
+      profile.selectedCharacter,
+      profile.coins,
+      JSON.stringify(profile.ownedCharacters),
+      JSON.stringify(profile.ownedHouses),
+      JSON.stringify(profile.items),
+      profile.position ? JSON.stringify(profile.position) : null,
+      profile.createdAt || null,
+      JSON.stringify(profile)
+    ]);
+    const row = result.rows[0];
+    return { profile: rowToProfile(row), mtimeMs: new Date(row.updated_at).getTime(), source: "postgres" };
+  }
+
+  await mkdir(profileRoot, { recursive: true });
+  const profilePath = profilePathFor(profileId);
+  await writeFile(profilePath, JSON.stringify(profile, null, 2), "utf8");
+  const info = await stat(profilePath);
+  return { profile, mtimeMs: info.mtimeMs, source: "json" };
+}
+
 function backupPathFor(key) {
   const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, "_");
   return path.join(storageRoot, "backups", `${safeKey}-${Date.now()}.json`);
@@ -316,19 +522,109 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/auth/nonce") {
+      if (req.method !== "POST") {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      const body = await readBody(req);
+      const payload = JSON.parse(body || "{}");
+      const address = sanitizeText(payload.address, 90);
+      const chain = sanitizeText(payload.chain, 32) || "EVM";
+      const provider = sanitizeText(payload.provider, 32);
+      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        sendJson(res, 400, { ok: false, error: "Invalid EVM address" });
+        return;
+      }
+      const nonce = crypto.randomBytes(16).toString("hex");
+      const issuedAt = new Date().toISOString();
+      const message = [
+        "ElderValley Login",
+        "",
+        "Assine para entrar com seguranca.",
+        `Carteira: ${address}`,
+        `Rede: ${chain}`,
+        `Nonce: ${nonce}`,
+        `Emitido em: ${issuedAt}`
+      ].join("\n");
+      const key = `${chain.toLowerCase()}:${address.toLowerCase()}`;
+      authNonces.set(key, { nonce, message, provider, expiresAt: Date.now() + 5 * 60 * 1000 });
+      sendJson(res, 200, { ok: true, nonce, message, issuedAt });
+      return;
+    }
+
+    if (url.pathname === "/api/auth/verify") {
+      if (req.method !== "POST") {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      const body = await readBody(req);
+      const payload = JSON.parse(body || "{}");
+      const address = sanitizeText(payload.address, 90);
+      const chain = sanitizeText(payload.chain, 32) || "EVM";
+      const provider = sanitizeText(payload.provider, 32);
+      const signature = sanitizeText(payload.signature, 300);
+      const nonce = sanitizeText(payload.nonce, 80);
+      const message = String(payload.message ?? "");
+      const key = `${chain.toLowerCase()}:${address.toLowerCase()}`;
+      const expected = authNonces.get(key);
+      if (!address || !signature || !expected || expected.nonce !== nonce || expected.message !== message || Date.now() > expected.expiresAt) {
+        sendJson(res, 401, { ok: false, error: "Invalid or expired login challenge" });
+        return;
+      }
+      let recovered = "";
+      try {
+        recovered = verifyMessage(message, signature);
+      } catch {
+        sendJson(res, 401, { ok: false, error: "Invalid wallet signature" });
+        return;
+      }
+      if (recovered.toLowerCase() !== address.toLowerCase()) {
+        sendJson(res, 401, { ok: false, error: "Signature does not match wallet" });
+        return;
+      }
+      authNonces.delete(key);
+      const profileId = walletProfileId(chain, address);
+      const token = createSessionToken({ profileId, address: address.toLowerCase(), chain, provider });
+      let profile = null;
+      try {
+        profile = (await readProfile(profileId)).profile;
+      } catch {
+        profile = normalizeProfile(profileId, {
+          loginMode: "wallet",
+          walletAddress: address,
+          walletProvider: provider,
+          selectedCharacter: "mage-1",
+          ownedCharacters: ["mage-1"],
+          ownedHouses: [],
+          items: []
+        });
+        try {
+          profile = (await writeProfile(profileId, profile)).profile;
+        } catch {
+          // A sessao ainda pode iniciar; o proximo save tenta persistir novamente.
+        }
+      }
+      sendJson(res, 200, { ok: true, token, profileId, profile });
+      return;
+    }
+
     if (url.pathname.startsWith("/api/profile/")) {
       const profileId = decodeURIComponent(url.pathname.slice("/api/profile/".length));
       if (!profileId) {
         sendJson(res, 400, { ok: false, error: "Missing profile id" });
         return;
       }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) {
+        sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
 
-      const profilePath = profilePathFor(profileId);
       if (req.method === "GET") {
         try {
-          const data = JSON.parse(await readFile(profilePath, "utf8"));
-          const info = await stat(profilePath);
-          sendJson(res, 200, { ok: true, profile: normalizeProfile(profileId, data), mtimeMs: info.mtimeMs });
+          const result = await readProfile(profileId);
+          sendJson(res, 200, { ok: true, profile: result.profile, mtimeMs: result.mtimeMs, source: result.source });
         } catch {
           sendJson(res, 200, { ok: true, profile: null, mtimeMs: 0 });
         }
@@ -338,11 +634,8 @@ const server = createServer(async (req, res) => {
       if (req.method === "POST") {
         const body = await readBody(req);
         const payload = JSON.parse(body || "null");
-        const nextProfile = normalizeProfile(profileId, payload);
-        await mkdir(profileRoot, { recursive: true });
-        await writeFile(profilePath, JSON.stringify(nextProfile, null, 2), "utf8");
-        const info = await stat(profilePath);
-        sendJson(res, 200, { ok: true, profile: nextProfile, mtimeMs: info.mtimeMs });
+        const result = await writeProfile(profileId, payload);
+        sendJson(res, 200, { ok: true, profile: result.profile, mtimeMs: result.mtimeMs, source: result.source });
         return;
       }
 

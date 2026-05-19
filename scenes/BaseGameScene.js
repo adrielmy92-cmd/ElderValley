@@ -742,9 +742,10 @@ export default class BaseGameScene extends Phaser.Scene {
     const profile = this.buildPlayerProfilePayload();
     this.registry.set("playerProfile", profile);
     try {
+      const token = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
       await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(profile),
         keepalive: options.keepalive === true
       });
