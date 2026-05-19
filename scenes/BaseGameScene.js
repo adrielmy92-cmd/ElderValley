@@ -13,21 +13,42 @@ export default class BaseGameScene extends Phaser.Scene {
 
   captureDevModeFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("dev") === "1") {
-      try {
+    const adminToken = params.get("admin") ?? params.get("devToken");
+    try {
+      if (params.get("dev") === "1" || adminToken) {
         localStorage.setItem("eldervalley-dev-mode", "1");
-      } catch {
-        // O jogo continua, apenas sem persistir o acesso dev.
       }
+      if (adminToken) {
+        localStorage.setItem("eldervalley-admin-token", adminToken);
+      }
+    } catch {
+      // O jogo continua, apenas sem persistir o acesso dev.
     }
   }
 
   isDevMode() {
     try {
-      return localStorage.getItem("eldervalley-dev-mode") === "1";
+      return localStorage.getItem("eldervalley-dev-mode") === "1"
+        || Boolean(localStorage.getItem("eldervalley-admin-token"));
     } catch {
       return false;
     }
+  }
+
+  getAdminStorageToken() {
+    try {
+      return localStorage.getItem("eldervalley-admin-token") ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  addAdminStorageHeaders(headers = {}) {
+    const token = this.getAdminStorageToken();
+    if (token) {
+      return { ...headers, "X-ElderValley-Admin-Token": token };
+    }
+    return headers;
   }
 
   showDevOnlyNotice() {
@@ -385,7 +406,7 @@ export default class BaseGameScene extends Phaser.Scene {
     try {
       await fetch(`/api/storage/${encodeURIComponent(this.manualCollisionStorageKey)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.addAdminStorageHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
         keepalive: true
       });

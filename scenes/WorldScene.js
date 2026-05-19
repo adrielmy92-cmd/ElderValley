@@ -719,10 +719,10 @@ export default class WorldScene extends BaseGameScene {
       const localMtimeMs = this.readLocalStorageMtime(key) || Date.now();
       const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, {
         method: "POST",
-        headers: {
+        headers: this.addAdminStorageHeaders({
           "Content-Type": "application/json",
           "X-ElderValley-Client-Mtime": String(localMtimeMs)
-        },
+        }),
         body: JSON.stringify(data),
         keepalive: true
       });
