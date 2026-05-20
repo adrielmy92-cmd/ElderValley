@@ -282,6 +282,16 @@ function sanitizeText(value, maxLength = 120) {
     .slice(0, maxLength);
 }
 
+function canonicalSceneChannel(scene, sceneChannel) {
+  if (scene === "WorldScene") {
+    return "world:main";
+  }
+  if (scene === "CityScene") {
+    return "city:main";
+  }
+  return sceneChannel || scene || "WorldScene";
+}
+
 function handleWsPayload(client, payload) {
   if (!payload || typeof payload !== "object") {
     return;
@@ -293,7 +303,7 @@ function handleWsPayload(client, payload) {
     supersedeOlderPresenceClients(client);
     client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
     client.scene = sanitizeText(payload.scene, 48) || "WorldScene";
-    client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.scene;
+    client.sceneChannel = canonicalSceneChannel(client.scene, sanitizeText(payload.sceneChannel, 80));
     client.x = finiteNumber(payload.x, 0);
     client.y = finiteNumber(payload.y, 0);
     client.facing = sanitizeText(payload.facing, 12) || "down";
@@ -320,7 +330,7 @@ function handleWsPayload(client, payload) {
       return;
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
-    client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
+    client.sceneChannel = canonicalSceneChannel(client.scene, sanitizeText(payload.sceneChannel, 80) || client.sceneChannel);
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     client.x = finiteNumber(payload.x, client.x);
     client.y = finiteNumber(payload.y, client.y);
@@ -339,7 +349,7 @@ function handleWsPayload(client, payload) {
       return;
     }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
-    client.sceneChannel = sanitizeText(payload.sceneChannel, 80) || client.sceneChannel || client.scene;
+    client.sceneChannel = canonicalSceneChannel(client.scene, sanitizeText(payload.sceneChannel, 80) || client.sceneChannel);
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     client.x = finiteNumber(payload.x, client.x);
     client.y = finiteNumber(payload.y, client.y);

@@ -8,18 +8,23 @@ export default class MultiplayerSystem {
     this.remotePlayers = new Map();
     this.lastStateSent = 0;
     this.connected = false;
+    this.destroyed = false;
     this.connect();
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy());
   }
 
   connect() {
-    if (window.location.protocol === "file:" || !window.WebSocket) {
+    if (this.destroyed || window.location.protocol === "file:" || !window.WebSocket) {
       return;
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     this.socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
     this.socket.addEventListener("open", () => {
+      if (this.destroyed) {
+        this.socket?.close();
+        return;
+      }
       this.connected = true;
       this.send({
         type: "hello",
@@ -103,8 +108,11 @@ export default class MultiplayerSystem {
 
   getSceneChannel() {
     const key = this.scene.scene.key;
-    if (key === "WorldScene" || key === "CityScene") {
-      return key;
+    if (key === "WorldScene") {
+      return "world:main";
+    }
+    if (key === "CityScene") {
+      return "city:main";
     }
     const interiorId = this.scene.entryData?.doorId
       ?? this.scene.entryData?.exitSpawnKey
@@ -174,7 +182,7 @@ export default class MultiplayerSystem {
   }
 
   update(time) {
-    if (!this.connected || time - this.lastStateSent < 90) {
+    if (this.destroyed || !this.connected || time - this.lastStateSent < 90) {
       this.updateRemotePlayerDepths();
       return;
     }
@@ -184,6 +192,9 @@ export default class MultiplayerSystem {
   }
 
   requestSnapshot() {
+    if (this.destroyed) {
+      return;
+    }
     this.send({ type: "sync", ...this.getLocalState() });
   }
 
@@ -404,11 +415,19 @@ export default class MultiplayerSystem {
   }
 
   destroy() {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    this.connected = false;
     this.clearSceneResyncTimers();
     this.clearRemotePlayers();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.close();
     }
     this.socket = null;
+    if (this.scene?.multiplayer === this) {
+      this.scene.multiplayer = null;
+    }
   }
 }
