@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=184";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=185";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;

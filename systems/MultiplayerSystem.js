@@ -27,6 +27,7 @@ export default class MultiplayerSystem {
         ...this.getLocalState()
       });
       this.requestSnapshot();
+      this.scheduleSceneResync();
     });
     this.socket.addEventListener("message", (event) => this.handleMessage(event));
     this.socket.addEventListener("close", () => {
@@ -65,10 +66,19 @@ export default class MultiplayerSystem {
   }
 
   getPresenceId() {
-    let presenceId = localStorage.getItem("eldervalley-presence-id");
+    let presenceId = "";
+    try {
+      presenceId = sessionStorage.getItem("eldervalley-presence-id-v2") ?? "";
+    } catch {
+      presenceId = window.__eldervalleyPresenceId ?? "";
+    }
     if (!presenceId) {
       presenceId = `presence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      localStorage.setItem("eldervalley-presence-id", presenceId);
+      try {
+        sessionStorage.setItem("eldervalley-presence-id-v2", presenceId);
+      } catch {
+        window.__eldervalleyPresenceId = presenceId;
+      }
     }
     return presenceId;
   }
@@ -175,6 +185,24 @@ export default class MultiplayerSystem {
 
   requestSnapshot() {
     this.send({ type: "sync", ...this.getLocalState() });
+  }
+
+  scheduleSceneResync() {
+    this.clearSceneResyncTimers();
+    this.sceneResyncTimers = [250, 900, 1800, 3200].map((delay) => (
+      window.setTimeout(() => {
+        if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
+          return;
+        }
+        this.send({ type: "state", ...this.getLocalState() });
+        this.requestSnapshot();
+      }, delay)
+    ));
+  }
+
+  clearSceneResyncTimers() {
+    this.sceneResyncTimers?.forEach((timer) => window.clearTimeout(timer));
+    this.sceneResyncTimers = [];
   }
 
   applySnapshot(peers) {
@@ -376,6 +404,7 @@ export default class MultiplayerSystem {
   }
 
   destroy() {
+    this.clearSceneResyncTimers();
     this.clearRemotePlayers();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.close();

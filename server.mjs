@@ -998,6 +998,20 @@ setInterval(() => {
   broadcast({ type: "timeSync", clockMinutes: getServerClockMinutes() });
 }, 5000).unref();
 
+setInterval(() => {
+  const clockMinutes = getServerClockMinutes();
+  for (const client of clients.values()) {
+    if (!client.ready || client.superseded) {
+      continue;
+    }
+    sendWs(client.socket, {
+      type: "snapshot",
+      clockMinutes,
+      peers: publicPeers(client)
+    });
+  }
+}, 2000).unref();
+
 function shutdown(signal) {
   console.log(`Received ${signal}, shutting down ElderValley server...`);
   broadcast({ type: "serverShutdown" });
