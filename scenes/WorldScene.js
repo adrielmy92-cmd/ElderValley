@@ -1690,7 +1690,7 @@ export default class WorldScene extends BaseGameScene {
       house: "Casas",
       structure: "Estruturas"
     }[this.activeCreativeMode] ?? "Nenhum";
-    this.creativeTitleText?.setText("Modo Criativo");
+    this.creativeTitleText?.setText("");
     this.creativeModesText?.setText(`Modo: ${activeLabel}  |  P Pisos  |  F Cercas  |  T Arvores  |  H Casas  |  B Estruturas`);
     this.updateCreativeSaveButton();
 
