@@ -1,7 +1,7 @@
 import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
-import ChatSystem from "../systems/ChatSystem.js?v=132";
+import ChatSystem from "../systems/ChatSystem.js?v=193";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=186";
 
 export default class BaseGameScene extends Phaser.Scene {
@@ -601,7 +601,13 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateInventoryHud();
     this.updateClockHud();
     this.updateCurrencyHud();
-    this.chat ??= new ChatSystem(this);
+    if (this.input.keyboard) {
+      this.input.keyboard.enabled = true;
+      this.input.keyboard.resetKeys();
+    }
+    if (!this.chat || this.chat.destroyed || !this.chat.root?.isConnected) {
+      this.chat = new ChatSystem(this);
+    }
     if (!this.multiplayer || this.multiplayer.destroyed) {
       this.multiplayer = new MultiplayerSystem(this);
     }

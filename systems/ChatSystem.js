@@ -2,6 +2,7 @@ export default class ChatSystem {
   constructor(scene) {
     this.scene = scene;
     this.active = false;
+    this.destroyed = false;
     this.messages = [];
     this.maxMessages = 6;
     this.bubbleHideEvent = null;
@@ -123,22 +124,29 @@ export default class ChatSystem {
   }
 
   open() {
-    if (this.active) {
+    if (this.destroyed || this.active || !this.inputEl?.isConnected) {
       return;
     }
     this.active = true;
     this.inputEl.style.display = "block";
     this.inputEl.value = "";
-    this.inputEl.focus();
     this.scene.input.keyboard.enabled = false;
+    window.setTimeout(() => this.inputEl?.focus(), 0);
   }
 
   close() {
+    if (this.destroyed) {
+      return;
+    }
     this.active = false;
-    this.inputEl.style.display = "none";
-    this.inputEl.blur();
-    this.scene.input.keyboard.enabled = true;
-    this.scene.input.keyboard.resetKeys();
+    if (this.inputEl) {
+      this.inputEl.style.display = "none";
+      this.inputEl.blur();
+    }
+    if (this.scene.input?.keyboard) {
+      this.scene.input.keyboard.enabled = true;
+      this.scene.input.keyboard.resetKeys();
+    }
   }
 
   submit() {
@@ -251,7 +259,16 @@ export default class ChatSystem {
   }
 
   destroy() {
-    this.scene.input.keyboard.enabled = true;
+    this.destroyed = true;
+    this.active = false;
+    if (this.inputEl) {
+      this.inputEl.style.display = "none";
+      this.inputEl.blur();
+    }
+    if (this.scene.input?.keyboard) {
+      this.scene.input.keyboard.enabled = true;
+      this.scene.input.keyboard.resetKeys();
+    }
     this.bubbleHideEvent?.remove(false);
     this.root?.remove();
     this.bubble?.destroy();
