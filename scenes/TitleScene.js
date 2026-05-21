@@ -520,7 +520,11 @@ export default class TitleScene extends Phaser.Scene {
       { name: "Mansao Esmeralda", key: "creative-house-ivy-manor", price: "7.800 EV", maxW: 0.96, maxH: 0.8 },
       { name: "Casa de Palha", key: "creative-house-thatch-cottage", price: "2.200 EV", maxW: 0.96, maxH: 0.8 },
       { name: "Casa Azul", key: "creative-house-blue-cottage", price: "2.900 EV", maxW: 0.88, maxH: 0.84 },
-      { name: "Casa Torre", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 }
+      { name: "Casa Torre", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 },
+      { name: "Mansao Azul", key: "creative-house-blue-arcane-manor", price: "8.200 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Mansao Elfica", key: "creative-house-elf-green-manor", price: "8.800 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Mansao Torre Azul", key: "creative-house-blue-gold-tower", price: "8.600 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Mansao Turquesa", key: "creative-house-teal-roof-manor", price: "7.900 EV", maxW: 0.96, maxH: 0.86 }
     ];
   }
 

@@ -268,6 +268,58 @@ const HOUSE_DEFS = [
     doorOffset: { x: 0, y: -18 },
     spawnOffset: { x: 0, y: 34 },
     colliders: []
+  },
+  {
+    id: "blueArcaneManorHouse",
+    label: "Mansao azul",
+    key: "creative-house-blue-arcane-manor",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_blue_arcane_manor_house",
+    doorOffset: { x: 0, y: -22 },
+    spawnOffset: { x: 0, y: 38 },
+    colliders: []
+  },
+  {
+    id: "elfGreenManorHouse",
+    label: "Mansao elfica",
+    key: "creative-house-elf-green-manor",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_elf_green_manor_house",
+    doorOffset: { x: 0, y: -22 },
+    spawnOffset: { x: 0, y: 38 },
+    colliders: []
+  },
+  {
+    id: "blueGoldTowerHouse",
+    label: "Mansao torre azul",
+    key: "creative-house-blue-gold-tower",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_blue_gold_tower_house",
+    doorOffset: { x: 0, y: -22 },
+    spawnOffset: { x: 0, y: 38 },
+    colliders: []
+  },
+  {
+    id: "tealRoofManorHouse",
+    label: "Mansao turquesa",
+    key: "creative-house-teal-roof-manor",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_teal_roof_manor_house",
+    doorOffset: { x: 0, y: -22 },
+    spawnOffset: { x: 0, y: 38 },
+    colliders: []
   }
 ];
 

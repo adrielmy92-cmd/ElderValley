@@ -54,6 +54,10 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("creative-house-thatch-cottage", "./assets/sprites/creative-house-thatch-cottage.png?v=195");
     this.load.image("creative-house-blue-cottage", "./assets/sprites/creative-house-blue-cottage.png?v=195");
     this.load.image("creative-house-red-tower-cottage", "./assets/sprites/creative-house-red-tower-cottage.png?v=195");
+    this.load.image("creative-house-blue-arcane-manor", "./assets/sprites/creative-house-blue-arcane-manor.png?v=199");
+    this.load.image("creative-house-elf-green-manor", "./assets/sprites/creative-house-elf-green-manor.png?v=199");
+    this.load.image("creative-house-blue-gold-tower", "./assets/sprites/creative-house-blue-gold-tower.png?v=199");
+    this.load.image("creative-house-teal-roof-manor", "./assets/sprites/creative-house-teal-roof-manor.png?v=199");
     this.load.image("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
