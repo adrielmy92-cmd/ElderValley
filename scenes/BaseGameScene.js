@@ -916,6 +916,7 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   createServerWorkUi(work) {
+    this.clearServerWorkPointerHandler();
     this.workUi?.destroy();
     const width = Math.min(560, Math.max(440, this.scale.width * 0.42));
     const x = Math.max(width / 2 + 14, this.scale.width - width / 2 - 18);
@@ -989,11 +990,42 @@ export default class BaseGameScene extends Phaser.Scene {
       buttons: [],
       slots: [],
       controls: [],
+      clickTargets: [],
       taskId: "",
       buttonsKey: "",
       lastMessage: ""
     };
+    this.serverWorkPointerHandler = (pointer) => this.handleServerWorkPointer(pointer);
+    this.input.on("pointerdown", this.serverWorkPointerHandler);
     this.updateServerWorkUi(work);
+  }
+
+  clearServerWorkPointerHandler() {
+    if (this.serverWorkPointerHandler && this.input) {
+      this.input.off("pointerdown", this.serverWorkPointerHandler);
+      this.serverWorkPointerHandler = null;
+    }
+  }
+
+  handleServerWorkPointer(pointer) {
+    const ui = this.serverWorkUi;
+    if (!ui?.clickTargets?.length || !ui.container?.active) {
+      return;
+    }
+    const localX = pointer.x - ui.container.x;
+    const localY = pointer.y - ui.container.y;
+    for (let index = ui.clickTargets.length - 1; index >= 0; index -= 1) {
+      const target = ui.clickTargets[index];
+      const left = target.x - target.width / 2;
+      const right = target.x + target.width / 2;
+      const top = target.y - target.height / 2;
+      const bottom = target.y + target.height / 2;
+      if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
+        pointer.event?.preventDefault?.();
+        target.onClick();
+        return;
+      }
+    }
   }
 
   updateServerWorkSlots() {
@@ -1026,6 +1058,7 @@ export default class BaseGameScene extends Phaser.Scene {
     ui.buttons = [];
     ui.slots = [];
     ui.controls = [];
+    ui.clickTargets = [];
     const choices = Array.isArray(work?.task?.choices) ? work.task.choices : [];
     if (!choices.length) {
       return;
@@ -1038,8 +1071,7 @@ export default class BaseGameScene extends Phaser.Scene {
     for (let index = 0; index < sequenceLength; index += 1) {
       const slotX = slotStartX + index * (slotWidth + slotGap);
       const bg = this.add.rectangle(slotX, 20, slotWidth, 38, 0x0c1118, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.75)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(2, 0xf0c15d, 0.75);
       const bottle = this.add.rectangle(slotX - slotWidth / 2 + 18, 20, 16, 25, 0xffffff, 1)
         .setStrokeStyle(2, 0x0b1016, 0.95)
         .setVisible(false);
@@ -1050,11 +1082,16 @@ export default class BaseGameScene extends Phaser.Scene {
         align: "center",
         stroke: "#000000",
         strokeThickness: 2
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => this.removeServerWorkIngredient(index));
-      text.on("pointerdown", () => this.removeServerWorkIngredient(index));
+      }).setOrigin(0.5);
       ui.container.add([bg, bottle, text]);
       ui.slots.push({ objects: [bg, bottle, text], bg, bottle, text });
+      ui.clickTargets.push({
+        x: slotX,
+        y: 20,
+        width: slotWidth,
+        height: 38,
+        onClick: () => this.removeServerWorkIngredient(index)
+      });
     }
 
     const buttonWidth = Math.min(104, Math.max(78, (ui.width - 40) / choices.length));
@@ -1063,8 +1100,7 @@ export default class BaseGameScene extends Phaser.Scene {
       const buttonX = startX + index * buttonWidth;
       const color = this.ingredientColor(choice);
       const bg = this.add.rectangle(buttonX, 76, buttonWidth - 8, 54, 0x1b2430, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.9)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(2, 0xf0c15d, 0.9);
       const bottle = this.add.rectangle(buttonX, 68, 21, 27, color, 1)
         .setStrokeStyle(2, 0x0b1016, 0.95);
       const neck = this.add.rectangle(buttonX, 49, 10, 10, color, 1)
@@ -1078,35 +1114,30 @@ export default class BaseGameScene extends Phaser.Scene {
         stroke: "#000000",
         strokeThickness: 2
       }).setOrigin(0.5);
-      const clickObjects = [bg, bottle, neck, label];
-      clickObjects.forEach((object) => {
-        object.setInteractive({ useHandCursor: true });
-        object.on("pointerdown", () => this.selectServerWorkIngredient(choice));
-        object.on("pointerover", () => bg.setFillStyle(0x2b3b4a, 1));
-        object.on("pointerout", () => bg.setFillStyle(0x1b2430, 0.98));
-      });
       ui.container.add([bg, bottle, neck, shine, label]);
       ui.buttons.push({ objects: [bg, bottle, neck, shine, label] });
+      ui.clickTargets.push({
+        x: buttonX,
+        y: 76,
+        width: buttonWidth - 8,
+        height: 62,
+        onClick: () => this.selectServerWorkIngredient(choice)
+      });
     });
 
     const makeControl = (x, label, fill, hover, color, onClick) => {
       const bg = this.add.rectangle(x, 122, 136, 30, fill, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.95)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(2, 0xf0c15d, 0.95);
       const text = this.add.text(x, 122, label, {
         fontFamily: "monospace",
         fontSize: "11px",
         color,
         stroke: "#000000",
         strokeThickness: 2
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      [bg, text].forEach((object) => {
-        object.on("pointerdown", onClick);
-        object.on("pointerover", () => bg.setFillStyle(hover, 1));
-        object.on("pointerout", () => bg.setFillStyle(fill, 0.98));
-      });
+      }).setOrigin(0.5);
       ui.container.add([bg, text]);
       ui.controls.push({ objects: [bg, text] });
+      ui.clickTargets.push({ x, y: 122, width: 136, height: 30, onClick });
     };
     makeControl(-76, "LIMPAR", 0x2b1f20, 0x4a2b2d, "#fff2c4", () => this.resetServerWorkSelection());
     makeControl(76, "MISTURAR", 0x203823, 0x315b38, "#d9ffd9", () => this.submitServerWorkTask());
@@ -1217,6 +1248,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.finishTimedWork = null;
     this.serverWorkPoll?.remove(false);
     this.serverWorkPoll = null;
+    this.clearServerWorkPointerHandler();
     this.workUi?.destroy();
     this.workUi = null;
     this.serverWorkUi = null;
