@@ -893,25 +893,47 @@ export default class BaseGameScene extends Phaser.Scene {
     return colors[name] ?? 0xf0c15d;
   }
 
+  createWorkMiniButton(x, y, width, height, label, onClick, options = {}) {
+    const group = this.add.container(x, y);
+    const bg = this.add.rectangle(0, 0, width, height, options.fill ?? 0x1b2430, 0.98)
+      .setStrokeStyle(2, options.stroke ?? 0xf0c15d, 0.95);
+    const text = this.add.text(0, 0, label, {
+      fontFamily: "monospace",
+      fontSize: options.fontSize ?? "11px",
+      color: options.color ?? "#fff2c4",
+      align: "center",
+      stroke: "#000000",
+      strokeThickness: 2,
+      wordWrap: { width: width - 8 }
+    }).setOrigin(0.5);
+    const hit = this.add.rectangle(0, 0, width, height, 0xffffff, 0.001)
+      .setInteractive({ useHandCursor: true });
+    hit.on("pointerdown", onClick);
+    hit.on("pointerover", () => bg.setFillStyle(options.hover ?? 0x2b3b4a, 1));
+    hit.on("pointerout", () => bg.setFillStyle(options.fill ?? 0x1b2430, 0.98));
+    group.add([bg, text, hit]);
+    return group;
+  }
+
   createServerWorkUi(work) {
     this.workUi?.destroy();
-    const width = Math.min(760, Math.max(520, this.scale.width * 0.62));
+    const width = Math.min(820, Math.max(560, this.scale.width * 0.68));
     const x = this.scale.width / 2;
-    const y = this.scale.height - 168;
+    const y = this.scale.height - 188;
     const container = this.add.container(x, y).setScrollFactor(0).setDepth(3200);
-    const bg = this.add.rectangle(0, 0, width, 246, 0x121821, 0.96)
+    const bg = this.add.rectangle(0, 0, width, 316, 0x121821, 0.97)
       .setStrokeStyle(2, 0xf0c15d, 0.95);
-    const barBack = this.add.rectangle(0, -68, width - 48, 15, 0x253241, 1);
-    const barFill = this.add.rectangle(-(width - 48) / 2, -68, 1, 15, 0x75d982, 1)
+    const barBack = this.add.rectangle(0, -96, width - 48, 15, 0x253241, 1);
+    const barFill = this.add.rectangle(-(width - 48) / 2, -96, 1, 15, 0x75d982, 1)
       .setOrigin(0, 0.5);
-    const title = this.add.text(0, -102, "", {
+    const title = this.add.text(0, -138, "", {
       fontFamily: "monospace",
       fontSize: "15px",
       color: "#fff2c4",
       stroke: "#1a202b",
       strokeThickness: 3
     }).setOrigin(0.5);
-    const detail = this.add.text(0, -43, "", {
+    const detail = this.add.text(0, -120, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#d9e5ef",
@@ -919,7 +941,7 @@ export default class BaseGameScene extends Phaser.Scene {
       strokeThickness: 3,
       align: "center"
     }).setOrigin(0.5);
-    const taskText = this.add.text(0, -12, "", {
+    const taskText = this.add.text(0, -70, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#fff2c4",
@@ -928,7 +950,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const sequenceText = this.add.text(0, 24, "", {
+    const sequenceText = this.add.text(0, -44, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#ffd66b",
@@ -937,7 +959,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const selectedText = this.add.text(0, 54, "", {
+    const selectedText = this.add.text(0, -16, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#d9e5ef",
@@ -946,7 +968,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const hint = this.add.text(0, 108, "Clique nos frascos na ordem certa | ESC sair antes", {
+    const hint = this.add.text(0, 146, "Clique nos frascos para montar a mistura | ESC sair antes", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#ffd66b",
@@ -965,10 +987,31 @@ export default class BaseGameScene extends Phaser.Scene {
       sequenceText,
       selectedText,
       buttons: [],
+      slots: [],
+      controls: [],
       taskId: "",
-      buttonsKey: ""
+      buttonsKey: "",
+      lastMessage: ""
     };
     this.updateServerWorkUi(work);
+  }
+
+  updateServerWorkSlots() {
+    const ui = this.serverWorkUi;
+    if (!ui) {
+      return;
+    }
+    const selected = this.serverWorkSelection ?? [];
+    ui.slots.forEach((slot, index) => {
+      const choice = selected[index];
+      slot.bg.setFillStyle(choice ? 0x263847 : 0x0c1118, choice ? 1 : 0.98);
+      slot.bg.setStrokeStyle(2, choice ? this.ingredientColor(choice) : 0xf0c15d, choice ? 1 : 0.75);
+      slot.text.setText(choice ? choice.replace(" ", "\n") : `${index + 1}`);
+      slot.bottle.setVisible(Boolean(choice));
+      if (choice) {
+        slot.bottle.setFillStyle(this.ingredientColor(choice), 1);
+      }
+    });
   }
 
   rebuildServerWorkTaskButtons(work) {
@@ -977,20 +1020,49 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
     ui.buttons.forEach((button) => button.destroy());
+    ui.slots.forEach((slot) => slot.group.destroy());
+    ui.controls.forEach((control) => control.destroy());
     ui.buttons = [];
+    ui.slots = [];
+    ui.controls = [];
     const choices = Array.isArray(work?.task?.choices) ? work.task.choices : [];
     if (!choices.length) {
       return;
     }
 
-    const buttonWidth = Math.min(118, Math.max(92, (ui.width - 72) / choices.length));
+    const sequenceLength = Math.max(1, Number(work?.task?.sequenceLength) || work?.task?.sequence?.length || 3);
+    const slotWidth = 118;
+    const slotStartX = -((sequenceLength - 1) * (slotWidth + 12)) / 2;
+    for (let index = 0; index < sequenceLength; index += 1) {
+      const group = this.add.container(slotStartX + index * (slotWidth + 12), 28);
+      const bg = this.add.rectangle(0, 0, slotWidth, 45, 0x0c1118, 0.98)
+        .setStrokeStyle(2, 0xf0c15d, 0.75);
+      const bottle = this.add.rectangle(-38, 0, 18, 28, 0xffffff, 1)
+        .setStrokeStyle(2, 0x0b1016, 0.95)
+        .setVisible(false);
+      const text = this.add.text(8, 0, `${index + 1}`, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#fff2c4",
+        align: "center",
+        stroke: "#000000",
+        strokeThickness: 2
+      }).setOrigin(0.5);
+      const hit = this.add.rectangle(0, 0, slotWidth, 45, 0xffffff, 0.001)
+        .setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", () => this.removeServerWorkIngredient(index));
+      group.add([bg, bottle, text, hit]);
+      ui.container.add(group);
+      ui.slots.push({ group, bg, bottle, text });
+    }
+
+    const buttonWidth = Math.min(126, Math.max(96, (ui.width - 72) / choices.length));
     const startX = -((choices.length - 1) * buttonWidth) / 2;
     choices.forEach((choice, index) => {
-      const group = this.add.container(startX + index * buttonWidth, 82);
+      const group = this.add.container(startX + index * buttonWidth, 88);
       const color = this.ingredientColor(choice);
       const bg = this.add.rectangle(0, 0, buttonWidth - 10, 56, 0x1b2430, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.9)
-        .setInteractive({ useHandCursor: true });
+        .setStrokeStyle(2, 0xf0c15d, 0.9);
       const bottle = this.add.rectangle(0, -8, 22, 28, color, 1)
         .setStrokeStyle(2, 0x0b1016, 0.95);
       const neck = this.add.rectangle(0, -27, 10, 10, color, 1)
@@ -1004,13 +1076,28 @@ export default class BaseGameScene extends Phaser.Scene {
         stroke: "#000000",
         strokeThickness: 2
       }).setOrigin(0.5);
-      group.add([bg, bottle, neck, shine, label]);
-      bg.on("pointerdown", () => this.selectServerWorkIngredient(choice));
-      bg.on("pointerover", () => bg.setFillStyle(0x2b3b4a, 1));
-      bg.on("pointerout", () => bg.setFillStyle(0x1b2430, 0.98));
+      const hit = this.add.rectangle(0, 0, buttonWidth - 4, 66, 0xffffff, 0.001)
+        .setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", () => this.selectServerWorkIngredient(choice));
+      hit.on("pointerover", () => bg.setFillStyle(0x2b3b4a, 1));
+      hit.on("pointerout", () => bg.setFillStyle(0x1b2430, 0.98));
+      group.add([bg, bottle, neck, shine, label, hit]);
       ui.container.add(group);
       ui.buttons.push(group);
     });
+
+    const reset = this.createWorkMiniButton(-84, 134, 140, 30, "LIMPAR", () => this.resetServerWorkSelection(), {
+      fill: 0x2b1f20,
+      hover: 0x4a2b2d
+    });
+    const submit = this.createWorkMiniButton(84, 134, 150, 30, "MISTURAR", () => this.submitServerWorkTask(), {
+      fill: 0x203823,
+      hover: 0x315b38,
+      color: "#d9ffd9"
+    });
+    ui.container.add([reset, submit]);
+    ui.controls.push(reset, submit);
+    this.updateServerWorkSlots();
   }
 
   updateServerWorkUi(work, message = "") {
@@ -1028,27 +1115,73 @@ export default class BaseGameScene extends Phaser.Scene {
     const sequence = Array.isArray(task?.sequence) ? task.sequence : [];
     ui.taskText.setText(sequence.length ? task.prompt : message);
     ui.sequenceText.setText(sequence.length ? `Receita: ${sequence.join("  >  ")}` : "");
-    ui.selectedText.setText(`${selected.length ? `Mistura: ${selected.join("  >  ")}` : "Mistura: escolha o primeiro frasco"}${message ? `\n${message}` : ""}`);
+    ui.lastMessage = message || ui.lastMessage || "";
+    ui.selectedText.setText(`${selected.length ? `Mistura: ${selected.join("  >  ")}` : "Mistura: preencha os espacos abaixo"}${ui.lastMessage ? `\n${ui.lastMessage}` : ""}`);
 
     const buttonsKey = `${task?.taskId ?? ""}:${(task?.choices ?? []).join("|")}`;
     if (ui.buttonsKey !== buttonsKey) {
       ui.buttonsKey = buttonsKey;
+      ui.lastMessage = message || "";
       this.rebuildServerWorkTaskButtons(work);
     }
+    this.updateServerWorkSlots();
   }
 
-  async selectServerWorkIngredient(choice) {
+  selectServerWorkIngredient(choice) {
     if (!this.serverWork?.task || this.serverWorkTaskBusy) {
       return;
     }
     const task = this.serverWork.task;
     const max = Math.max(1, Number(task.sequenceLength) || task.sequence?.length || 3);
-    this.serverWorkSelection = [...(this.serverWorkSelection ?? []), choice].slice(0, max);
+    if ((this.serverWorkSelection ?? []).length >= max) {
+      this.serverWorkUi.lastMessage = "Mistura cheia. Clique em MISTURAR ou LIMPAR.";
+      this.updateServerWorkUi(this.serverWork);
+      return;
+    }
+    this.serverWorkSelection = [...(this.serverWorkSelection ?? []), choice];
+    this.serverWorkUi.lastMessage = this.serverWorkSelection.length >= max
+      ? "Mistura completa. Clique em MISTURAR."
+      : "Continue preenchendo a receita.";
     this.updateServerWorkUi(this.serverWork);
-    if (this.serverWorkSelection.length < max) {
+  }
+
+  removeServerWorkIngredient(index) {
+    if (this.serverWorkTaskBusy) {
+      return;
+    }
+    const selected = [...(this.serverWorkSelection ?? [])];
+    if (index < 0 || index >= selected.length) {
+      return;
+    }
+    selected.splice(index, 1);
+    this.serverWorkSelection = selected;
+    this.serverWorkUi.lastMessage = "Frasco removido.";
+    this.updateServerWorkUi(this.serverWork);
+  }
+
+  resetServerWorkSelection() {
+    if (this.serverWorkTaskBusy) {
+      return;
+    }
+    this.serverWorkSelection = [];
+    this.serverWorkUi.lastMessage = "Mistura limpa.";
+    this.updateServerWorkUi(this.serverWork);
+  }
+
+  async submitServerWorkTask() {
+    if (!this.serverWork?.task || this.serverWorkTaskBusy) {
+      return;
+    }
+    const task = this.serverWork.task;
+    const max = Math.max(1, Number(task.sequenceLength) || task.sequence?.length || 3);
+    if ((this.serverWorkSelection ?? []).length < max) {
+      this.serverWorkUi.lastMessage = `Faltam ${max - (this.serverWorkSelection ?? []).length} frascos.`;
+      this.updateServerWorkUi(this.serverWork);
       return;
     }
     this.serverWorkTaskBusy = true;
+    this.serverWorkUi.lastMessage = "Misturando...";
+    this.updateServerWorkUi(this.serverWork);
     try {
       const result = await this.requestServerWork("task", {
         sessionId: this.serverWork.sessionId,
@@ -1056,6 +1189,7 @@ export default class BaseGameScene extends Phaser.Scene {
       });
       this.serverWork = result.work;
       this.serverWorkSelection = [];
+      this.serverWorkUi.lastMessage = "";
       this.updateServerWorkUi(this.serverWork, result.success ? `Acerto: +${result.bonusGameMinutes} min de progresso` : "Sequencia falhou. Uma nova receita chegou.");
     } catch (error) {
       this.showWorkNotice(error.message);
