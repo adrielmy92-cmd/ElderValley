@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=202";
+import WorldScene from "./WorldScene.js?v=203";
 
 const TILE = 32;
 
@@ -13,7 +13,8 @@ export default class CityScene extends WorldScene {
       fences: "eldervalley-city-manual-fences-v1",
       trees: "eldervalley-city-manual-trees-v1",
       floors: "eldervalley-city-manual-floors-v1",
-      structures: "eldervalley-city-manual-structures-v1"
+      structures: "eldervalley-city-manual-structures-v1",
+      windowLights: "eldervalley-city-manual-window-lights-v1"
     };
     this.manualCollisionStorageKey = "eldervalley-city-manual-collisions-v1";
     this.houseStorageKey = "eldervalley-city-editable-houses-v1";

@@ -335,7 +335,8 @@ export default class WorldScene extends BaseGameScene {
       fences: "market-village-manual-fences-v1",
       trees: "market-village-manual-trees-v1",
       floors: "eldervalley-manual-floors-v1",
-      structures: "eldervalley-village-manual-structures-v1"
+      structures: "eldervalley-village-manual-structures-v1",
+      windowLights: "eldervalley-village-manual-window-lights-v1"
     };
     this.manualCollisionStorageKey = "eldervalley-village-manual-collisions-v1";
     this.houseStorageKey = HOUSE_STORAGE_KEY;
@@ -756,6 +757,7 @@ export default class WorldScene extends BaseGameScene {
       [this.manualFloorStorageKey, this.manualFloors.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualTreeStorageKey, this.manualTrees.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualStructureStorageKey, this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }))],
+      [this.manualWindowLightStorageKey, this.manualWindowLights.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualCollisionStorageKey, (this.manualCollisionRects ?? []).map(({ type = "rect", x, y, w, h, r }) => (
         type === "circle" ? { type, x, y, r } : { type: "rect", x, y, w, h }
       ))]
@@ -921,6 +923,17 @@ export default class WorldScene extends BaseGameScene {
           this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
         }
       });
+      return true;
+    }
+    if (key === this.manualWindowLightStorageKey) {
+      this.writeLocalStorageArray(key, data, mtimeMs);
+      this.clearManualWindowLights();
+      data.forEach((light) => {
+        if (typeof light?.x === "number" && typeof light?.y === "number") {
+          this.placeManualWindowLight(light.type, light.x, light.y, false);
+        }
+      });
+      this.updateDayNightCycle(0);
       return true;
     }
     return false;
@@ -1230,10 +1243,12 @@ export default class WorldScene extends BaseGameScene {
     this.manualTreeStorageKey = this.manualStorageKeys?.trees ?? `${this.creativeStoragePrefix ?? "eldervalley"}-manual-trees-v1`;
     this.manualFloorStorageKey = this.manualStorageKeys?.floors ?? `${this.creativeStoragePrefix ?? "eldervalley"}-manual-floors-v1`;
     this.manualStructureStorageKey = this.manualStorageKeys?.structures ?? `${this.creativeStoragePrefix ?? "eldervalley"}-manual-structures-v1`;
+    this.manualWindowLightStorageKey = this.manualStorageKeys?.windowLights ?? `${this.creativeStoragePrefix ?? "eldervalley"}-manual-window-lights-v1`;
     this.manualFences = [];
     this.manualTrees = [];
     this.manualFloors = [];
     this.manualStructures = [];
+    this.manualWindowLights = [];
     this.creativeModeEnabled = false;
     this.activeCreativeMode = "tree";
     this.fenceEditorEnabled = false;
@@ -1241,11 +1256,13 @@ export default class WorldScene extends BaseGameScene {
     this.floorEditorEnabled = false;
     this.houseEditorEnabled = false;
     this.structureEditorEnabled = false;
+    this.windowLightEditorEnabled = false;
     this.selectedFenceType = "h";
     this.selectedTreeType = "pine";
     this.selectedFloorType = "stoneA";
     this.selectedStructureType = "fruitStall";
     this.selectedStructureFlipX = false;
+    this.selectedWindowLightType = "warmSmall";
     this.selectedHouseType = HOUSE_DEFS[0]?.id ?? null;
     this.selectedEditableHouse = null;
     this.draggedEditableHouse = null;
@@ -1478,6 +1495,41 @@ export default class WorldScene extends BaseGameScene {
         frameRate: 6
       }
     };
+    this.windowLightPieces = {
+      warmSmall: {
+        label: "Janela baixa",
+        width: 34,
+        height: 20,
+        coreWidth: 14,
+        coreHeight: 8,
+        color: 0xffb24a,
+        innerColor: 0xfff1a8,
+        maxAlpha: 0.48,
+        snap: 8
+      },
+      warmMedium: {
+        label: "Janela media",
+        width: 52,
+        height: 30,
+        coreWidth: 22,
+        coreHeight: 12,
+        color: 0xffa335,
+        innerColor: 0xfff6bf,
+        maxAlpha: 0.66,
+        snap: 8
+      },
+      warmLarge: {
+        label: "Janela forte",
+        width: 72,
+        height: 42,
+        coreWidth: 32,
+        coreHeight: 16,
+        color: 0xff8f24,
+        innerColor: 0xffffc8,
+        maxAlpha: 0.82,
+        snap: 8
+      }
+    };
 
     this.input.mouse?.disableContextMenu();
     this.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.TAB);
@@ -1489,6 +1541,7 @@ export default class WorldScene extends BaseGameScene {
       modeHouse: Phaser.Input.Keyboard.KeyCodes.H,
       modeFloor: Phaser.Input.Keyboard.KeyCodes.P,
       modeStructure: Phaser.Input.Keyboard.KeyCodes.B,
+      modeWindowLight: Phaser.Input.Keyboard.KeyCodes.L,
       horizontal: Phaser.Input.Keyboard.KeyCodes.ONE,
       vertical: Phaser.Input.Keyboard.KeyCodes.TWO,
       post: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -1576,6 +1629,7 @@ export default class WorldScene extends BaseGameScene {
     this.loadManualFences();
     this.loadManualTrees();
     this.loadManualStructures();
+    this.loadManualWindowLights();
     this.updateCreativeHud();
   }
 
@@ -1626,6 +1680,12 @@ export default class WorldScene extends BaseGameScene {
 
     if (this.creativeModeEnabled && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.modeStructure)) {
       this.activeCreativeMode = "structure";
+      this.syncCreativeModeState();
+      this.updateCreativeHud();
+    }
+
+    if (this.creativeModeEnabled && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.modeWindowLight)) {
+      this.activeCreativeMode = "windowLight";
       this.syncCreativeModeState();
       this.updateCreativeHud();
     }
@@ -1701,6 +1761,14 @@ export default class WorldScene extends BaseGameScene {
       }
     });
 
+    const windowLightSelectionKeys = [["horizontal", "warmSmall"], ["vertical", "warmMedium"], ["post", "warmLarge"]];
+    windowLightSelectionKeys.forEach(([keyName, lightType]) => {
+      if (this.isWindowLightEditorActive() && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys[keyName])) {
+        this.selectedWindowLightType = lightType;
+        this.updateCreativeHud();
+      }
+    });
+
     if (this.isStructureEditorActive() && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.invert)) {
       this.selectedStructureFlipX = !this.selectedStructureFlipX;
       this.updateCreativeHud();
@@ -1720,6 +1788,9 @@ export default class WorldScene extends BaseGameScene {
     } else if (this.isStructureEditorActive() && removePressed) {
       const point = this.getStructureEditorPointerWorldPoint();
       this.removeManualStructureAt(point.x, point.y);
+    } else if (this.isWindowLightEditorActive() && removePressed) {
+      const point = this.getWindowLightEditorPointerWorldPoint();
+      this.removeManualWindowLightAt(point.x, point.y);
     } else if (this.isHouseEditorActive() && removePressed) {
       const point = this.getHouseEditorPointerWorldPoint();
       this.removeEditableHouse(this.getHouseAtWorldPoint(point.x, point.y) ?? this.selectedEditableHouse);
@@ -1735,6 +1806,7 @@ export default class WorldScene extends BaseGameScene {
     this.floorEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "floor";
     this.houseEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "house";
     this.structureEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "structure";
+    this.windowLightEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "windowLight";
     if (!this.houseEditorEnabled) {
       this.draggedEditableHouse = null;
       this.updateHouseSelectionMarker();
@@ -1759,6 +1831,10 @@ export default class WorldScene extends BaseGameScene {
 
   isStructureEditorActive() {
     return this.creativeModeEnabled && this.activeCreativeMode === "structure";
+  }
+
+  isWindowLightEditorActive() {
+    return this.creativeModeEnabled && this.activeCreativeMode === "windowLight";
   }
 
   updateCreativeHud() {
@@ -1792,10 +1868,11 @@ export default class WorldScene extends BaseGameScene {
       tree: "Arvores",
       floor: "Pisos",
       house: "Casas",
-      structure: "Estruturas"
+      structure: "Estruturas",
+      windowLight: "Luzes"
     }[this.activeCreativeMode] ?? "Nenhum";
     this.creativeTitleText?.setText("");
-    this.creativeModesText?.setText(`Modo: ${activeLabel}  |  P Pisos  |  F Cercas  |  T Arvores  |  H Casas  |  B Estruturas`);
+    this.creativeModesText?.setText(`Modo: ${activeLabel}  |  P Pisos  |  F Cercas  |  T Arvores  |  H Casas  |  B Estruturas  |  L Luzes`);
     this.updateCreativeSaveButton();
 
     if (this.isFenceEditorActive()) {
@@ -1815,6 +1892,9 @@ export default class WorldScene extends BaseGameScene {
       const label = this.structurePieces[this.selectedStructureType]?.label ?? "Banca frutas";
       const side = this.selectedStructureFlipX ? "invertido" : "normal";
       this.fenceEditorText.setText(`Estrutura: ${label} | I inverte (${side}) | clique coloca | direito/Delete apaga`);
+    } else if (this.isWindowLightEditorActive()) {
+      const label = this.windowLightPieces[this.selectedWindowLightType]?.label ?? "Janela media";
+      this.fenceEditorText.setText(`Luz: ${label} | acende a noite | clique coloca | direito/Delete apaga`);
     } else {
       this.fenceEditorText.setText("Escolha um modo criativo");
     }
@@ -1961,6 +2041,24 @@ export default class WorldScene extends BaseGameScene {
       }));
     }
 
+    if (this.isWindowLightEditorActive()) {
+      return [
+        ["warmSmall", "1"],
+        ["warmMedium", "2"],
+        ["warmLarge", "3"]
+      ].map(([type, hotkey]) => ({
+        type,
+        piece: this.windowLightPieces[type],
+        hotkey,
+        selected: this.selectedWindowLightType === type,
+        previewLight: true,
+        select: () => {
+          this.selectedWindowLightType = type;
+          this.updateCreativeHud();
+        }
+      }));
+    }
+
     return [];
   }
 
@@ -1998,14 +2096,26 @@ export default class WorldScene extends BaseGameScene {
         this.updateCreativeHud();
       });
 
-      const icon = this.add.image(x + cardWidth / 2, y + 41, entry.piece.key)
-        .setOrigin(0.5, 1)
-        .setScrollFactor(0)
-        .setDepth(3001);
-      const iconScale = Math.min(46 / icon.width, 46 / icon.height, 1.4);
-      icon.setScale(iconScale);
-      if (this.isStructureEditorActive() && entry.type === this.selectedStructureType && this.selectedStructureFlipX) {
-        icon.setFlipX(true);
+      let icon;
+      if (entry.previewLight) {
+        icon = this.add.graphics()
+          .setScrollFactor(0)
+          .setDepth(3001);
+        icon.setBlendMode(Phaser.BlendModes.ADD);
+        icon.fillStyle(entry.piece.color, 0.42);
+        icon.fillEllipse(x + cardWidth / 2, y + 34, entry.piece.width * 0.58, entry.piece.height * 0.58);
+        icon.fillStyle(entry.piece.innerColor, 0.75);
+        icon.fillEllipse(x + cardWidth / 2, y + 34, entry.piece.coreWidth * 0.9, entry.piece.coreHeight * 0.9);
+      } else {
+        icon = this.add.image(x + cardWidth / 2, y + 41, entry.piece.key)
+          .setOrigin(0.5, 1)
+          .setScrollFactor(0)
+          .setDepth(3001);
+        const iconScale = Math.min(46 / icon.width, 46 / icon.height, 1.4);
+        icon.setScale(iconScale);
+        if (this.isStructureEditorActive() && entry.type === this.selectedStructureType && this.selectedStructureFlipX) {
+          icon.setFlipX(true);
+        }
       }
 
       const keyText = this.add.text(x + 6, y + 4, entry.hotkey, {
@@ -2080,6 +2190,16 @@ export default class WorldScene extends BaseGameScene {
         return;
       }
       this.placeManualStructure(this.selectedStructureType, point.x, point.y, true, this.selectedStructureFlipX);
+      return;
+    }
+
+    if (this.isWindowLightEditorActive()) {
+      const point = this.getWindowLightEditorPointerWorldPoint(pointer);
+      if (pointer.rightButtonDown()) {
+        this.removeManualWindowLightAt(point.x, point.y);
+        return;
+      }
+      this.placeManualWindowLight(this.selectedWindowLightType, point.x, point.y);
       return;
     }
 
@@ -2158,6 +2278,16 @@ export default class WorldScene extends BaseGameScene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const piece = this.structurePieces[this.selectedStructureType] ?? this.structurePieces.fruitStall;
     const snap = piece.snap ?? 16;
+    return {
+      x: Math.round(worldPoint.x / snap) * snap,
+      y: Math.round(worldPoint.y / snap) * snap
+    };
+  }
+
+  getWindowLightEditorPointerWorldPoint(pointer = this.input.activePointer) {
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const piece = this.windowLightPieces[this.selectedWindowLightType] ?? this.windowLightPieces.warmMedium;
+    const snap = piece.snap ?? 8;
     return {
       x: Math.round(worldPoint.x / snap) * snap,
       y: Math.round(worldPoint.y / snap) * snap
@@ -2429,6 +2559,62 @@ export default class WorldScene extends BaseGameScene {
     this.saveManualStructures();
   }
 
+  placeManualWindowLight(type, x, y, shouldSave = true) {
+    const piece = this.windowLightPieces[type];
+    if (!piece) {
+      return;
+    }
+
+    const duplicate = this.manualWindowLights.some((light) => light.type === type && light.x === x && light.y === y);
+    if (duplicate) {
+      return;
+    }
+
+    const glow = this.add.graphics()
+      .setDepth(2811);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    glow.fillStyle(piece.color, 0.18);
+    glow.fillEllipse(x, y, piece.width * 1.55, piece.height * 1.55);
+    glow.fillStyle(piece.color, 0.32);
+    glow.fillEllipse(x, y, piece.width, piece.height);
+    glow.fillStyle(piece.innerColor, 0.48);
+    glow.fillEllipse(x, y, piece.coreWidth, piece.coreHeight);
+    glow.setAlpha(0);
+    glow.maxGlowAlpha = piece.maxAlpha;
+    glow.lightType = type;
+
+    this.lampGlows = this.lampGlows ?? [];
+    this.lampGlows.push(glow);
+    this.manualWindowLights.push({ type, x, y, glow });
+    this.updateDayNightCycle(0);
+
+    if (shouldSave) {
+      this.saveManualWindowLights();
+    }
+  }
+
+  removeManualWindowLightAt(x, y) {
+    let indexToRemove = -1;
+    for (let index = this.manualWindowLights.length - 1; index >= 0; index -= 1) {
+      const light = this.manualWindowLights[index];
+      const piece = this.windowLightPieces[light.type] ?? this.windowLightPieces.warmMedium;
+      const radius = Math.max(piece.width, piece.height, 32);
+      if (Phaser.Math.Distance.Between(x, y, light.x, light.y) <= radius) {
+        indexToRemove = index;
+        break;
+      }
+    }
+
+    if (indexToRemove === -1) {
+      return;
+    }
+
+    const [light] = this.manualWindowLights.splice(indexToRemove, 1);
+    this.lampGlows = (this.lampGlows ?? []).filter((glow) => glow !== light.glow);
+    light.glow?.destroy();
+    this.saveManualWindowLights();
+  }
+
   placeManualFloor(type, x, y, shouldSave = true) {
     const piece = this.floorPieces[type];
     if (!piece) {
@@ -2510,6 +2696,13 @@ export default class WorldScene extends BaseGameScene {
       structure.colliders?.forEach((collider) => collider.destroy());
     });
     this.manualStructures = [];
+  }
+
+  clearManualWindowLights() {
+    const lightGlows = new Set((this.manualWindowLights ?? []).map((light) => light.glow));
+    this.lampGlows = (this.lampGlows ?? []).filter((glow) => !lightGlows.has(glow));
+    (this.manualWindowLights ?? []).forEach((light) => light.glow?.destroy());
+    this.manualWindowLights = [];
   }
 
   loadManualFences() {
@@ -2630,6 +2823,34 @@ export default class WorldScene extends BaseGameScene {
     this.writeLocalStorageArray(this.manualStructureStorageKey, data);
     this.setCreativeDirty(true);
     this.saveSharedStorage(this.manualStructureStorageKey, data);
+  }
+
+  loadManualWindowLights() {
+    const { data: saved, hasLocalSave } = this.readLocalStorageArray(this.manualWindowLightStorageKey);
+
+    saved.forEach((light) => {
+      if (typeof light?.x === "number" && typeof light?.y === "number") {
+        this.placeManualWindowLight(light.type, light.x, light.y, false);
+      }
+    });
+    this.syncCreativeCollection(
+      this.manualWindowLightStorageKey,
+      saved,
+      hasLocalSave,
+      () => this.clearManualWindowLights(),
+      (light) => {
+        if (typeof light?.x === "number" && typeof light?.y === "number") {
+          this.placeManualWindowLight(light.type, light.x, light.y, false);
+        }
+      }
+    ).then(() => this.updateDayNightCycle(0));
+  }
+
+  saveManualWindowLights() {
+    const data = this.manualWindowLights.map(({ type, x, y }) => ({ type, x, y }));
+    this.writeLocalStorageArray(this.manualWindowLightStorageKey, data);
+    this.setCreativeDirty(true);
+    this.saveSharedStorage(this.manualWindowLightStorageKey, data);
   }
 
   addFencedLot({ left, right, top, bottom, gateX, gateWidth = 96 }) {
@@ -2830,7 +3051,8 @@ export default class WorldScene extends BaseGameScene {
     this.sunsetOverlay.setAlpha(sunsetAlpha);
     this.lampGlows?.forEach((glow, index) => {
       const flicker = 0.88 + Math.sin((this.time.now + index * 430) / 260) * 0.12;
-      glow.setAlpha(glowAlpha * flicker);
+      const baseAlpha = typeof glow.maxGlowAlpha === "number" ? glow.maxGlowAlpha : 1;
+      glow.setAlpha(glowAlpha * baseAlpha * flicker);
     });
   }
 
