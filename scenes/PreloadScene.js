@@ -50,7 +50,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("creative-house-red-lodge", "./assets/sprites/creative-house-red-lodge.png?v=132");
     this.load.image("creative-house-green-cottage", "./assets/sprites/creative-house-green-cottage.png?v=132");
     this.load.image("creative-house-alchemist", "./assets/sprites/creative-house-alchemist.png?v=144");
-    this.load.image("creative-house-ivy-manor", "./assets/sprites/creative-house-ivy-manor.png?v=197");
+    this.load.image("creative-house-ivy-manor", "./assets/sprites/creative-house-ivy-manor.png?v=198");
     this.load.image("creative-house-thatch-cottage", "./assets/sprites/creative-house-thatch-cottage.png?v=195");
     this.load.image("creative-house-blue-cottage", "./assets/sprites/creative-house-blue-cottage.png?v=195");
     this.load.image("creative-house-red-tower-cottage", "./assets/sprites/creative-house-red-tower-cottage.png?v=195");
