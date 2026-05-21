@@ -917,23 +917,23 @@ export default class BaseGameScene extends Phaser.Scene {
 
   createServerWorkUi(work) {
     this.workUi?.destroy();
-    const width = Math.min(820, Math.max(560, this.scale.width * 0.68));
-    const x = this.scale.width / 2;
-    const y = this.scale.height - 188;
+    const width = Math.min(560, Math.max(440, this.scale.width * 0.42));
+    const x = Math.max(width / 2 + 14, this.scale.width - width / 2 - 18);
+    const y = Math.max(150, this.scale.height - 154);
     const container = this.add.container(x, y).setScrollFactor(0).setDepth(3200);
-    const bg = this.add.rectangle(0, 0, width, 316, 0x121821, 0.97)
+    const bg = this.add.rectangle(0, 0, width, 286, 0x121821, 0.97)
       .setStrokeStyle(2, 0xf0c15d, 0.95);
-    const barBack = this.add.rectangle(0, -96, width - 48, 15, 0x253241, 1);
-    const barFill = this.add.rectangle(-(width - 48) / 2, -96, 1, 15, 0x75d982, 1)
+    const barBack = this.add.rectangle(0, -88, width - 38, 14, 0x253241, 1);
+    const barFill = this.add.rectangle(-(width - 38) / 2, -88, 1, 14, 0x75d982, 1)
       .setOrigin(0, 0.5);
-    const title = this.add.text(0, -138, "", {
+    const title = this.add.text(0, -124, "", {
       fontFamily: "monospace",
       fontSize: "15px",
       color: "#fff2c4",
       stroke: "#1a202b",
       strokeThickness: 3
     }).setOrigin(0.5);
-    const detail = this.add.text(0, -120, "", {
+    const detail = this.add.text(0, -106, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#d9e5ef",
@@ -941,7 +941,7 @@ export default class BaseGameScene extends Phaser.Scene {
       strokeThickness: 3,
       align: "center"
     }).setOrigin(0.5);
-    const taskText = this.add.text(0, -70, "", {
+    const taskText = this.add.text(0, -62, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#fff2c4",
@@ -950,7 +950,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const sequenceText = this.add.text(0, -44, "", {
+    const sequenceText = this.add.text(0, -40, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#ffd66b",
@@ -959,7 +959,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const selectedText = this.add.text(0, -16, "", {
+    const selectedText = this.add.text(0, -18, "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#d9e5ef",
@@ -968,9 +968,9 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const hint = this.add.text(0, 146, "Clique nos frascos para montar a mistura | ESC sair antes", {
+    const hint = this.add.text(0, 140, "Clique nos frascos | slots removem item | ESC sair antes", {
       fontFamily: "monospace",
-      fontSize: "12px",
+      fontSize: "10px",
       color: "#ffd66b",
       stroke: "#1a202b",
       strokeThickness: 3
@@ -1019,9 +1019,10 @@ export default class BaseGameScene extends Phaser.Scene {
     if (!ui) {
       return;
     }
-    ui.buttons.forEach((button) => button.destroy());
-    ui.slots.forEach((slot) => slot.group.destroy());
-    ui.controls.forEach((control) => control.destroy());
+    const destroyObjects = (entry) => (entry?.objects ?? [entry]).forEach((object) => object?.destroy?.());
+    ui.buttons.forEach(destroyObjects);
+    ui.slots.forEach(destroyObjects);
+    ui.controls.forEach(destroyObjects);
     ui.buttons = [];
     ui.slots = [];
     ui.controls = [];
@@ -1031,44 +1032,45 @@ export default class BaseGameScene extends Phaser.Scene {
     }
 
     const sequenceLength = Math.max(1, Number(work?.task?.sequenceLength) || work?.task?.sequence?.length || 3);
-    const slotWidth = 118;
-    const slotStartX = -((sequenceLength - 1) * (slotWidth + 12)) / 2;
+    const slotWidth = Math.min(108, Math.max(82, (ui.width - 84) / sequenceLength));
+    const slotGap = 10;
+    const slotStartX = -((sequenceLength - 1) * (slotWidth + slotGap)) / 2;
     for (let index = 0; index < sequenceLength; index += 1) {
-      const group = this.add.container(slotStartX + index * (slotWidth + 12), 28);
-      const bg = this.add.rectangle(0, 0, slotWidth, 45, 0x0c1118, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.75);
-      const bottle = this.add.rectangle(-38, 0, 18, 28, 0xffffff, 1)
+      const slotX = slotStartX + index * (slotWidth + slotGap);
+      const bg = this.add.rectangle(slotX, 20, slotWidth, 38, 0x0c1118, 0.98)
+        .setStrokeStyle(2, 0xf0c15d, 0.75)
+        .setInteractive({ useHandCursor: true });
+      const bottle = this.add.rectangle(slotX - slotWidth / 2 + 18, 20, 16, 25, 0xffffff, 1)
         .setStrokeStyle(2, 0x0b1016, 0.95)
         .setVisible(false);
-      const text = this.add.text(8, 0, `${index + 1}`, {
+      const text = this.add.text(slotX + 8, 20, `${index + 1}`, {
         fontFamily: "monospace",
         fontSize: "11px",
         color: "#fff2c4",
         align: "center",
         stroke: "#000000",
         strokeThickness: 2
-      }).setOrigin(0.5);
-      const hit = this.add.rectangle(0, 0, slotWidth, 45, 0xffffff, 0.001)
-        .setInteractive({ useHandCursor: true });
-      hit.on("pointerdown", () => this.removeServerWorkIngredient(index));
-      group.add([bg, bottle, text, hit]);
-      ui.container.add(group);
-      ui.slots.push({ group, bg, bottle, text });
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      bg.on("pointerdown", () => this.removeServerWorkIngredient(index));
+      text.on("pointerdown", () => this.removeServerWorkIngredient(index));
+      ui.container.add([bg, bottle, text]);
+      ui.slots.push({ objects: [bg, bottle, text], bg, bottle, text });
     }
 
-    const buttonWidth = Math.min(126, Math.max(96, (ui.width - 72) / choices.length));
+    const buttonWidth = Math.min(104, Math.max(78, (ui.width - 40) / choices.length));
     const startX = -((choices.length - 1) * buttonWidth) / 2;
     choices.forEach((choice, index) => {
-      const group = this.add.container(startX + index * buttonWidth, 88);
+      const buttonX = startX + index * buttonWidth;
       const color = this.ingredientColor(choice);
-      const bg = this.add.rectangle(0, 0, buttonWidth - 10, 56, 0x1b2430, 0.98)
-        .setStrokeStyle(2, 0xf0c15d, 0.9);
-      const bottle = this.add.rectangle(0, -8, 22, 28, color, 1)
+      const bg = this.add.rectangle(buttonX, 76, buttonWidth - 8, 54, 0x1b2430, 0.98)
+        .setStrokeStyle(2, 0xf0c15d, 0.9)
+        .setInteractive({ useHandCursor: true });
+      const bottle = this.add.rectangle(buttonX, 68, 21, 27, color, 1)
         .setStrokeStyle(2, 0x0b1016, 0.95);
-      const neck = this.add.rectangle(0, -27, 10, 10, color, 1)
+      const neck = this.add.rectangle(buttonX, 49, 10, 10, color, 1)
         .setStrokeStyle(1, 0x0b1016, 0.95);
-      const shine = this.add.rectangle(-5, -13, 4, 14, 0xffffff, 0.38);
-      const label = this.add.text(0, 22, choice.replace(" ", "\n"), {
+      const shine = this.add.rectangle(buttonX - 5, 63, 4, 13, 0xffffff, 0.38);
+      const label = this.add.text(buttonX, 99, choice.replace(" ", "\n"), {
         fontFamily: "monospace",
         fontSize: "9px",
         color: "#fff2c4",
@@ -1076,27 +1078,38 @@ export default class BaseGameScene extends Phaser.Scene {
         stroke: "#000000",
         strokeThickness: 2
       }).setOrigin(0.5);
-      const hit = this.add.rectangle(0, 0, buttonWidth - 4, 66, 0xffffff, 0.001)
-        .setInteractive({ useHandCursor: true });
-      hit.on("pointerdown", () => this.selectServerWorkIngredient(choice));
-      hit.on("pointerover", () => bg.setFillStyle(0x2b3b4a, 1));
-      hit.on("pointerout", () => bg.setFillStyle(0x1b2430, 0.98));
-      group.add([bg, bottle, neck, shine, label, hit]);
-      ui.container.add(group);
-      ui.buttons.push(group);
+      const clickObjects = [bg, bottle, neck, label];
+      clickObjects.forEach((object) => {
+        object.setInteractive({ useHandCursor: true });
+        object.on("pointerdown", () => this.selectServerWorkIngredient(choice));
+        object.on("pointerover", () => bg.setFillStyle(0x2b3b4a, 1));
+        object.on("pointerout", () => bg.setFillStyle(0x1b2430, 0.98));
+      });
+      ui.container.add([bg, bottle, neck, shine, label]);
+      ui.buttons.push({ objects: [bg, bottle, neck, shine, label] });
     });
 
-    const reset = this.createWorkMiniButton(-84, 134, 140, 30, "LIMPAR", () => this.resetServerWorkSelection(), {
-      fill: 0x2b1f20,
-      hover: 0x4a2b2d
-    });
-    const submit = this.createWorkMiniButton(84, 134, 150, 30, "MISTURAR", () => this.submitServerWorkTask(), {
-      fill: 0x203823,
-      hover: 0x315b38,
-      color: "#d9ffd9"
-    });
-    ui.container.add([reset, submit]);
-    ui.controls.push(reset, submit);
+    const makeControl = (x, label, fill, hover, color, onClick) => {
+      const bg = this.add.rectangle(x, 122, 136, 30, fill, 0.98)
+        .setStrokeStyle(2, 0xf0c15d, 0.95)
+        .setInteractive({ useHandCursor: true });
+      const text = this.add.text(x, 122, label, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color,
+        stroke: "#000000",
+        strokeThickness: 2
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      [bg, text].forEach((object) => {
+        object.on("pointerdown", onClick);
+        object.on("pointerover", () => bg.setFillStyle(hover, 1));
+        object.on("pointerout", () => bg.setFillStyle(fill, 0.98));
+      });
+      ui.container.add([bg, text]);
+      ui.controls.push({ objects: [bg, text] });
+    };
+    makeControl(-76, "LIMPAR", 0x2b1f20, 0x4a2b2d, "#fff2c4", () => this.resetServerWorkSelection());
+    makeControl(76, "MISTURAR", 0x203823, 0x315b38, "#d9ffd9", () => this.submitServerWorkTask());
     this.updateServerWorkSlots();
   }
 
@@ -1106,7 +1119,7 @@ export default class BaseGameScene extends Phaser.Scene {
     }
     const ui = this.serverWorkUi;
     const progress = Phaser.Math.Clamp(Number(work.progress) || 0, 0, 1);
-    ui.barFill.width = Math.max(1, (ui.width - 42) * progress);
+    ui.barFill.width = Math.max(1, (ui.width - 38) * progress);
     ui.title.setText(`${work.label} ${Math.floor(progress * 100)}%`);
     ui.detail.setText(`${this.formatWorkMinutes(work.elapsedGameMinutes)} / ${this.formatWorkMinutes(work.totalGameMinutes)} | ${work.coinsPerGameHour} moedas/h | +${work.earnedCoins}/${work.maxCoins} moedas`);
 
