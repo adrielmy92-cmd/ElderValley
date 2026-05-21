@@ -12,6 +12,8 @@ export default class TitleScene extends Phaser.Scene {
     this.activePanel = "houses";
     this.loginMode = localStorage.getItem("eldervalley-login-mode") ?? "guest";
     this.selectedCharacter = localStorage.getItem("eldervalley-selected-character") ?? "mage-1";
+    this.scrollOffsets = { houses: 0, characters: 0 };
+    this.activeScrollArea = null;
     this.walletSystem = new WalletSystem(this);
     if (this.selectedCharacter === "archer") {
       this.selectedCharacter = "adventurer";
@@ -95,6 +97,16 @@ export default class TitleScene extends Phaser.Scene {
     this.drawVideoPanel(this.layout.video);
     this.drawTabs(this.layout.side.x, this.layout.side.y - 46, this.layout.side.w);
     this.contentRoot = this.add.container(0, 0).setDepth(30);
+    this.input.on("wheel", (pointer, _gameObjects, _deltaX, deltaY) => {
+      if (!this.activeScrollArea) {
+        return;
+      }
+      const { x, y, w, h } = this.activeScrollArea;
+      if (pointer.x < x || pointer.x > x + w || pointer.y < y || pointer.y > y + h) {
+        return;
+      }
+      this.scrollActivePanel(deltaY);
+    });
     this.renderPanel();
   }
 
@@ -467,6 +479,7 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   renderPanel() {
+    this.activeScrollArea = null;
     this.contentRoot?.removeAll(true);
     this.tabButtons?.forEach(({ tab, button }) => {
       const active = tab.id === this.activePanel;
@@ -527,24 +540,30 @@ export default class TitleScene extends Phaser.Scene {
     const columns = w >= 500 ? 2 : 1;
     const gap = 14;
     const rows = Math.ceil(houses.length / columns);
-    const cardW = (w - 48 - gap * (columns - 1)) / columns;
-    const cardH = Math.min(210, Math.max(132, (h - 176 - gap * (rows - 1)) / rows));
+    const listX = x + 18;
+    const listY = y + 150;
+    const listW = w - 36;
+    const listH = h - 174;
+    const cardW = (listW - 12 - gap * (columns - 1)) / columns;
+    const cardH = columns > 1 ? 190 : 214;
+    const contentH = rows * cardH + Math.max(0, rows - 1) * gap;
+    const scroller = this.createScrollArea("houses", listX, listY, listW, listH, contentH);
 
     houses.forEach((house, index) => {
       const col = index % columns;
       const row = Math.floor(index / columns);
-      const cx = x + 24 + col * (cardW + gap);
-      const cy = y + 162 + row * (cardH + gap);
-      this.addCard(cx, cy, cardW, cardH);
-      const image = this.add.image(cx + cardW / 2, cy + cardH - 32, house.key)
+      const cx = listX + 6 + col * (cardW + gap);
+      const cy = listY + row * (cardH + gap);
+      this.addCard(cx, cy, cardW, cardH, false, scroller.content);
+      const image = this.add.image(cx + cardW / 2, cy + cardH - 54, house.key)
         .setOrigin(0.5, 1)
         .setDepth(36);
-      this.fitImageInside(image, cardW * house.maxW, cardH * house.maxH);
-      this.contentRoot.add(image);
-      this.addContentText(cx + 12, cy + cardH - 26, house.name, 14, "#ffd889", cardW - 24);
+      this.fitImageInside(image, cardW * house.maxW, Math.max(90, cardH - 68));
+      scroller.content.add(image);
+      this.addContentText(cx + 12, cy + cardH - 35, house.name, 14, "#ffd889", cardW - 24, scroller.content);
       const owned = this.walletSystem.isHouseOwned(house.key);
-      this.addContentText(cx + 12, cy + cardH - 9, owned ? "Comprada nesta carteira" : house.price, 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - 24);
-      this.addBuyButton(cx + cardW - 88, cy + cardH - 24, house);
+      this.addContentText(cx + 12, cy + cardH - 16, owned ? "Comprada nesta carteira" : house.price, 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - 104, scroller.content);
+      this.addBuyButton(cx + cardW - 88, cy + cardH - 24, house, scroller.content);
     });
   }
 
@@ -567,7 +586,7 @@ export default class TitleScene extends Phaser.Scene {
     this.addContentText(x + 14, y + 66, this.walletSystem.status, 10, "#9fb8d9", w - 28);
   }
 
-  addBuyButton(x, y, house) {
+  addBuyButton(x, y, house, parent = this.contentRoot) {
     const owned = this.walletSystem.isHouseOwned(house.key);
     const button = this.add.rectangle(x, y, 74, 24, owned ? 0x1d4d28 : (this.walletSystem.connected ? 0x17395c : 0x2b190d), 0.98)
       .setOrigin(0, 0.5)
@@ -578,7 +597,7 @@ export default class TitleScene extends Phaser.Scene {
     const label = this.add.text(x + 37, y, owned ? "Minha" : "Comprar", this.textStyle(10, "#ffe0a0"))
       .setOrigin(0.5)
       .setDepth(61);
-    this.contentRoot.add([button, label]);
+    parent.add([button, label]);
   }
 
   async handleHousePurchase(house) {
@@ -597,23 +616,30 @@ export default class TitleScene extends Phaser.Scene {
     this.drawAccountSummary(x + 24, y + 56, w - 48);
 
     const chars = this.getCharacterCatalog();
-    const cardW = w - 48;
+    const listX = x + 18;
+    const listY = y + 150;
+    const listW = w - 36;
+    const listH = h - 174;
+    const gap = 14;
+    const cardW = listW - 12;
     const cardH = 118;
+    const contentH = chars.length * cardH + Math.max(0, chars.length - 1) * gap;
+    const scroller = this.createScrollArea("characters", listX, listY, listW, listH, contentH);
     chars.forEach((character, index) => {
-      const cy = y + 162 + index * 136;
+      const cy = listY + index * (cardH + gap);
       const selected = this.selectedCharacter === character.id;
       const owned = this.loginMode !== "wallet"
         || !this.walletSystem.connected
         || this.walletSystem.profile?.ownedCharacters?.includes(character.id);
-      this.addCard(x + 24, cy, cardW, cardH, selected);
-      const sprite = this.add.sprite(x + 72, cy + cardH - 16, character.key, character.frame)
+      this.addCard(listX + 6, cy, cardW, cardH, selected, scroller.content);
+      const sprite = this.add.sprite(listX + 54, cy + cardH - 16, character.key, character.frame)
         .setOrigin(0.5, 1)
         .setScale(character.scale)
         .setDepth(36);
-      this.contentRoot.add(sprite);
-      this.addContentText(x + 124, cy + 34, character.name, 18, "#ffd889", cardW - 150);
-      this.addContentText(x + 124, cy + 64, selected ? "Selecionado" : (owned ? "Escolher" : "Nao comprado"), 12, selected ? "#a7ffb3" : (owned ? "#d8c6a1" : "#d97878"), cardW - 150);
-      const zone = this.add.zone(x + 24, cy, cardW, cardH)
+      scroller.content.add(sprite);
+      this.addContentText(listX + 106, cy + 34, character.name, 18, "#ffd889", cardW - 132, scroller.content);
+      this.addContentText(listX + 106, cy + 64, selected ? "Selecionado" : (owned ? "Escolher" : "Nao comprado"), 12, selected ? "#a7ffb3" : (owned ? "#d8c6a1" : "#d97878"), cardW - 132, scroller.content);
+      const zone = this.add.zone(listX + 6, cy, cardW, cardH)
         .setOrigin(0)
         .setInteractive({ useHandCursor: true })
         .setDepth(60)
@@ -625,7 +651,7 @@ export default class TitleScene extends Phaser.Scene {
             this.renderPanel();
           }
         });
-      this.contentRoot.add(zone);
+      scroller.content.add(zone);
     });
   }
 
@@ -676,7 +702,7 @@ export default class TitleScene extends Phaser.Scene {
     }
   }
 
-  addCard(x, y, w, h, selected = false) {
+  addCard(x, y, w, h, selected = false, parent = this.contentRoot) {
     const g = this.add.graphics().setDepth(34);
     g.fillStyle(0x0a0d12, 0.94);
     g.fillRoundedRect(x, y, w, h, 6);
@@ -684,10 +710,10 @@ export default class TitleScene extends Phaser.Scene {
     g.strokeRoundedRect(x, y, w, h, 6);
     g.lineStyle(1, selected ? 0xf7c86a : 0xd49a4c, 0.72);
     g.strokeRoundedRect(x + 5, y + 5, w - 10, h - 10, 4);
-    this.contentRoot.add(g);
+    parent.add(g);
   }
 
-  addContentText(x, y, text, size, color, width) {
+  addContentText(x, y, text, size, color, width, parent = this.contentRoot) {
     const label = this.add.text(x, y, text, {
       fontFamily: size >= 18 ? "Georgia, 'Times New Roman', serif" : "monospace",
       fontSize: `${size}px`,
@@ -696,13 +722,93 @@ export default class TitleScene extends Phaser.Scene {
       strokeThickness: size >= 18 ? 4 : 3,
       wordWrap: { width }
     }).setOrigin(0, 0.5).setDepth(36);
-    this.contentRoot.add(label);
+    parent.add(label);
     return label;
   }
 
   fitImageInside(image, maxWidth, maxHeight) {
     const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
     image.setScale(scale);
+  }
+
+  createScrollArea(key, x, y, w, h, contentHeight) {
+    const maxScroll = Math.max(0, contentHeight - h);
+    const offset = Phaser.Math.Clamp(this.scrollOffsets[key] ?? 0, 0, maxScroll);
+    this.scrollOffsets[key] = offset;
+
+    const maskShape = this.add.graphics().setVisible(false);
+    maskShape.fillStyle(0xffffff, 1);
+    maskShape.fillRect(x, y, w, h);
+    const content = this.add.container(0, -offset).setDepth(35);
+    content.setMask(maskShape.createGeometryMask());
+
+    const hitZone = this.add.zone(x, y, w, h)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: false })
+      .setDepth(31);
+
+    this.contentRoot.add([maskShape, content, hitZone]);
+
+    const area = {
+      key,
+      x,
+      y,
+      w,
+      h,
+      contentHeight,
+      maxScroll,
+      content,
+      handle: null
+    };
+    this.activeScrollArea = area;
+
+    if (maxScroll > 0) {
+      const trackX = x + w - 8;
+      const track = this.add.rectangle(trackX, y, 5, h, 0x2b190d, 0.82)
+        .setOrigin(0.5, 0)
+        .setDepth(84);
+      const handleH = Math.max(34, h * (h / contentHeight));
+      const handle = this.add.rectangle(trackX, y + 3, 10, handleH, 0xd29643, 0.98)
+        .setOrigin(0.5, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(85);
+      this.input.setDraggable(handle);
+      handle.on("drag", (_pointer, _dragX, dragY) => {
+        const minY = y + 3;
+        const maxY = y + h - handleH - 3;
+        const clampedY = Phaser.Math.Clamp(dragY, minY, maxY);
+        const ratio = maxY === minY ? 0 : (clampedY - minY) / (maxY - minY);
+        this.setScrollOffset(area, ratio * maxScroll);
+      });
+      area.handle = handle;
+      area.handleRange = { minY: y + 3, maxY: y + h - handleH - 3, handleH };
+      this.contentRoot.add([track, handle]);
+      this.updateScrollHandle(area);
+    }
+
+    return area;
+  }
+
+  scrollActivePanel(deltaY) {
+    if (!this.activeScrollArea || this.activeScrollArea.maxScroll <= 0) {
+      return;
+    }
+    this.setScrollOffset(this.activeScrollArea, (this.scrollOffsets[this.activeScrollArea.key] ?? 0) + deltaY * 0.75);
+  }
+
+  setScrollOffset(area, value) {
+    const offset = Phaser.Math.Clamp(value, 0, area.maxScroll);
+    this.scrollOffsets[area.key] = offset;
+    area.content.y = -offset;
+    this.updateScrollHandle(area);
+  }
+
+  updateScrollHandle(area) {
+    if (!area.handle || !area.handleRange) {
+      return;
+    }
+    const ratio = area.maxScroll <= 0 ? 0 : (this.scrollOffsets[area.key] ?? 0) / area.maxScroll;
+    area.handle.y = Phaser.Math.Linear(area.handleRange.minY, area.handleRange.maxY, ratio);
   }
 
   textStyle(size, color) {
