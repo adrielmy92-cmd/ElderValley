@@ -503,7 +503,11 @@ export default class TitleScene extends Phaser.Scene {
       { name: "Casa Alta", key: "creative-house-cottage", price: "1.900 EV", maxW: 0.96, maxH: 0.78 },
       { name: "Casa Vermelha", key: "creative-house-red-lodge", price: "2.600 EV", maxW: 0.96, maxH: 0.76 },
       { name: "Casa Verde", key: "creative-house-green-cottage", price: "2.400 EV", maxW: 0.96, maxH: 0.78 },
-      { name: "Casa Arcana", key: "creative-house-alchemist", price: "4.800 EV", maxW: 0.96, maxH: 0.82 }
+      { name: "Casa Arcana", key: "creative-house-alchemist", price: "4.800 EV", maxW: 0.96, maxH: 0.82 },
+      { name: "Mansao Esmeralda", key: "creative-house-ivy-manor", price: "7.800 EV", maxW: 0.96, maxH: 0.8 },
+      { name: "Casa de Palha", key: "creative-house-thatch-cottage", price: "2.200 EV", maxW: 0.96, maxH: 0.8 },
+      { name: "Casa Azul", key: "creative-house-blue-cottage", price: "2.900 EV", maxW: 0.88, maxH: 0.84 },
+      { name: "Casa Torre", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 }
     ];
   }
 

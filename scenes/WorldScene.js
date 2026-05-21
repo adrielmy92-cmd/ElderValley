@@ -216,6 +216,58 @@ const HOUSE_DEFS = [
     doorOffset: { x: 0, y: -28 },
     spawnOffset: { x: 0, y: 34 },
     colliders: []
+  },
+  {
+    id: "ivyManorHouse",
+    label: "Mansao verde",
+    key: "creative-house-ivy-manor",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_ivy_manor_house",
+    doorOffset: { x: 0, y: -18 },
+    spawnOffset: { x: 0, y: 34 },
+    colliders: []
+  },
+  {
+    id: "thatchCottageHouse",
+    label: "Casa palha",
+    key: "creative-house-thatch-cottage",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_thatch_cottage_house",
+    doorOffset: { x: 0, y: -18 },
+    spawnOffset: { x: 0, y: 34 },
+    colliders: []
+  },
+  {
+    id: "blueCottageHouse",
+    label: "Casa azul",
+    key: "creative-house-blue-cottage",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_blue_cottage_house",
+    doorOffset: { x: 0, y: -18 },
+    spawnOffset: { x: 0, y: 34 },
+    colliders: []
+  },
+  {
+    id: "redTowerCottageHouse",
+    label: "Casa torre",
+    key: "creative-house-red-tower-cottage",
+    creativeOnly: true,
+    x: 0,
+    y: 0,
+    sceneKey: "HouseInteriorScene",
+    doorId: "door_red_tower_cottage_house",
+    doorOffset: { x: 0, y: -18 },
+    spawnOffset: { x: 0, y: 34 },
+    colliders: []
   }
 ];
 
