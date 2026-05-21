@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=193";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=186";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=194";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -853,7 +853,11 @@ export default class BaseGameScene extends Phaser.Scene {
 
   async requestServerWork(action, payload = {}, method = "POST") {
     const profileId = this.getPlayerProfileId();
-    const body = { profileId, ...payload };
+    const body = {
+      profileId,
+      presenceId: this.multiplayer?.getPresenceId?.() ?? "",
+      ...payload
+    };
     const url = method === "GET"
       ? `/api/work/${action}?${new URLSearchParams(body).toString()}`
       : `/api/work/${action}`;

@@ -131,6 +131,29 @@ function requireProfileSession(req, profileId) {
   return { ok: true, session };
 }
 
+function validateWalletSocketSession(payload) {
+  const loginMode = sanitizeText(payload.loginMode, 16) || "guest";
+  if (loginMode !== "wallet") {
+    return { ok: true, loginMode: "guest", session: null, profileId: "" };
+  }
+  const session = verifySessionToken(sanitizeText(payload.sessionToken, 2000));
+  if (!session?.profileId || !isWalletProfile(session.profileId)) {
+    return { ok: false, error: "Carteira precisa assinar a sessao novamente." };
+  }
+  const walletAddress = sanitizeText(payload.walletAddress, 90).toLowerCase();
+  if (walletAddress && session.address && walletAddress !== String(session.address).toLowerCase()) {
+    return { ok: false, error: "Sessao da carteira nao corresponde ao endereco conectado." };
+  }
+  return {
+    ok: true,
+    loginMode: "wallet",
+    session,
+    profileId: String(session.profileId).toLowerCase(),
+    walletAddress: String(session.address ?? walletAddress).toLowerCase(),
+    walletProvider: sanitizeText(session.provider ?? payload.walletProvider, 32)
+  };
+}
+
 function isDeveloperWallet(address) {
   return developerWallets.has(String(address ?? "").toLowerCase());
 }
@@ -219,9 +242,17 @@ function publicPlayer(client) {
     moving: client.moving,
     characterId: client.characterId,
     loginMode: client.loginMode,
-    walletAddress: client.walletAddress,
+    walletAddress: maskWalletAddress(client.walletAddress),
     walletProvider: client.walletProvider
   };
+}
+
+function maskWalletAddress(address) {
+  const value = String(address ?? "").toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(value)) {
+    return "";
+  }
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
 function finiteNumber(value, fallback = 0) {
@@ -354,8 +385,36 @@ function supersedeOlderPresenceClients(activeClient) {
   }
 }
 
+function supersedeOlderWalletClients(activeClient) {
+  if (!activeClient.walletProfileId) {
+    return;
+  }
+  for (const peer of clients.values()) {
+    if (peer.id === activeClient.id || peer.walletProfileId !== activeClient.walletProfileId) {
+      continue;
+    }
+    peer.superseded = true;
+    sendWs(peer.socket, {
+      type: "walletSessionReplaced",
+      message: "Essa carteira entrou em outro navegador. Esta sessao foi encerrada para evitar farm duplicado."
+    });
+    peer.socket.end();
+  }
+}
+
 function hasActivePresence(presenceId) {
   return [...clients.values()].some((peer) => peer.ready && !peer.superseded && (peer.presenceId || peer.id) === presenceId);
+}
+
+function hasActiveWalletPresence(profileId, presenceId = "") {
+  const normalizedProfileId = String(profileId ?? "").toLowerCase();
+  const normalizedPresenceId = sanitizeText(presenceId, 80);
+  return [...clients.values()].some((peer) => (
+    peer.ready
+    && !peer.superseded
+    && peer.walletProfileId === normalizedProfileId
+    && (!normalizedPresenceId || (peer.presenceId || peer.id) === normalizedPresenceId)
+  ));
 }
 
 function sanitizeText(value, maxLength = 120) {
@@ -383,6 +442,13 @@ function handleWsPayload(client, payload) {
 
   if (payload.type === "hello") {
     const wasReady = client.ready;
+    const walletAuth = validateWalletSocketSession(payload);
+    if (!walletAuth.ok) {
+      sendWs(client.socket, { type: "authRejected", message: walletAuth.error });
+      client.superseded = true;
+      client.socket.end();
+      return;
+    }
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     supersedeOlderPresenceClients(client);
     client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
@@ -392,11 +458,13 @@ function handleWsPayload(client, payload) {
     client.y = finiteNumber(payload.y, 0);
     client.facing = sanitizeText(payload.facing, 12) || "down";
     client.characterId = sanitizeText(payload.characterId, 24) || "mage-1";
-    client.loginMode = sanitizeText(payload.loginMode, 16) || "guest";
-    client.walletAddress = sanitizeText(payload.walletAddress, 80);
-    client.walletProvider = sanitizeText(payload.walletProvider, 32);
+    client.loginMode = walletAuth.loginMode;
+    client.walletProfileId = walletAuth.profileId;
+    client.walletAddress = walletAuth.walletAddress ?? "";
+    client.walletProvider = walletAuth.walletProvider ?? "";
     client.moving = false;
     client.ready = true;
+    supersedeOlderWalletClients(client);
     sendWs(client.socket, {
       type: "welcome",
       id: client.id,
@@ -413,6 +481,15 @@ function handleWsPayload(client, payload) {
     if (!client.ready || client.superseded) {
       return;
     }
+    if (client.walletProfileId) {
+      const walletAuth = validateWalletSocketSession(payload);
+      if (!walletAuth.ok || walletAuth.profileId !== client.walletProfileId) {
+        sendWs(client.socket, { type: "authRejected", message: "Sessao de carteira invalida." });
+        client.superseded = true;
+        client.socket.end();
+        return;
+      }
+    }
     client.scene = sanitizeText(payload.scene, 48) || client.scene;
     client.sceneChannel = canonicalSceneChannel(client.scene, sanitizeText(payload.sceneChannel, 80) || client.sceneChannel);
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
@@ -420,9 +497,7 @@ function handleWsPayload(client, payload) {
     client.y = finiteNumber(payload.y, client.y);
     client.facing = sanitizeText(payload.facing, 12) || client.facing;
     client.characterId = sanitizeText(payload.characterId, 24) || client.characterId;
-    client.loginMode = sanitizeText(payload.loginMode, 16) || client.loginMode || "guest";
-    client.walletAddress = sanitizeText(payload.walletAddress, 80) || client.walletAddress || "";
-    client.walletProvider = sanitizeText(payload.walletProvider, 32) || client.walletProvider || "";
+    client.loginMode = client.walletProfileId ? "wallet" : (sanitizeText(payload.loginMode, 16) || client.loginMode || "guest");
     client.moving = Boolean(payload.moving);
     broadcast({ type: "state", player: publicPlayer(client) }, client.id, client.presenceId);
     return;
@@ -823,6 +898,13 @@ const server = createServer(async (req, res) => {
       const auth = requireProfileSession(req, profileId);
       if (!auth.ok) {
         sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
+      if (isWalletProfile(profileId) && !hasActiveWalletPresence(profileId, payload.presenceId)) {
+        sendJson(res, 409, {
+          ok: false,
+          error: "Carteira sem presenca ativa no servidor. Reentre no jogo para evitar farm duplicado."
+        });
         return;
       }
 

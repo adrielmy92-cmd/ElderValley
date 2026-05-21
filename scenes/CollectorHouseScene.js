@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=193";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
 
 export default class CollectorHouseScene extends InteriorBaseScene {
   constructor() {

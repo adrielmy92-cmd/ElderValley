@@ -66,6 +66,7 @@ export default class MultiplayerSystem {
       loginMode: localStorage.getItem("eldervalley-login-mode") ?? "guest",
       walletAddress: this.getWalletAddress(),
       walletProvider: this.getWalletProvider(),
+      sessionToken: this.getSessionToken(),
       moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
     };
   }
@@ -101,6 +102,14 @@ export default class MultiplayerSystem {
     try {
       const wallet = JSON.parse(localStorage.getItem("eldervalley-wallet") || "null");
       return wallet?.provider ?? "";
+    } catch {
+      return "";
+    }
+  }
+
+  getSessionToken() {
+    try {
+      return localStorage.getItem("eldervalley-session-token") ?? "";
     } catch {
       return "";
     }
@@ -161,6 +170,13 @@ export default class MultiplayerSystem {
     if (payload.type === "presenceReplaced") {
       this.connected = false;
       this.clearRemotePlayers();
+      this.socket?.close();
+      return;
+    }
+    if (payload.type === "walletSessionReplaced" || payload.type === "authRejected") {
+      this.connected = false;
+      this.clearRemotePlayers();
+      this.scene.chat?.addSystemMessage(payload.message ?? "Sessao de carteira encerrada.");
       this.socket?.close();
       return;
     }
