@@ -2693,12 +2693,6 @@ export default class WorldScene extends BaseGameScene {
 
   addDecorations() {
     this.lampGlows = [];
-    const trees = [
-      [70, 150], [70, 545], [340, 598], [410, 545], [835, 620],
-      [900, 565], [1110, 540], [1400, 630]
-    ];
-    trees.forEach(([x, y]) => this.addReferenceTree(x, y));
-
     const lamps = [[300, 520], [540, 506], [1010, 508], [1160, 310], [1510, 470], [1840, 686]];
     lamps.forEach(([x, y], index) => this.addStreetLamp(x, y, index));
 
