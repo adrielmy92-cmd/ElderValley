@@ -739,6 +739,14 @@ export default class BaseGameScene extends Phaser.Scene {
     return coins;
   }
 
+  getSessionHeaders(headers = {}) {
+    const token = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
+    return {
+      ...headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+  }
+
   updateCurrencyHud() {
     this.coinText?.setText(`Moedas: ${this.getCoins()}`);
   }
@@ -828,6 +836,252 @@ export default class BaseGameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => {
       this.scene.start(sceneKey, data);
     });
+  }
+
+  formatWorkMinutes(minutes) {
+    const safeMinutes = Math.max(0, Math.floor(Number(minutes) || 0));
+    const hours = Math.floor(safeMinutes / 60);
+    const mins = safeMinutes % 60;
+    return `${hours}h${String(mins).padStart(2, "0")}`;
+  }
+
+  async requestServerWork(action, payload = {}, method = "POST") {
+    const profileId = this.getPlayerProfileId();
+    const body = { profileId, ...payload };
+    const url = method === "GET"
+      ? `/api/work/${action}?${new URLSearchParams(body).toString()}`
+      : `/api/work/${action}`;
+    const response = await fetch(url, {
+      method,
+      headers: this.getSessionHeaders({ "Content-Type": "application/json" }),
+      body: method === "GET" ? undefined : JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error ?? "Servidor recusou a acao de trabalho.");
+    }
+    return result;
+  }
+
+  showWorkNotice(text) {
+    const notice = this.add.text(this.scale.width / 2, this.scale.height - 156, text, {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#fff2c4",
+      backgroundColor: "#1b2430",
+      padding: { left: 10, right: 10, top: 6, bottom: 6 },
+      align: "center",
+      wordWrap: { width: Math.min(560, this.scale.width - 80) }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3300);
+    this.tweens.add({
+      targets: notice,
+      alpha: 0,
+      delay: 1500,
+      duration: 420,
+      onComplete: () => notice.destroy()
+    });
+  }
+
+  createServerWorkUi(work) {
+    this.workUi?.destroy();
+    const width = Math.min(620, Math.max(320, this.scale.width * 0.52));
+    const x = this.scale.width / 2;
+    const y = this.scale.height - 122;
+    const container = this.add.container(x, y).setScrollFactor(0).setDepth(3200);
+    const bg = this.add.rectangle(0, 0, width, 148, 0x121821, 0.95)
+      .setStrokeStyle(2, 0xf0c15d, 0.95);
+    const barBack = this.add.rectangle(0, 4, width - 42, 14, 0x253241, 1);
+    const barFill = this.add.rectangle(-(width - 42) / 2, 4, 1, 14, 0x75d982, 1)
+      .setOrigin(0, 0.5);
+    const title = this.add.text(0, -54, "", {
+      fontFamily: "monospace",
+      fontSize: "15px",
+      color: "#fff2c4",
+      stroke: "#1a202b",
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    const detail = this.add.text(0, -25, "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#d9e5ef",
+      stroke: "#1a202b",
+      strokeThickness: 3,
+      align: "center"
+    }).setOrigin(0.5);
+    const taskText = this.add.text(0, 29, "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#fff2c4",
+      stroke: "#1a202b",
+      strokeThickness: 3,
+      align: "center",
+      wordWrap: { width: width - 42 }
+    }).setOrigin(0.5);
+    const hint = this.add.text(0, 61, "ESC sair antes", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#ffd66b",
+      stroke: "#1a202b",
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    container.add([bg, barBack, barFill, title, detail, taskText, hint]);
+    this.workUi = container;
+    this.serverWorkUi = { container, width, barFill, title, detail, taskText, buttons: [] };
+    this.updateServerWorkUi(work);
+  }
+
+  updateServerWorkUi(work, message = "") {
+    if (!this.serverWorkUi || !work) {
+      return;
+    }
+    const ui = this.serverWorkUi;
+    const progress = Phaser.Math.Clamp(Number(work.progress) || 0, 0, 1);
+    ui.barFill.width = Math.max(1, (ui.width - 42) * progress);
+    ui.title.setText(`${work.label} ${Math.floor(progress * 100)}%`);
+    ui.detail.setText(`${this.formatWorkMinutes(work.elapsedGameMinutes)} / ${this.formatWorkMinutes(work.totalGameMinutes)} | ${work.coinsPerGameHour} moedas/h | +${work.earnedCoins}/${work.maxCoins} moedas`);
+
+    const task = work.task;
+    const selected = this.serverWorkSelection ?? [];
+    const sequence = Array.isArray(task?.sequence) ? task.sequence : [];
+    const taskLine = sequence.length
+      ? `${task.prompt}\nOrdem: ${sequence.join(" > ")}\nSelecionado: ${selected.join(" > ") || "-"}${message ? `\n${message}` : ""}`
+      : message;
+    ui.taskText.setText(taskLine);
+
+    ui.buttons.forEach((button) => button.destroy());
+    ui.buttons = [];
+    const choices = Array.isArray(task?.choices) ? task.choices : [];
+    const buttonWidth = Math.min(112, Math.max(74, (ui.width - 72) / Math.max(1, choices.length)));
+    const startX = -((choices.length - 1) * buttonWidth) / 2;
+    choices.forEach((choice, index) => {
+      const button = this.add.text(startX + index * buttonWidth, 84, choice, {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#1b2430",
+        backgroundColor: "#ffd66b",
+        padding: { left: 5, right: 5, top: 4, bottom: 4 },
+        align: "center",
+        fixedWidth: buttonWidth - 8
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      button.on("pointerdown", () => this.selectServerWorkIngredient(choice));
+      ui.container.add(button);
+      ui.buttons.push(button);
+    });
+  }
+
+  async selectServerWorkIngredient(choice) {
+    if (!this.serverWork?.task || this.serverWorkTaskBusy) {
+      return;
+    }
+    const task = this.serverWork.task;
+    const max = Math.max(1, Number(task.sequenceLength) || task.sequence?.length || 3);
+    this.serverWorkSelection = [...(this.serverWorkSelection ?? []), choice].slice(0, max);
+    this.updateServerWorkUi(this.serverWork);
+    if (this.serverWorkSelection.length < max) {
+      return;
+    }
+    this.serverWorkTaskBusy = true;
+    try {
+      const result = await this.requestServerWork("task", {
+        sessionId: this.serverWork.sessionId,
+        answer: this.serverWorkSelection
+      });
+      this.serverWork = result.work;
+      this.serverWorkSelection = [];
+      this.updateServerWorkUi(this.serverWork, result.success ? `+${result.bonusGameMinutes} min de progresso` : "Sequencia falhou. Tente a proxima.");
+    } catch (error) {
+      this.showWorkNotice(error.message);
+    } finally {
+      this.serverWorkTaskBusy = false;
+    }
+  }
+
+  restorePlayerAfterWork() {
+    this.isWorking = false;
+    this.workCancelKey = null;
+    this.finishTimedWork = null;
+    this.serverWorkPoll?.remove(false);
+    this.serverWorkPoll = null;
+    this.workUi?.destroy();
+    this.workUi = null;
+    this.serverWorkUi = null;
+    this.serverWork = null;
+    this.serverWorkSelection = [];
+    if (this.player?.body) {
+      this.player.body.enable = true;
+    }
+    this.player?.setVisible(true);
+    this.player?.playIdle?.();
+  }
+
+  async finishServerWork(cancelled = false) {
+    if (!this.serverWork || this.serverWorkFinishing) {
+      return;
+    }
+    this.serverWorkFinishing = true;
+    try {
+      const result = await this.requestServerWork("finish", {
+        sessionId: this.serverWork.sessionId,
+        cancelled
+      });
+      if (result.profile) {
+        this.registry.set("playerProfile", result.profile);
+        this.setCoins(result.profile.coins ?? this.getCoins());
+      }
+      this.restorePlayerAfterWork();
+      this.showWorkNotice(`${result.cancelled ? "Voce saiu da alquimia." : "Turno de alquimia finalizado."}\n+${result.earnedCoins ?? 0} moedas`);
+    } catch (error) {
+      this.showWorkNotice(error.message);
+    } finally {
+      this.serverWorkFinishing = false;
+    }
+  }
+
+  async refreshServerWork() {
+    if (!this.serverWork || this.serverWorkFinishing) {
+      return;
+    }
+    try {
+      const result = await this.requestServerWork("status", { sessionId: this.serverWork.sessionId }, "GET");
+      this.serverWork = result.work;
+      this.updateServerWorkUi(this.serverWork);
+      if (this.serverWork.completed) {
+        this.finishServerWork(false);
+      }
+    } catch (error) {
+      this.showWorkNotice(error.message);
+    }
+  }
+
+  async startServerWork({ jobId = "alchemy" } = {}) {
+    if (this.isWorking || !this.player) {
+      return false;
+    }
+    this.isWorking = true;
+    this.serverWorkFinishing = false;
+    this.serverWorkSelection = [];
+    this.player.setVelocity(0, 0);
+    this.player.setVisible(false);
+    if (this.player.body) {
+      this.player.body.enable = false;
+    }
+    this.workCancelKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.finishTimedWork = (cancelled = true) => this.finishServerWork(cancelled);
+    try {
+      const result = await this.requestServerWork("start", { jobId });
+      this.serverWork = result.work;
+      this.createServerWorkUi(this.serverWork);
+      this.serverWorkPoll = this.time.addEvent({
+        delay: 1000,
+        loop: true,
+        callback: () => this.refreshServerWork()
+      });
+      return true;
+    } catch (error) {
+      this.restorePlayerAfterWork();
+      this.showWorkNotice(error.message);
+      return false;
+    }
   }
 
   startTimedWork({

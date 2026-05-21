@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=186";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=188";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;
@@ -68,14 +68,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       promptText: "E Trabalhar (6h | 10 moedas/h)",
       radius: 82,
       enabled: () => !this.isWorking,
-      onInteract: () => this.startTimedWork({
-        label: "Alquimia",
-        totalGameMinutes: 360,
-        coinsPerGameHour: 10,
-        rewardText: "Voce concluiu um turno completo na alquimia.",
-        cancelText: "Voce saiu da alquimia antes do fim.",
-        allowCancel: true
-      })
+      onInteract: () => this.startServerWork({ jobId: "alchemy" })
     });
 
     this.interactions.add({

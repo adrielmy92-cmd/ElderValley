@@ -234,6 +234,90 @@ function getServerClockMinutes() {
   return (worldClockStartMinutes + elapsedSeconds * worldClockMinutesPerSecond) % 1440;
 }
 
+const workDefinitions = {
+  alchemy: {
+    id: "alchemy",
+    label: "Alquimia",
+    totalGameMinutes: 360,
+    coinsPerGameHour: 10,
+    taskBonusGameMinutes: 30,
+    ingredients: ["Folha viva", "Sal cristalino", "Raiz lunar", "Cinza azul", "Essencia verde"],
+    prompts: [
+      "Misture os ingredientes na ordem correta.",
+      "Estabilize a pocao seguindo a sequencia.",
+      "Ajuste o caldeirao antes que a energia escape."
+    ]
+  }
+};
+const workSessions = new Map();
+
+function createWorkTask(definition) {
+  const choices = [...definition.ingredients];
+  const sequence = [];
+  const sequenceLength = 3;
+  for (let index = 0; index < sequenceLength; index += 1) {
+    const pick = choices[Math.floor(Math.random() * choices.length)];
+    sequence.push(pick);
+  }
+  return {
+    taskId: crypto.randomUUID(),
+    prompt: definition.prompts[Math.floor(Math.random() * definition.prompts.length)],
+    choices,
+    sequence,
+    sequenceLength,
+    bonusGameMinutes: definition.taskBonusGameMinutes
+  };
+}
+
+function normalizeWorkSession(session) {
+  const definition = workDefinitions[session.jobId] ?? workDefinitions.alchemy;
+  const elapsedRealSeconds = Math.max(0, (Date.now() - session.startedAtMs) / 1000);
+  const elapsedGameMinutes = Math.min(
+    definition.totalGameMinutes,
+    elapsedRealSeconds * worldClockMinutesPerSecond + session.bonusGameMinutes
+  );
+  const earnedCoins = Math.floor((elapsedGameMinutes / 60) * definition.coinsPerGameHour);
+  return {
+    sessionId: session.sessionId,
+    profileId: session.profileId,
+    jobId: definition.id,
+    label: definition.label,
+    totalGameMinutes: definition.totalGameMinutes,
+    elapsedGameMinutes,
+    remainingGameMinutes: Math.max(0, definition.totalGameMinutes - elapsedGameMinutes),
+    progress: definition.totalGameMinutes > 0 ? elapsedGameMinutes / definition.totalGameMinutes : 1,
+    coinsPerGameHour: definition.coinsPerGameHour,
+    earnedCoins,
+    maxCoins: Math.floor((definition.totalGameMinutes / 60) * definition.coinsPerGameHour),
+    completed: elapsedGameMinutes >= definition.totalGameMinutes,
+    task: session.task
+  };
+}
+
+function publicWorkState(session) {
+  const state = normalizeWorkSession(session);
+  return {
+    ...state,
+    progress: Math.max(0, Math.min(1, state.progress)),
+    elapsedGameMinutes: Math.floor(state.elapsedGameMinutes),
+    remainingGameMinutes: Math.ceil(state.remainingGameMinutes)
+  };
+}
+
+async function awardWorkCoins(profileId, coins) {
+  const coinsToAward = Math.max(0, Math.floor(Number(coins) || 0));
+  let profile = null;
+  try {
+    profile = (await readProfile(profileId)).profile;
+  } catch {
+    profile = null;
+  }
+  profile = normalizeProfile(profileId, profile ?? {});
+  profile.coins = Math.max(0, Math.floor(Number(profile.coins ?? 0) || 0)) + coinsToAward;
+  const result = await writeProfile(profileId, profile);
+  return result.profile;
+}
+
 function publicPeers(exceptClient = null) {
   const exceptId = typeof exceptClient === "object" ? exceptClient?.id : exceptClient;
   const exceptPresenceId = typeof exceptClient === "object" ? exceptClient?.presenceId : null;
@@ -712,6 +796,112 @@ const server = createServer(async (req, res) => {
         playersOnline: [...clients.values()].filter((client) => client.ready).length
       });
       return;
+    }
+
+    if (url.pathname.startsWith("/api/work/")) {
+      const action = url.pathname.slice("/api/work/".length);
+      if (!["start", "status", "task", "finish"].includes(action)) {
+        sendJson(res, 404, { ok: false, error: "Unknown work action" });
+        return;
+      }
+
+      let payload = {};
+      if (req.method === "POST") {
+        payload = JSON.parse(await readBody(req) || "{}");
+      } else if (req.method === "GET") {
+        payload = Object.fromEntries(url.searchParams.entries());
+      } else {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+
+      const profileId = sanitizeText(payload.profileId, 140);
+      if (!profileId) {
+        sendJson(res, 400, { ok: false, error: "Missing profile id" });
+        return;
+      }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) {
+        sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
+
+      if (action === "start") {
+        const jobId = sanitizeText(payload.jobId, 40) || "alchemy";
+        const definition = workDefinitions[jobId];
+        if (!definition) {
+          sendJson(res, 400, { ok: false, error: "Unknown job" });
+          return;
+        }
+        const existing = [...workSessions.values()].find((session) => session.profileId === profileId && !session.finished);
+        const session = existing ?? {
+          sessionId: crypto.randomUUID(),
+          profileId,
+          jobId: definition.id,
+          startedAtMs: Date.now(),
+          bonusGameMinutes: 0,
+          task: createWorkTask(definition),
+          finished: false
+        };
+        workSessions.set(session.sessionId, session);
+        sendJson(res, 200, { ok: true, work: publicWorkState(session) });
+        return;
+      }
+
+      const sessionId = sanitizeText(payload.sessionId, 80);
+      const session = workSessions.get(sessionId) ?? [...workSessions.values()].find((item) => item.profileId === profileId && !item.finished);
+      if (!session || session.profileId !== profileId || session.finished) {
+        sendJson(res, 404, { ok: false, error: "No active work session" });
+        return;
+      }
+
+      if (action === "status") {
+        sendJson(res, 200, { ok: true, work: publicWorkState(session) });
+        return;
+      }
+
+      if (action === "task") {
+        const answer = Array.isArray(payload.answer) ? payload.answer.map((item) => sanitizeText(item, 40)) : [];
+        const expected = session.task?.sequence ?? [];
+        const success = answer.length === expected.length && answer.every((item, index) => item === expected[index]);
+        let bonusGameMinutes = 0;
+        if (success) {
+          const definition = workDefinitions[session.jobId] ?? workDefinitions.alchemy;
+          bonusGameMinutes = definition.taskBonusGameMinutes;
+          session.bonusGameMinutes += bonusGameMinutes;
+          session.task = createWorkTask(definition);
+        }
+        sendJson(res, 200, {
+          ok: true,
+          success,
+          bonusGameMinutes,
+          expected: success ? undefined : expected,
+          work: publicWorkState(session)
+        });
+        return;
+      }
+
+      if (action === "finish") {
+        const state = normalizeWorkSession(session);
+        session.finished = true;
+        workSessions.delete(session.sessionId);
+        const profile = await awardWorkCoins(profileId, state.earnedCoins);
+        sendJson(res, 200, {
+          ok: true,
+          cancelled: Boolean(payload.cancelled) && !state.completed,
+          completed: state.completed,
+          earnedCoins: state.earnedCoins,
+          profile,
+          work: {
+            ...publicWorkState({
+              ...session,
+              bonusGameMinutes: Math.min(session.bonusGameMinutes, state.elapsedGameMinutes)
+            }),
+            completed: state.completed
+          }
+        });
+        return;
+      }
     }
 
     if (url.pathname === "/api/auth/nonce") {
