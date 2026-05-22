@@ -1484,41 +1484,41 @@ export default class WorldScene extends BaseGameScene {
       lampDouble: {
         key: "creative-structure-lamp-double",
         label: "Luminaria dupla",
-        scale: 0.18,
-        colliders: [[0, -30, 46, 56]],
-        depthOffset: 120,
+        scale: 0.12,
+        colliders: [[0, -20, 32, 38]],
+        depthOffset: 82,
         snap: 16,
         lights: [
-          { dx: -37, dy: -114, width: 104, height: 84, maxAlpha: 0.84 },
-          { dx: 37, dy: -114, width: 104, height: 84, maxAlpha: 0.84 }
+          { dx: -25, dy: -76, width: 86, height: 70, maxAlpha: 0.78 },
+          { dx: 25, dy: -76, width: 86, height: 70, maxAlpha: 0.78 }
         ]
       },
       lampHanging: {
         key: "creative-structure-lamp-hanging",
         label: "Luminaria lateral",
-        scale: 0.17,
-        colliders: [[-18, -30, 32, 58]],
-        depthOffset: 120,
+        scale: 0.115,
+        colliders: [[-12, -20, 24, 40]],
+        depthOffset: 82,
         snap: 16,
-        lights: [{ dx: 35, dy: -104, width: 108, height: 86, maxAlpha: 0.86 }]
+        lights: [{ dx: 24, dy: -70, width: 88, height: 72, maxAlpha: 0.8 }]
       },
       lampMonk: {
         key: "creative-structure-lamp-monk",
         label: "Estatua luminosa",
-        scale: 0.17,
-        colliders: [[0, -34, 82, 68]],
-        depthOffset: 122,
+        scale: 0.115,
+        colliders: [[0, -23, 58, 48]],
+        depthOffset: 86,
         snap: 16,
-        lights: [{ dx: -42, dy: -110, width: 96, height: 86, maxAlpha: 0.76 }]
+        lights: [{ dx: -28, dy: -74, width: 82, height: 72, maxAlpha: 0.72 }]
       },
       lampVine: {
         key: "creative-structure-lamp-vine",
         label: "Poste com hera",
-        scale: 0.17,
-        colliders: [[0, -30, 46, 58]],
-        depthOffset: 118,
+        scale: 0.115,
+        colliders: [[0, -20, 32, 40]],
+        depthOffset: 80,
         snap: 16,
-        lights: [{ dx: 0, dy: -107, width: 104, height: 84, maxAlpha: 0.82 }]
+        lights: [{ dx: 0, dy: -72, width: 86, height: 70, maxAlpha: 0.76 }]
       },
       cat: {
         key: "creative-animal-cat",
