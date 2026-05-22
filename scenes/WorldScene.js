@@ -1481,6 +1481,45 @@ export default class WorldScene extends BaseGameScene {
         frames: 8,
         frameRate: 8
       },
+      lampDouble: {
+        key: "creative-structure-lamp-double",
+        label: "Luminaria dupla",
+        scale: 0.18,
+        colliders: [[0, -30, 46, 56]],
+        depthOffset: 120,
+        snap: 16,
+        lights: [
+          { dx: -37, dy: -114, width: 104, height: 84, maxAlpha: 0.84 },
+          { dx: 37, dy: -114, width: 104, height: 84, maxAlpha: 0.84 }
+        ]
+      },
+      lampHanging: {
+        key: "creative-structure-lamp-hanging",
+        label: "Luminaria lateral",
+        scale: 0.17,
+        colliders: [[-18, -30, 32, 58]],
+        depthOffset: 120,
+        snap: 16,
+        lights: [{ dx: 35, dy: -104, width: 108, height: 86, maxAlpha: 0.86 }]
+      },
+      lampMonk: {
+        key: "creative-structure-lamp-monk",
+        label: "Estatua luminosa",
+        scale: 0.17,
+        colliders: [[0, -34, 82, 68]],
+        depthOffset: 122,
+        snap: 16,
+        lights: [{ dx: -42, dy: -110, width: 96, height: 86, maxAlpha: 0.76 }]
+      },
+      lampVine: {
+        key: "creative-structure-lamp-vine",
+        label: "Poste com hera",
+        scale: 0.17,
+        colliders: [[0, -30, 46, 58]],
+        depthOffset: 118,
+        snap: 16,
+        lights: [{ dx: 0, dy: -107, width: 104, height: 84, maxAlpha: 0.82 }]
+      },
       cat: {
         key: "creative-animal-cat",
         label: "Gato",
@@ -2521,7 +2560,18 @@ export default class WorldScene extends BaseGameScene {
     const colliders = (piece.colliders ?? [])
       .map(([dx, dy, width, height]) => this.addSolidRect(x + dx, y + dy, width, height));
 
-    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders });
+    const lights = Array.isArray(piece.lights) ? piece.lights : [];
+    const glows = lights.map((light) => this.addDiffuseLampGlow(x + (light.dx ?? 0), y + (light.dy ?? 0), {
+      width: light.width,
+      height: light.height,
+      color: light.color,
+      innerColor: light.innerColor,
+      maxAlpha: light.maxAlpha,
+      depth: light.depth
+    }));
+
+    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders, glows });
+    this.updateDayNightCycle(0);
     if (shouldSave) {
       this.saveManualStructures();
     }
@@ -2543,8 +2593,7 @@ export default class WorldScene extends BaseGameScene {
     }
 
     const [structure] = this.manualStructures.splice(bestIndex, 1);
-    structure.image?.destroy();
-    structure.colliders?.forEach((collider) => collider.destroy());
+    this.destroyManualStructure(structure);
     this.saveManualStructures();
   }
 
@@ -2565,8 +2614,7 @@ export default class WorldScene extends BaseGameScene {
     }
 
     const [structure] = this.manualStructures.splice(indexToRemove, 1);
-    structure.image?.destroy();
-    structure.colliders?.forEach((collider) => collider.destroy());
+    this.destroyManualStructure(structure);
     this.saveManualStructures();
   }
 
@@ -2581,21 +2629,16 @@ export default class WorldScene extends BaseGameScene {
       return;
     }
 
-    const glow = this.add.graphics()
-      .setDepth(2811);
-    glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.fillStyle(piece.color, 0.18);
-    glow.fillEllipse(x, y, piece.width * 1.55, piece.height * 1.55);
-    glow.fillStyle(piece.color, 0.32);
-    glow.fillEllipse(x, y, piece.width, piece.height);
-    glow.fillStyle(piece.innerColor, 0.48);
-    glow.fillEllipse(x, y, piece.coreWidth, piece.coreHeight);
-    glow.setAlpha(0);
-    glow.maxGlowAlpha = piece.maxAlpha;
+    const glow = this.addDiffuseLampGlow(x, y, {
+      width: piece.width,
+      height: piece.height,
+      color: piece.color,
+      innerColor: piece.innerColor,
+      maxAlpha: piece.maxAlpha,
+      depth: 2811
+    });
     glow.lightType = type;
 
-    this.lampGlows = this.lampGlows ?? [];
-    this.lampGlows.push(glow);
     this.manualWindowLights.push({ type, x, y, glow });
     this.updateDayNightCycle(0);
 
@@ -2703,10 +2746,20 @@ export default class WorldScene extends BaseGameScene {
 
   clearManualStructures() {
     (this.manualStructures ?? []).forEach((structure) => {
-      structure.image?.destroy();
-      structure.colliders?.forEach((collider) => collider.destroy());
+      this.destroyManualStructure(structure);
     });
     this.manualStructures = [];
+  }
+
+  destroyManualStructure(structure) {
+    structure.image?.destroy();
+    structure.colliders?.forEach((collider) => collider.destroy());
+    const glows = structure.glows ?? [];
+    if (glows.length) {
+      const glowSet = new Set(glows);
+      this.lampGlows = (this.lampGlows ?? []).filter((glow) => !glowSet.has(glow));
+      glows.forEach((glow) => glow?.destroy());
+    }
   }
 
   clearManualWindowLights() {
@@ -2925,8 +2978,6 @@ export default class WorldScene extends BaseGameScene {
 
   addDecorations() {
     this.lampGlows = [];
-    const lamps = [[300, 520], [540, 506], [1010, 508], [1160, 310], [1510, 470], [1840, 686]];
-    lamps.forEach(([x, y], index) => this.addStreetLamp(x, y, index));
 
     const flowers = [[300, 470], [330, 486], [1090, 310], [450, 490], [860, 485], [1000, 470]];
     flowers.forEach(([x, y]) => this.add.image(x, y, "flower-white").setDepth(y));
@@ -3004,18 +3055,40 @@ export default class WorldScene extends BaseGameScene {
   }
 
   addLampGlow(x, y) {
-    const glow = this.add.graphics().setDepth(2810);
+    return this.addDiffuseLampGlow(x, y, {
+      width: 118,
+      height: 96,
+      maxAlpha: 1,
+      depth: 2810
+    });
+  }
+
+  addDiffuseLampGlow(x, y, {
+    width = 96,
+    height = 72,
+    color = 0xff9f35,
+    innerColor = 0xfff1a8,
+    maxAlpha = 1,
+    depth = 2810
+  } = {}) {
+    const glow = this.add.graphics().setDepth(depth);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.fillStyle(0xff9f35, 0.16);
-    glow.fillCircle(x, y, 72);
-    glow.fillStyle(0xffd36a, 0.22);
-    glow.fillCircle(x, y, 46);
-    glow.fillStyle(0xfff1a8, 0.34);
-    glow.fillCircle(x, y, 22);
-    glow.fillStyle(0xffffc8, 0.44);
-    glow.fillCircle(x, y, 9);
+    [
+      [1.95, 0.035, color],
+      [1.55, 0.055, color],
+      [1.18, 0.075, color],
+      [0.86, 0.09, color],
+      [0.58, 0.1, innerColor],
+      [0.36, 0.08, innerColor]
+    ].forEach(([scale, alpha, fillColor]) => {
+      glow.fillStyle(fillColor, alpha);
+      glow.fillEllipse(x, y, width * scale, height * scale);
+    });
     glow.setAlpha(0);
+    glow.maxGlowAlpha = maxAlpha;
+    this.lampGlows = this.lampGlows ?? [];
     this.lampGlows.push(glow);
+    return glow;
   }
 
   createDayNightCycle() {
