@@ -35,6 +35,10 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("creative-structure-knight-statue", "./assets/sprites/creative-structure-knight-statue-game.png?v=132");
     this.load.image("creative-structure-fountain", "./assets/sprites/creative-structure-fountain-game.png?v=132");
     this.load.image("creative-structure-well", "./assets/sprites/creative-structure-well-game.png?v=132");
+    this.load.spritesheet("creative-structure-campfire", "./assets/sprites/creative-structure-campfire-sheet.png?v=204", {
+      frameWidth: 384,
+      frameHeight: 352
+    });
     this.load.spritesheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=176", {
       frameWidth: 96,
       frameHeight: 96

@@ -1470,6 +1470,17 @@ export default class WorldScene extends BaseGameScene {
         depthOffset: 100,
         snap: 16
       },
+      campfire: {
+        key: "creative-structure-campfire",
+        label: "Fogueira",
+        scale: 0.42,
+        colliders: [[0, -26, 118, 52]],
+        depthOffset: 80,
+        snap: 16,
+        animated: true,
+        frames: 8,
+        frameRate: 8
+      },
       cat: {
         key: "creative-animal-cat",
         label: "Gato",
