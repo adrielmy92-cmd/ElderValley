@@ -1,6 +1,7 @@
 import BootScene from "./scenes/BootScene.js?v=180";
-import PreloadScene from "./scenes/PreloadScene.js?v=204";
-import TitleScene from "./scenes/TitleScene.js?v=199";
+import PreloadScene from "./scenes/PreloadScene.js?v=205";
+import GamePreloadScene from "./scenes/GamePreloadScene.js?v=205";
+import TitleScene from "./scenes/TitleScene.js?v=205";
 import WorldScene from "./scenes/WorldScene.js?v=204";
 import CityScene from "./scenes/CityScene.js?v=204";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=195";
@@ -34,6 +35,7 @@ const config = {
   scene: [
     BootScene,
     PreloadScene,
+    GamePreloadScene,
     TitleScene,
     WorldScene,
     CityScene,

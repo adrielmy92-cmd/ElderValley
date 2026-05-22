@@ -1130,7 +1130,7 @@ export default class TitleScene extends Phaser.Scene {
     this.stopTitleMusic(false);
     this.cameras.main.fadeOut(420, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start(this.targetScene, { spawnKey: this.spawnKey });
+      this.scene.start("GamePreloadScene", { targetScene: this.targetScene, spawnKey: this.spawnKey });
     });
   }
 
