@@ -1473,9 +1473,9 @@ export default class WorldScene extends BaseGameScene {
       campfire: {
         key: "creative-structure-campfire",
         label: "Fogueira",
-        scale: 0.42,
-        colliders: [[0, -26, 118, 52]],
-        depthOffset: 80,
+        scale: 0.3,
+        colliders: [[0, -18, 84, 38]],
+        depthOffset: 58,
         snap: 16,
         animated: true,
         frames: 8,
