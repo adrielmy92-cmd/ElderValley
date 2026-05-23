@@ -578,6 +578,20 @@ async function ensureDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS game_storage_history (
+        id BIGSERIAL PRIMARY KEY,
+        storage_key TEXT NOT NULL,
+        data JSONB NOT NULL,
+        saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS game_storage_history_key_time_idx ON game_storage_history (storage_key, saved_at DESC);
+      CREATE TABLE IF NOT EXISTS profile_history (
+        id BIGSERIAL PRIMARY KEY,
+        profile_id TEXT NOT NULL,
+        data JSONB NOT NULL,
+        saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS profile_history_profile_time_idx ON profile_history (profile_id, saved_at DESC);
     `).then(() => true).catch((error) => {
       dbReadyPromise = null;
       console.error("[database] profile init failed:", error.message);
@@ -655,6 +669,13 @@ async function readGameStorage(key) {
 async function writeGameStorage(key, data) {
   if (await ensureDatabase()) {
     await seedGameStorage();
+    const previous = await dbPool.query("SELECT data FROM game_storage WHERE storage_key = $1", [key]);
+    if (previous.rows[0]?.data !== undefined) {
+      await dbPool.query(`
+        INSERT INTO game_storage_history (storage_key, data)
+        VALUES ($1, $2::jsonb)
+      `, [key, JSON.stringify(previous.rows[0].data)]);
+    }
     const result = await dbPool.query(`
       INSERT INTO game_storage (storage_key, data, updated_at)
       VALUES ($1, $2::jsonb, NOW())
@@ -708,6 +729,13 @@ async function readProfile(profileId) {
 async function writeProfile(profileId, data) {
   const profile = normalizeProfile(profileId, data);
   if (await ensureDatabase()) {
+    const previous = await dbPool.query("SELECT data FROM profiles WHERE profile_id = $1", [profile.profileId]);
+    if (previous.rows[0]?.data !== undefined) {
+      await dbPool.query(`
+        INSERT INTO profile_history (profile_id, data)
+        VALUES ($1, $2::jsonb)
+      `, [profile.profileId, JSON.stringify(previous.rows[0].data)]);
+    }
     const result = await dbPool.query(`
       INSERT INTO profiles (
         profile_id,
