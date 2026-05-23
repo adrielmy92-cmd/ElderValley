@@ -586,7 +586,7 @@ export default class TitleScene extends Phaser.Scene {
     const houses = profile?.ownedHouses?.length ?? 0;
     const characters = profile?.ownedCharacters?.length ?? 0;
     this.addContentText(x + 14, y + 20, loginLabel, 13, "#ffd889", w - 28);
-    this.addContentText(x + 14, y + 45, `Suas casas: ${houses}  |  Personagens: ${characters}`, 12, "#d8c6a1", w - 28);
+    this.addContentText(x + 14, y + 45, `Your houses: ${houses}  |  Characters: ${characters}`, 12, "#d8c6a1", w - 28);
     this.addContentText(x + 14, y + 66, this.walletSystem.status, 10, "#9fb8d9", w - 28);
   }
 
@@ -990,11 +990,11 @@ export default class TitleScene extends Phaser.Scene {
       `Wallet: ${this.walletSystem.getShortAddress()}`,
       `Rede: ${this.walletSystem.wallet?.chain ?? "EVM"}`,
       `Purchased houses: ${houses.length}`,
-      `Personagens: ${ownedCharacterIds.length}`
+      `Characters: ${ownedCharacterIds.length}`
     ];
     this.addProfileBox(infoX, y + 22, infoW, 104, "Resumo da Conta", info.join("\n"));
     this.addProfileBox(infoX, y + 138, infoW, 96, "Your Houses", ownedHouses);
-    this.addProfileBox(infoX, y + 246, infoW, Math.max(70, h - 268), "Seus Personagens", ownedCharacters);
+    this.addProfileBox(infoX, y + 246, infoW, Math.max(70, h - 268), "Your Characters", ownedCharacters);
   }
 
   addProfileBox(x, y, w, h, title, body) {

@@ -112,7 +112,7 @@ export default class CityScene extends WorldScene {
       "A guarda esta de olho nas ruas.",
       "Boa jornada, viajante.",
       "Sem confusao no centro da cidade.",
-      "As casas daqui estao sob protecao.",
+      "The houses here are under protection.",
       "Qualquer movimento estranho, avise a guarda."
     ];
 
