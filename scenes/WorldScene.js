@@ -815,31 +815,40 @@ export default class WorldScene extends BaseGameScene {
 
   async saveSharedStorage(key, data) {
     if (!key || window.location.protocol === "file:") {
-      return;
+      throw new Error(`Server storage is unavailable for ${key}`);
     }
 
-    try {
-      const localMtimeMs = this.readLocalStorageMtime(key) || Date.now();
-      const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, {
-        method: "POST",
-        headers: this.addAdminStorageHeaders({
-          "Content-Type": "application/json",
-          "X-ElderValley-Client-Mtime": String(localMtimeMs)
-        }),
-        body: JSON.stringify(data),
-        keepalive: true
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to save ${key}: ${response.status}`);
-      }
-      if (response.ok) {
+    const localMtimeMs = this.readLocalStorageMtime(key) || Date.now();
+    const response = await fetch(`/api/storage/${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: this.addAdminStorageHeaders({
+        "Content-Type": "application/json",
+        "X-ElderValley-Client-Mtime": String(localMtimeMs)
+      }),
+      body: JSON.stringify(data),
+      keepalive: true
+    });
+
+    if (!response.ok) {
+      let reason = "";
+      try {
         const payload = await response.json();
-        const mtimeMs = Number(payload?.mtimeMs ?? Date.now());
-        this.writeLocalStorageArray(key, data, mtimeMs);
+        reason = payload?.error ? ` (${payload.error})` : "";
+      } catch {
+        reason = "";
       }
-    } catch {
-      // LocalStorage fica como fallback.
+      throw new Error(`Failed to save ${key}: ${response.status}${reason}`);
     }
+
+    const payload = await response.json();
+    const mtimeMs = Number(payload?.mtimeMs ?? Date.now());
+    this.writeLocalStorageArray(key, data, mtimeMs);
+  }
+
+  handleCreativeSaveError(error) {
+    this.setCreativeDirty(true);
+    this.fenceEditorText?.setText("SERVER SAVE FAILED - reconnect dev wallet");
+    console.error("[ElderValley] Creative save failed", error);
   }
 
   async syncCreativeCollection(key, localData, hasLocalSave, clearFn, applyFn) {
@@ -858,9 +867,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveEditableHouseLayouts() {
     const data = this.getEditableHouseLayoutData();
-    this.writeLocalStorageArray(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data);
+    this.saveSharedStorage(this.houseStorageKey ?? HOUSE_STORAGE_KEY, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   handleSharedStorageUpdate(payload) {
@@ -2786,9 +2795,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveManualFences() {
     const data = this.manualFences.map(({ type, x, y }) => ({ type, x, y }));
-    this.writeLocalStorageArray(this.manualFenceStorageKey, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.manualFenceStorageKey, data);
+    this.saveSharedStorage(this.manualFenceStorageKey, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   loadManualFloors() {
@@ -2822,9 +2831,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveManualFloors() {
     const data = this.manualFloors.map(({ type, x, y }) => ({ type, x, y }));
-    this.writeLocalStorageArray(this.manualFloorStorageKey, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.manualFloorStorageKey, data);
+    this.saveSharedStorage(this.manualFloorStorageKey, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   loadManualTrees() {
@@ -2850,9 +2859,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveManualTrees() {
     const data = this.manualTrees.map(({ type, x, y }) => ({ type, x, y }));
-    this.writeLocalStorageArray(this.manualTreeStorageKey, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.manualTreeStorageKey, data);
+    this.saveSharedStorage(this.manualTreeStorageKey, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   loadManualStructures() {
@@ -2878,9 +2887,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveManualStructures() {
     const data = this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }));
-    this.writeLocalStorageArray(this.manualStructureStorageKey, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.manualStructureStorageKey, data);
+    this.saveSharedStorage(this.manualStructureStorageKey, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   loadManualWindowLights() {
@@ -2906,9 +2915,9 @@ export default class WorldScene extends BaseGameScene {
 
   saveManualWindowLights() {
     const data = this.manualWindowLights.map(({ type, x, y }) => ({ type, x, y }));
-    this.writeLocalStorageArray(this.manualWindowLightStorageKey, data);
     this.setCreativeDirty(true);
-    this.saveSharedStorage(this.manualWindowLightStorageKey, data);
+    this.saveSharedStorage(this.manualWindowLightStorageKey, data)
+      .catch((error) => this.handleCreativeSaveError(error));
   }
 
   addFencedLot({ left, right, top, bottom, gateX, gateWidth = 96 }) {

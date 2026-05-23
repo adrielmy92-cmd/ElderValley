@@ -769,7 +769,7 @@ function backupPathFor(key) {
 }
 
 function isCreativeStorageKey(key) {
-  return /(?:editable-houses|manual-(?:floors|trees|fences|structures|collisions))/i.test(key);
+  return /(?:editable-houses|manual-(?:floors|trees|fences|structures|collisions|window-lights))/i.test(key);
 }
 
 function isLocalRequest(req) {
