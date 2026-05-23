@@ -6,6 +6,7 @@ const RIVER_BOTTOM = 960;
 const BRIDGE_LEFT = 3680;
 const BRIDGE_RIGHT = 3872;
 const WATER_COLLISION_TILE = 64;
+const VILLAGE_TOP_PADDING = 160;
 
 const SPAWNS = {
   start: { x: 1042, y: 420 },
@@ -342,8 +343,10 @@ export default class WorldScene extends BaseGameScene {
     this.houseStorageKey = HOUSE_STORAGE_KEY;
     this.worldWidth = 2920;
     this.worldHeight = 1320;
-    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
-    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.worldTop = -VILLAGE_TOP_PADDING;
+    this.worldDrawHeight = this.worldHeight - this.worldTop;
+    this.physics.world.setBounds(0, this.worldTop, this.worldWidth, this.worldDrawHeight);
+    this.cameras.main.setBounds(0, this.worldTop, this.worldWidth, this.worldDrawHeight);
     this.drawGround();
     this.createControls();
 
@@ -428,7 +431,7 @@ export default class WorldScene extends BaseGameScene {
 
   drawGround() {
     this.createGroundLayers();
-    for (let y = 0; y < this.worldHeight; y += TILE) {
+    for (let y = this.worldTop ?? 0; y < this.worldHeight; y += TILE) {
       for (let x = 0; x < this.worldWidth; x += TILE) {
         const water = y >= RIVER_TOP && y < RIVER_BOTTOM;
         const bridge = (
@@ -450,7 +453,7 @@ export default class WorldScene extends BaseGameScene {
           || townCenter
           || bridge
         );
-        const grassVariant = ((x / TILE) + (y / TILE)) % 3;
+        const grassVariant = (((x / TILE) + (y / TILE)) % 3 + 3) % 3;
         const key = water && !bridge ? "tile-water-0" : path ? "tile-path" : `tile-grass-${grassVariant}`;
         if (water && !bridge) {
           this.drawGroundTile(key, x, y, { animated: true, kind: "water", variant: 0 });
@@ -464,13 +467,15 @@ export default class WorldScene extends BaseGameScene {
   }
 
   createGroundLayers() {
-    this.staticGroundLayer = this.add.renderTexture(0, 0, this.worldWidth, this.worldHeight)
+    const top = this.worldTop ?? 0;
+    const height = this.worldDrawHeight ?? this.worldHeight;
+    this.staticGroundLayer = this.add.renderTexture(0, top, this.worldWidth, height)
       .setOrigin(0)
       .setDepth(-22);
-    this.animatedGroundLayer = this.add.renderTexture(0, 0, this.worldWidth, this.worldHeight)
+    this.animatedGroundLayer = this.add.renderTexture(0, top, this.worldWidth, height)
       .setOrigin(0)
       .setDepth(-21);
-    this.manualFloorLayer = this.add.renderTexture(0, 0, this.worldWidth, this.worldHeight)
+    this.manualFloorLayer = this.add.renderTexture(0, top, this.worldWidth, height)
       .setOrigin(0)
       .setDepth(-12);
     this.animatedGroundTiles = [];
@@ -478,7 +483,8 @@ export default class WorldScene extends BaseGameScene {
 
   drawGroundTile(key, x, y, options = {}) {
     const layer = options.animated ? this.animatedGroundLayer : this.staticGroundLayer;
-    layer.draw(key, x, y);
+    const localY = y - (this.worldTop ?? 0);
+    layer.draw(key, x, localY);
     if (options.animated) {
       this.animatedGroundTiles.push({
         x,
@@ -502,7 +508,7 @@ export default class WorldScene extends BaseGameScene {
         this.animatedGroundLayer.clear();
         this.animatedGroundTiles.forEach((tile) => {
           const key = this.waterFrame ? "tile-water-0" : "tile-water-1";
-          this.animatedGroundLayer.draw(key, tile.x, tile.y);
+          this.animatedGroundLayer.draw(key, tile.x, tile.y - (this.worldTop ?? 0));
         });
       }
     });
@@ -523,10 +529,12 @@ export default class WorldScene extends BaseGameScene {
   }
 
   addWorldBounds() {
-    this.addSolidRect(this.worldWidth / 2, -8, this.worldWidth, 16);
+    const top = this.worldTop ?? 0;
+    const height = this.worldDrawHeight ?? this.worldHeight;
+    this.addSolidRect(this.worldWidth / 2, top - 8, this.worldWidth, 16);
     this.addSolidRect(this.worldWidth / 2, this.worldHeight + 8, this.worldWidth, 16);
-    this.addSolidRect(-8, this.worldHeight / 2, 16, this.worldHeight);
-    this.addSolidRect(this.worldWidth + 8, this.worldHeight / 2, 16, this.worldHeight);
+    this.addSolidRect(-8, top + height / 2, 16, height);
+    this.addSolidRect(this.worldWidth + 8, top + height / 2, 16, height);
     this.rebuildWaterCollision();
   }
 
@@ -2700,7 +2708,7 @@ export default class WorldScene extends BaseGameScene {
     const source = this.textures.get(piece.key)?.getSourceImage();
     const width = source?.width ?? 128;
     const height = source?.height ?? 128;
-    this.manualFloorLayer.draw(piece.key, x - width / 2, y - height / 2);
+    this.manualFloorLayer.draw(piece.key, x - width / 2, y - height / 2 - (this.worldTop ?? 0));
   }
 
   redrawManualFloors() {
