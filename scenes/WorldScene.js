@@ -657,9 +657,6 @@ export default class WorldScene extends BaseGameScene {
     const hasLocalSave = this.hasLocalStorageKey(key);
     const remote = await this.loadSharedStorage(key);
     if (Array.isArray(remote?.data)) {
-      if (this.shouldKeepLocalCreativeSave(key, localData, remote.data, hasLocalSave, remote.mtimeMs)) {
-        return;
-      }
       this.writeLocalStorageArray(key, remote.data, remote.mtimeMs);
       this.replaceEditableHouseLayouts(remote.data, includeDefaults);
       return;
@@ -848,9 +845,6 @@ export default class WorldScene extends BaseGameScene {
   async syncCreativeCollection(key, localData, hasLocalSave, clearFn, applyFn) {
     const remote = await this.loadSharedStorage(key);
     if (Array.isArray(remote?.data)) {
-      if (this.shouldKeepLocalCreativeSave(key, localData, remote.data, hasLocalSave, remote.mtimeMs)) {
-        return;
-      }
       this.writeLocalStorageArray(key, remote.data, remote.mtimeMs);
       clearFn();
       remote.data.forEach((item) => applyFn(item));
