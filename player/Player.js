@@ -1,7 +1,7 @@
 const PLAYER_CHARACTERS = {
   "mage-1": {
     id: "mage-1",
-    label: "Mago 1",
+    label: "Mage 1",
     walkTexture: "mage-1-sheet",
     idleTexture: "mage-1-idle-sheet",
     attackTexture: "mage-1-attack-normalized",
@@ -22,7 +22,7 @@ const PLAYER_CHARACTERS = {
   },
   adventurer: {
     id: "adventurer",
-    label: "Aventureiro",
+    label: "Adventurer",
     walkTexture: "adventurer-sheet",
     idleTexture: "adventurer-sheet",
     animatedIdle: false,

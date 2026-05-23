@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
 
 export default class MiddleForgeInteriorScene extends InteriorBaseScene {
   constructor() {
@@ -17,10 +17,10 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
     this.addForgeArchitecture();
 
     this.add.image(352, 378, "tile-rug").setScale(3.1, 1.1).setDepth(120);
-    this.addFurniture(160, 184, "bookcase", 38, 18, "Ferramentas pequenas, couro e caixas de rebites estao organizados aqui.", "Prateleira");
-    this.addFurniture(244, 392, "table", 70, 24, "A bancada tem martelos, limas e pecas de metal ainda mornas.", "Bancada");
-    this.addFurniture(484, 390, "card-table", 72, 24, "Algumas cartas foram protegidas com placas finas de metal polido.", "Mesa de Encomendas");
-    this.addFurniture(578, 266, "chest-closed", 36, 20, "Um bau pesado guarda ferramentas antigas.", "Bau de Ferramentas");
+    this.addFurniture(160, 184, "bookcase", 38, 18, "Ferramentas pequenas, couro e caixas de rebites estao organizados aqui.", "Shelf");
+    this.addFurniture(244, 392, "table", 70, 24, "A bancada tem martelos, limas e pecas de metal ainda mornas.", "Workbench");
+    this.addFurniture(484, 390, "card-table", 72, 24, "Some cards have been protected with thin plates of polished metal.", "Order Table");
+    this.addFurniture(578, 266, "chest-closed", 36, 20, "A heavy chest holds old tools.", "Tool Chest");
 
     const anvilShadow = this.add.ellipse(356, 330, 76, 28, 0x181619, 0.28).setDepth(315);
     const anvil = this.add.rectangle(356, 318, 68, 30, 0x59606a, 1).setDepth(330);
@@ -33,7 +33,7 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
       promptY: 276,
       promptText: "E Ver",
       radius: 46,
-      onInteract: () => this.dialog.show("Bigorna", "A bigorna tem marcas profundas de muitos anos de trabalho.")
+      onInteract: () => this.dialog.show("Anvil", "The anvil has deep marks from many years of work.")
     });
 
     this.tweens.add({

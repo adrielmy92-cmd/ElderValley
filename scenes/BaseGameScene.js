@@ -1,8 +1,8 @@
 import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
-import ChatSystem from "../systems/ChatSystem.js?v=193";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=194";
+import ChatSystem from "../systems/ChatSystem.js?v=209";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=209";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -279,7 +279,7 @@ export default class BaseGameScene extends Phaser.Scene {
         this.writeLocalManualCollisionLayout(remote);
       }
     } catch {
-      // Se o servidor nao tiver API, o localStorage ainda funciona.
+      // If the server API is unavailable, localStorage still works.
     }
   }
 
@@ -577,7 +577,7 @@ export default class BaseGameScene extends Phaser.Scene {
       stroke: "#1a202b",
       strokeThickness: 4
     }).setScrollFactor(0).setDepth(3000);
-    this.coinText = this.add.text(0, 0, "Moedas: 0", {
+    this.coinText = this.add.text(0, 0, "Coins: 0", {
       fontFamily: "monospace",
       fontSize: "16px",
       color: "#ffd66b",
@@ -754,7 +754,7 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   updateCurrencyHud() {
-    this.coinText?.setText(`Moedas: ${this.getCoins()}`);
+    this.coinText?.setText(`Coins: ${this.getCoins()}`);
   }
 
   createProfilePersistence() {
@@ -868,7 +868,7 @@ export default class BaseGameScene extends Phaser.Scene {
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.ok) {
-      throw new Error(result?.error ?? "Servidor recusou a acao de trabalho.");
+      throw new Error(result?.error ?? "Server refused the work action.");
     }
     return result;
   }
@@ -894,11 +894,11 @@ export default class BaseGameScene extends Phaser.Scene {
 
   ingredientColor(name) {
     const colors = {
-      "Folha viva": 0x69d36f,
-      "Sal cristalino": 0xd9f0ff,
-      "Raiz lunar": 0xb48755,
-      "Cinza azul": 0x7da6ff,
-      "Essencia verde": 0x31f06b
+      "Living Leaf": 0x69d36f,
+      "Crystal Salt": 0xd9f0ff,
+      "Moonroot": 0xb48755,
+      "Blue Ash": 0x7da6ff,
+      "Green Essence": 0x31f06b
     };
     return colors[name] ?? 0xf0c15d;
   }
@@ -979,7 +979,7 @@ export default class BaseGameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: width - 42 }
     }).setOrigin(0.5);
-    const hint = this.add.text(0, 140, "Clique nos frascos | slots removem item | ESC sair antes", {
+    const hint = this.add.text(0, 140, "Click flasks | slots remove items | ESC leave early", {
       fontFamily: "monospace",
       fontSize: "10px",
       color: "#ffd66b",
@@ -1149,8 +1149,8 @@ export default class BaseGameScene extends Phaser.Scene {
       ui.controls.push({ objects: [bg, text] });
       ui.clickTargets.push({ x, y: 122, width: 136, height: 30, onClick });
     };
-    makeControl(-76, "LIMPAR", 0x2b1f20, 0x4a2b2d, "#fff2c4", () => this.resetServerWorkSelection());
-    makeControl(76, "MISTURAR", 0x203823, 0x315b38, "#d9ffd9", () => this.submitServerWorkTask());
+    makeControl(-76, "CLEAR", 0x2b1f20, 0x4a2b2d, "#fff2c4", () => this.resetServerWorkSelection());
+    makeControl(76, "MIX", 0x203823, 0x315b38, "#d9ffd9", () => this.submitServerWorkTask());
     this.updateServerWorkSlots();
   }
 
@@ -1162,15 +1162,15 @@ export default class BaseGameScene extends Phaser.Scene {
     const progress = Phaser.Math.Clamp(Number(work.progress) || 0, 0, 1);
     ui.barFill.width = Math.max(1, (ui.width - 38) * progress);
     ui.title.setText(`${work.label} ${Math.floor(progress * 100)}%`);
-    ui.detail.setText(`${this.formatWorkMinutes(work.elapsedGameMinutes)} / ${this.formatWorkMinutes(work.totalGameMinutes)} | ${work.coinsPerGameHour} moedas/h | +${work.earnedCoins}/${work.maxCoins} moedas`);
+    ui.detail.setText(`${this.formatWorkMinutes(work.elapsedGameMinutes)} / ${this.formatWorkMinutes(work.totalGameMinutes)} | ${work.coinsPerGameHour} coins/h | +${work.earnedCoins}/${work.maxCoins} coins`);
 
     const task = work.task;
     const selected = this.serverWorkSelection ?? [];
     const sequence = Array.isArray(task?.sequence) ? task.sequence : [];
     ui.taskText.setText(sequence.length ? task.prompt : message);
-    ui.sequenceText.setText(sequence.length ? `Receita: ${sequence.join("  >  ")}` : "");
+    ui.sequenceText.setText(sequence.length ? `Recipe: ${sequence.join("  >  ")}` : "");
     ui.lastMessage = message || ui.lastMessage || "";
-    ui.selectedText.setText(`${selected.length ? `Mistura: ${selected.join("  >  ")}` : "Mistura: preencha os espacos abaixo"}${ui.lastMessage ? `\n${ui.lastMessage}` : ""}`);
+    ui.selectedText.setText(`${selected.length ? `Mixture: ${selected.join("  >  ")}` : "Mixture: fill the slots below"}${ui.lastMessage ? `\n${ui.lastMessage}` : ""}`);
 
     const buttonsKey = `${task?.taskId ?? ""}:${(task?.choices ?? []).join("|")}`;
     if (ui.buttonsKey !== buttonsKey) {
@@ -1188,13 +1188,13 @@ export default class BaseGameScene extends Phaser.Scene {
     const task = this.serverWork.task;
     const max = Math.max(1, Number(task.sequenceLength) || task.sequence?.length || 3);
     if ((this.serverWorkSelection ?? []).length >= max) {
-      this.serverWorkUi.lastMessage = "Mistura cheia. Clique em MISTURAR ou LIMPAR.";
+      this.serverWorkUi.lastMessage = "Mixture full. Click MIX or CLEAR.";
       this.updateServerWorkUi(this.serverWork);
       return;
     }
     this.serverWorkSelection = [...(this.serverWorkSelection ?? []), choice];
     this.serverWorkUi.lastMessage = this.serverWorkSelection.length >= max
-      ? "Mistura completa. Clique em MISTURAR."
+      ? "Mixture complete. Click MIX."
       : "Continue preenchendo a receita.";
     this.updateServerWorkUi(this.serverWork);
   }
@@ -1218,7 +1218,7 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
     this.serverWorkSelection = [];
-    this.serverWorkUi.lastMessage = "Mistura limpa.";
+    this.serverWorkUi.lastMessage = "Mixture cleared.";
     this.updateServerWorkUi(this.serverWork);
   }
 
@@ -1229,12 +1229,12 @@ export default class BaseGameScene extends Phaser.Scene {
     const task = this.serverWork.task;
     const max = Math.max(1, Number(task.sequenceLength) || task.sequence?.length || 3);
     if ((this.serverWorkSelection ?? []).length < max) {
-      this.serverWorkUi.lastMessage = `Faltam ${max - (this.serverWorkSelection ?? []).length} frascos.`;
+      this.serverWorkUi.lastMessage = `Missing ${max - (this.serverWorkSelection ?? []).length} flasks.`;
       this.updateServerWorkUi(this.serverWork);
       return;
     }
     this.serverWorkTaskBusy = true;
-    this.serverWorkUi.lastMessage = "Misturando...";
+    this.serverWorkUi.lastMessage = "Mixing...";
     this.updateServerWorkUi(this.serverWork);
     try {
       const result = await this.requestServerWork("task", {
@@ -1286,7 +1286,7 @@ export default class BaseGameScene extends Phaser.Scene {
         this.setCoins(result.profile.coins ?? this.getCoins());
       }
       this.restorePlayerAfterWork();
-      this.showWorkNotice(`${result.cancelled ? "Voce saiu da alquimia." : "Turno de alquimia finalizado."}\n+${result.earnedCoins ?? 0} moedas`);
+      this.showWorkNotice(`${result.cancelled ? "You left alchemy." : "Alchemy shift complete."}\n+${result.earnedCoins ?? 0} coins`);
     } catch (error) {
       this.showWorkNotice(error.message);
     } finally {
@@ -1347,7 +1347,7 @@ export default class BaseGameScene extends Phaser.Scene {
     totalGameMinutes,
     coinsPerGameHour = 0,
     rewardText = "Trabalho concluido.",
-    cancelText = "Voce saiu do trabalho mais cedo.",
+    cancelText = "You left work early.",
     allowCancel = true
   } = {}) {
     if (this.isWorking || !this.player) {
@@ -1435,8 +1435,8 @@ export default class BaseGameScene extends Phaser.Scene {
       this.player?.setVisible(true);
       this.player?.playIdle?.();
       const summary = earnedCoins > 0
-        ? `${cancelled ? cancelText : rewardText}\nTempo: ${formatHours(elapsedGameMinutes)} | +${earnedCoins} moedas`
-        : `${cancelled ? cancelText : rewardText}\nTempo: ${formatHours(elapsedGameMinutes)} | sem moedas ainda`;
+        ? `${cancelled ? cancelText : rewardText}\nTime: ${formatHours(elapsedGameMinutes)} | +${earnedCoins} coins`
+        : `${cancelled ? cancelText : rewardText}\nTime: ${formatHours(elapsedGameMinutes)} | no coins yet`;
       const doneText = this.add.text(this.scale.width / 2, this.scale.height - 150, summary, {
         fontFamily: "monospace",
         fontSize: "14px",
@@ -1465,7 +1465,7 @@ export default class BaseGameScene extends Phaser.Scene {
         const earnedCoins = Math.min(maxCoins, earnedCoinsFor(elapsedGameMinutes));
         barFill.width = Math.max(1, (width - 40) * progress);
         text.setText(`${label} ${Math.floor(progress * 100)}%`);
-        detailText.setText(`${formatHours(elapsedGameMinutes)} / ${formatHours(workGameMinutes)} | ${coinsPerGameHour} moedas/h | +${earnedCoins}/${maxCoins} moedas`);
+        detailText.setText(`${formatHours(elapsedGameMinutes)} / ${formatHours(workGameMinutes)} | ${coinsPerGameHour} coins/h | +${earnedCoins}/${maxCoins} coins`);
         if (this.time.now >= end) {
           finishWork();
         }

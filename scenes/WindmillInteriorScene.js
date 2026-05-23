@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
 
 const ART_SCALE = 1.05;
 const SOURCE_SCALE = ART_SCALE / 0.5;
@@ -28,7 +28,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
     this.makeRoom({
       width: Math.round(1448 * ART_SCALE),
       height: Math.round(1086 * ART_SCALE),
-      title: "Moinho",
+      title: "Windmill",
       spawnX: sx(362),
       spawnY: sx(430)
     });
@@ -41,7 +41,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
     this.addWindmillCollisions();
     this.addWindmillInteractions();
     this.scalePlayerForMill();
-    const miller = this.addNpc(sx(520), sx(394), 4, "Moleiro", "O eixo do moinho range devagar. Quando o vento muda, a farinha fica mais fina.");
+    const miller = this.addNpc(sx(520), sx(394), 4, "Miller", "The windmill shaft creaks slowly. When the wind changes, the flour becomes finer.");
     this.scaleNpcForMill(miller);
     this.addMillExit();
   }
@@ -147,7 +147,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       x: sx(362),
       y: sx(462),
       promptY: sx(430),
-      promptText: "E Sair",
+      promptText: "E Exit",
       radius: sx(70),
       onInteract: () => this.fadeTo(returnScene, { spawnKey: "windmill" })
     });
@@ -160,7 +160,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       promptY: sx(210),
       promptText: "E Ver",
       radius: sx(78),
-      onInteract: () => this.dialog.show("Mecanismo", "A pedra de moagem vibra baixo, presa ao eixo principal do moinho.")
+      onInteract: () => this.dialog.show("Mechanism", "The millstone hums softly, locked to the windmill's main shaft.")
     });
 
     this.interactions.add({
@@ -169,7 +169,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       promptY: sx(82),
       promptText: "E Ver",
       radius: sx(54),
-      onInteract: () => this.dialog.show("Prateleira", "Jarras, cestos e pequenos sacos de graos ficam alinhados na madeira.")
+      onInteract: () => this.dialog.show("Shelf", "Jarras, cestos e pequenos sacos de graos ficam alinhados na madeira.")
     });
 
     this.interactions.add({
@@ -178,7 +178,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       promptY: sx(336),
       promptText: "E Ver",
       radius: sx(54),
-      onInteract: () => this.dialog.show("Mesa", "Farinha fina cobre a mesa, iluminada por uma pequena lanterna.")
+      onInteract: () => this.dialog.show("Table", "Farinha fina cobre a mesa, iluminada por uma pequena lanterna.")
     });
 
     this.interactions.add({
@@ -187,7 +187,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       promptY: sx(342),
       promptText: "E Ver",
       radius: sx(58),
-      onInteract: () => this.dialog.show("Bancada", "Ferramentas, potes e pecas soltas mostram que o moinho recebe manutencao constante.")
+      onInteract: () => this.dialog.show("Workbench", "Tools, jars, and loose parts show the windmill receives constant maintenance.")
     });
   }
 }

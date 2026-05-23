@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=194";
+import BaseGameScene from "./BaseGameScene.js?v=209";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -23,7 +23,7 @@ const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
 const HOUSE_DEFS = [
   {
     id: "blacksmith",
-    label: "Loja",
+    label: "Shop",
     key: "card-shop-house",
     x: 445,
     y: 338,
@@ -64,7 +64,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "house01",
-    label: "Casa",
+    label: "House",
     key: "reference-house",
     x: 1380,
     y: 318,
@@ -79,7 +79,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "windmill",
-    label: "Moinho",
+    label: "Windmill",
     key: "windmill-house",
     x: 1970,
     y: 650,
@@ -145,7 +145,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "cozyCottage",
-    label: "Casa alta",
+    label: "Tall House",
     key: "creative-house-cottage",
     creativeOnly: true,
     x: 0,
@@ -167,7 +167,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "blueMarketHouse",
-    label: "Mercado azul",
+    label: "Blue Market",
     key: "creative-house-blue-market",
     creativeOnly: true,
     x: 0,
@@ -193,7 +193,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "greenCottageHouse",
-    label: "Casa verde",
+    label: "Green House",
     key: "creative-house-green-cottage",
     creativeOnly: true,
     x: 0,
@@ -206,7 +206,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "alchemistHouse",
-    label: "Casa arcana",
+    label: "Arcane House",
     key: "creative-house-alchemist",
     creativeOnly: true,
     x: 0,
@@ -232,7 +232,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "thatchCottageHouse",
-    label: "Casa palha",
+    label: "Thatched House",
     key: "creative-house-thatch-cottage",
     creativeOnly: true,
     x: 0,
@@ -245,7 +245,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "blueCottageHouse",
-    label: "Casa azul",
+    label: "Blue House",
     key: "creative-house-blue-cottage",
     creativeOnly: true,
     x: 0,
@@ -258,7 +258,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "redTowerCottageHouse",
-    label: "Casa torre",
+    label: "Tower House",
     key: "creative-house-red-tower-cottage",
     creativeOnly: true,
     x: 0,
@@ -724,7 +724,7 @@ export default class WorldScene extends BaseGameScene {
       return;
     }
 
-    this.creativeSaveButtonText.setText(this.creativeDirty ? "Salvar Mundo *" : "Mundo Salvo");
+    this.creativeSaveButtonText.setText(this.creativeDirty ? "Save World *" : "World Saved");
     this.creativeSaveButtonBg?.setFillStyle(this.creativeDirty ? 0x6b3b16 : 0x25462d, 0.96);
     this.creativeSaveButtonBg?.setStrokeStyle(2, this.creativeDirty ? 0xffd56c : 0x7ed98a, 0.95);
   }
@@ -767,7 +767,7 @@ export default class WorldScene extends BaseGameScene {
     const results = await Promise.allSettled(saves.map(([key, data]) => this.saveSharedStorage(key, data)));
     const failed = results.some((result) => result.status === "rejected");
     this.setCreativeDirty(failed);
-    this.fenceEditorText?.setText(failed ? "Erro ao salvar mundo" : "Mundo salvo no servidor");
+    this.fenceEditorText?.setText(failed ? "Error saving world" : "World saved on server");
   }
 
   creativeSaveReach(data) {
@@ -833,7 +833,7 @@ export default class WorldScene extends BaseGameScene {
         keepalive: true
       });
       if (!response.ok) {
-        throw new Error(`Falha ao salvar ${key}: ${response.status}`);
+        throw new Error(`Failed to save ${key}: ${response.status}`);
       }
       if (response.ok) {
         const payload = await response.json();
@@ -968,7 +968,7 @@ export default class WorldScene extends BaseGameScene {
         x: x + def.doorOffset.x,
         y: y + def.doorOffset.y,
         promptY: y + def.doorOffset.y - 38,
-        promptText: "E Entrar",
+        promptText: "E Enter",
         radius: 46,
         onInteract: () => this.fadeTo(def.sceneKey, { exitSpawnKey: def.id, doorId: def.doorId, returnScene: this.scene.key })
       }
@@ -1464,7 +1464,7 @@ export default class WorldScene extends BaseGameScene {
       },
       well: {
         key: "creative-structure-well",
-        label: "Poco",
+        label: "Well",
         scale: 1,
         colliders: [[0, -58, 112, 96]],
         depthOffset: 100,
@@ -1472,7 +1472,7 @@ export default class WorldScene extends BaseGameScene {
       },
       campfire: {
         key: "creative-structure-campfire",
-        label: "Fogueira",
+        label: "Campfire",
         scale: 0.3,
         colliders: [[0, -18, 84, 38]],
         depthOffset: 58,
@@ -1483,7 +1483,7 @@ export default class WorldScene extends BaseGameScene {
       },
       lampDouble: {
         key: "creative-structure-lamp-double",
-        label: "Luminaria dupla",
+        label: "Double Lamp",
         scale: 0.12,
         colliders: [[0, -20, 32, 38]],
         depthOffset: 82,
@@ -1495,7 +1495,7 @@ export default class WorldScene extends BaseGameScene {
       },
       lampHanging: {
         key: "creative-structure-lamp-hanging",
-        label: "Luminaria lateral",
+        label: "Side Lamp",
         scale: 0.115,
         colliders: [[-12, -20, 24, 40]],
         depthOffset: 82,
@@ -1641,7 +1641,7 @@ export default class WorldScene extends BaseGameScene {
       event?.stopPropagation();
       this.saveCreativeWorld();
     });
-    this.creativeSaveButtonText = this.add.text(this.creativePanelPosition.x + 746, this.creativePanelPosition.y + 28, "Mundo Salvo", {
+    this.creativeSaveButtonText = this.add.text(this.creativePanelPosition.x + 746, this.creativePanelPosition.y + 28, "World Saved", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#fff3c4",
@@ -1899,7 +1899,7 @@ export default class WorldScene extends BaseGameScene {
     this.creativeSaveButtonText?.setVisible(this.creativeModeEnabled);
 
     if (!this.creativeModeEnabled) {
-      this.fenceEditorText.setText("Tab Criativo");
+      this.fenceEditorText.setText("Tab Creative");
       this.clearCreativeInventory();
       return;
     }
@@ -1914,15 +1914,15 @@ export default class WorldScene extends BaseGameScene {
     this.creativeSaveButtonText?.setPosition(this.creativePanelPosition.x + panelWidth - 84, this.creativePanelPosition.y + 28);
     this.creativeInventoryBounds = new Phaser.Geom.Rectangle(this.creativePanelPosition.x, this.creativePanelPosition.y, panelWidth, 188);
     const activeLabel = {
-      fence: "Cercas",
-      tree: "Arvores",
-      floor: "Pisos",
-      house: "Casas",
-      structure: "Estruturas",
-      windowLight: "Luzes"
+      fence: "Fences",
+      tree: "Trees",
+      floor: "Floors",
+      house: "Houses",
+      structure: "Structures",
+      windowLight: "Lights"
     }[this.activeCreativeMode] ?? "Nenhum";
     this.creativeTitleText?.setText("");
-    this.creativeModesText?.setText(`Modo: ${activeLabel}  |  P Pisos  |  F Cercas  |  T Arvores  |  H Casas  |  B Estruturas  |  L Luzes`);
+    this.creativeModesText?.setText(`Mode: ${activeLabel}  |  P Floors  |  F Fences  |  T Trees  |  H Houses  |  B Structures  |  L Lights`);
     this.updateCreativeSaveButton();
 
     if (this.isFenceEditorActive()) {
@@ -1937,7 +1937,7 @@ export default class WorldScene extends BaseGameScene {
     } else if (this.isHouseEditorActive()) {
       const selectedDef = HOUSE_DEFS.find((def) => def.id === this.selectedHouseType);
       const label = this.selectedEditableHouse?.def.label ?? selectedDef?.label ?? "nenhuma";
-      this.fenceEditorText.setText(`Casa: ${label} | clique coloca/move | direito/Delete remove do mapa`);
+      this.fenceEditorText.setText(`House: ${label} | click place/move | right-click/Delete removes from map`);
     } else if (this.isStructureEditorActive()) {
       const label = this.structurePieces[this.selectedStructureType]?.label ?? "Banca frutas";
       const side = this.selectedStructureFlipX ? "invertido" : "normal";
@@ -2970,7 +2970,7 @@ export default class WorldScene extends BaseGameScene {
       x,
       y,
       promptY: y - 38,
-      promptText: "E Entrar",
+      promptText: "E Enter",
       radius: 46,
       onInteract: () => this.fadeTo(sceneKey, { exitSpawnKey: spawnKey, doorId: id, returnScene: this.scene.key })
     });
@@ -3194,7 +3194,7 @@ export default class WorldScene extends BaseGameScene {
       promptY: villager.y - 32,
       promptText: "E Falar",
       radius: 42,
-      onInteract: () => this.dialog.show("Morador", "Dizem que algumas cartas antigas foram escondidas nas casas da vila.")
+      onInteract: () => this.dialog.show("Resident", "They say some old cards were hidden inside village houses.")
     });
   }
 
@@ -3278,7 +3278,7 @@ export default class WorldScene extends BaseGameScene {
       promptY: character.y - 44,
       promptText: "E Falar",
       radius: 44,
-      onInteract: () => this.dialog.show("Aventureiro", "Vou explorar a vila enquanto voce testa essa magia nova.")
+      onInteract: () => this.dialog.show("Adventurer", "Vou explorar a vila enquanto voce testa essa magia nova.")
     };
     this.interactions.add(interaction);
 

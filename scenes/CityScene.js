@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=204";
+import WorldScene from "./WorldScene.js?v=209";
 
 const TILE = 32;
 
@@ -79,7 +79,7 @@ export default class CityScene extends WorldScene {
     this.add.rectangle(x, y - 52, 118, 32, 0x7c512d, 1)
       .setDepth(y - 1)
       .setStrokeStyle(2, 0x3b2416, 1);
-    this.add.text(x, y - 52, "Vila", {
+    this.add.text(x, y - 52, "Village", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#fff0c2",
@@ -91,7 +91,7 @@ export default class CityScene extends WorldScene {
       x,
       y,
       promptY: y - 88,
-      promptText: "E Voltar para Vila",
+      promptText: "E Return to Village",
       radius: 82,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "cityGate" })
     });
@@ -126,21 +126,21 @@ export default class CityScene extends WorldScene {
         x: left,
         y: top,
         facing: "down",
-        name: "Guarda Rowan",
+        name: "Guard Rowan",
         patrol: [{ x: left, y: top }, { x: left + 90, y: top }, { x: left + 90, y: top + 90 }, { x: left, y: top + 90 }]
       },
       {
         x: right,
         y: top,
         facing: "left",
-        name: "Guarda Cedric",
+        name: "Guard Cedric",
         patrol: [{ x: right, y: top }, { x: right - 90, y: top }, { x: right - 90, y: top + 90 }, { x: right, y: top + 90 }]
       },
       {
         x: right,
         y: bottom,
         facing: "up",
-        name: "Guarda Alden",
+        name: "Guard Alden",
         patrol: [{ x: right, y: bottom }, { x: right - 110, y: bottom }, { x: right - 110, y: bottom - 90 }, { x: right, y: bottom - 90 }]
       }
     ].forEach((guardConfig, index) => {

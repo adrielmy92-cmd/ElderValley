@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
 
 export default class CardShopHouseScene extends InteriorBaseScene {
   constructor() {
@@ -9,7 +9,7 @@ export default class CardShopHouseScene extends InteriorBaseScene {
     this.makeRoom({
       width: 512,
       height: 576,
-      title: "Loja de Cartas",
+      title: "Card Shop",
       spawnX: 256,
       spawnY: 488
     });
@@ -19,13 +19,13 @@ export default class CardShopHouseScene extends InteriorBaseScene {
     this.add.image(256, 394, "tile-rug").setScale(3.5, 1.35).setDepth(120);
     this.add.image(256, 226, "tile-rug").setScale(2.2, 1.2).setDepth(120);
 
-    this.addFurniture(146, 178, "bookcase", 38, 18, "Caixas de cartas comuns estao organizadas por cor e regiao.", "Prateleira");
-    this.addFurniture(366, 178, "bookcase", 38, 18, "As caixas superiores tem selos antigos de ElderValley.", "Prateleira");
-    this.addFurniture(104, 342, "bookcase", 38, 18, "Pacotes fechados ficam atras do vidro, longe de maos curiosas.", "Vitrine");
-    this.addFurniture(256, 286, "counter", 112, 24, "O balcao tem um livro de vendas, moedas e cartas separadas por raridade.", "Balcao");
-    this.addFurniture(256, 402, "card-table", 68, 24, "Cartas de colecao estao expostas sob um pano vermelho e creme.", "Mesa de Cartas");
-    this.addFurniture(372, 388, "card-table", 58, 22, "Uma pequena placa diz: trocas justas, cartas originais.", "Mesa Lateral");
-    this.addFurniture(414, 474, "plant", 20, 18, "A planta fica perto da porta para deixar a loja menos empoeirada.", "Vaso");
+    this.addFurniture(146, 178, "bookcase", 38, 18, "Common card boxes are organized by color and region.", "Shelf");
+    this.addFurniture(366, 178, "bookcase", 38, 18, "The upper boxes carry old ElderValley seals.", "Shelf");
+    this.addFurniture(104, 342, "bookcase", 38, 18, "Sealed packs sit behind glass, away from curious hands.", "Display Case");
+    this.addFurniture(256, 286, "counter", 112, 24, "O balcao tem um livro de vendas, coins e cartas separadas por raridade.", "Counter");
+    this.addFurniture(256, 402, "card-table", 68, 24, "Collectible cards are displayed on a red and cream cloth.", "Card Table");
+    this.addFurniture(372, 388, "card-table", 58, 22, "A small sign says: fair trades, original cards.", "Side Table");
+    this.addFurniture(414, 474, "plant", 20, 18, "The plant sits near the door to make the shop less dusty.", "Plant");
 
     const chestId = "card-shop-house-chest";
     const opened = this.registry.get("openedChests") ?? {};
@@ -35,19 +35,19 @@ export default class CardShopHouseScene extends InteriorBaseScene {
       x: 116,
       y: 474,
       promptY: 438,
-      promptText: "E Abrir",
+      promptText: "E Open",
       radius: 44,
       onInteract: () => {
         const state = this.registry.get("openedChests") ?? {};
         if (state[chestId]) {
-          this.dialog.show("Bau", "O bau da loja ja foi aberto.");
+          this.dialog.show("Chest", "The shop chest has already been opened.");
           return;
         }
         state[chestId] = true;
         this.registry.set("openedChests", state);
         chest.setTexture("chest-open");
         this.addCardToInventory("Lantern Market Card");
-        this.dialog.show("Bau", "Voce encontrou uma Lantern Market Card.");
+        this.dialog.show("Chest", "You found a Lantern Market Card.");
       }
     });
 
@@ -55,7 +55,7 @@ export default class CardShopHouseScene extends InteriorBaseScene {
     const sparkleB = this.add.image(386, 360, "card-sparkle-1").setDepth(500);
     this.tweens.add({ targets: [sparkleA, sparkleB], alpha: 0.22, scale: 1.2, duration: 720, yoyo: true, repeat: -1 });
 
-    this.addNpc(256, 230, 2, "Vendedor", "Bem-vindo. Essa loja parece pequena por fora, mas as melhores cartas ficam bem guardadas.");
+    this.addNpc(256, 230, 2, "Vendor", "Welcome. This shop looks small outside, but the best cards are well protected.");
     this.addExitDoor(256, 536, "blacksmith");
   }
 

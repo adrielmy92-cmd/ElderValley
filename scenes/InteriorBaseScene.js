@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=194";
+import BaseGameScene from "./BaseGameScene.js?v=209";
 
 const TILE = 32;
 
@@ -46,7 +46,7 @@ export default class InteriorBaseScene extends BaseGameScene {
       x,
       y,
       promptY: y - 24,
-      promptText: "E Sair",
+      promptText: "E Exit",
       radius: 44,
       onInteract: () => this.fadeTo(returnScene, { spawnKey })
     });

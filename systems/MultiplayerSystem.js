@@ -47,7 +47,7 @@ export default class MultiplayerSystem {
   getPlayerName() {
     let name = localStorage.getItem("eldervalley-player-name");
     if (!name) {
-      name = `Jogador ${Math.floor(Math.random() * 9000) + 1000}`;
+      name = `Player ${Math.floor(Math.random() * 9000) + 1000}`;
       localStorage.setItem("eldervalley-player-name", name);
     }
     return name;
@@ -176,7 +176,7 @@ export default class MultiplayerSystem {
     if (payload.type === "walletSessionReplaced" || payload.type === "authRejected") {
       this.connected = false;
       this.clearRemotePlayers();
-      this.scene.chat?.addSystemMessage(payload.message ?? "Sessao de carteira encerrada.");
+      this.scene.chat?.addSystemMessage(payload.message ?? "Wallet session ended.");
       this.socket?.close();
       return;
     }
@@ -282,7 +282,7 @@ export default class MultiplayerSystem {
         .setOrigin(0.5, 0.5)
         .setScale(this.getRemoteScale(profile))
         .setDepth(data.y + 120);
-      const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Jogador", {
+      const nameText = this.scene.add.text(data.x, data.y - 58, data.name ?? "Player", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: "#fff7d6",
@@ -291,7 +291,7 @@ export default class MultiplayerSystem {
       }).setOrigin(0.5).setDepth(6100);
       remote = {
         id: data.id,
-        name: data.name ?? "Jogador",
+        name: data.name ?? "Player",
         characterId,
         profile,
         sprite,
@@ -387,7 +387,7 @@ export default class MultiplayerSystem {
       return;
     }
     const remote = this.remotePlayers.get(payload.presenceId ?? payload.id) ?? this.findRemoteBySocketId(payload.id);
-    this.scene.chat?.addMessage(payload.name ?? "Jogador", payload.message);
+    this.scene.chat?.addMessage(payload.name ?? "Player", payload.message);
     if (remote) {
       this.scene.chat?.showBubbleFor(remote.sprite, payload.message);
     }

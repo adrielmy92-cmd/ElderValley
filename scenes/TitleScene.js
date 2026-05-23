@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=180";
+import WalletSystem from "../systems/WalletSystem.js?v=209";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -156,7 +156,7 @@ export default class TitleScene extends Phaser.Scene {
       shadow: { offsetX: 4, offsetY: 5, color: "#030201", blur: 0, fill: true }
     }).setOrigin(0.5).setDepth(20);
 
-    this.add.text(width / 2, 118, "Versao Demo", {
+    this.add.text(width / 2, 118, "Demo Version", {
       fontFamily: "monospace",
       fontSize: "18px",
       color: "#e7ba61",
@@ -219,7 +219,7 @@ export default class TitleScene extends Phaser.Scene {
     g.strokeRoundedRect(x + 6, y + 6, dockW - 12, 84, 5);
     this.walletDock.add(g);
 
-    const title = this.add.text(x + 16, y + 17, "Carteira do Holder", this.textStyle(13, "#ffd889"))
+    const title = this.add.text(x + 16, y + 17, "Holder Wallet", this.textStyle(13, "#ffd889"))
       .setOrigin(0, 0.5);
     const address = this.add.text(x + 16, y + 40, this.walletSystem.getShortAddress(), this.textStyle(11, "#d8c6a1"))
       .setOrigin(0, 0.5);
@@ -232,13 +232,13 @@ export default class TitleScene extends Phaser.Scene {
     const rightX = x + dockW - 222;
     this.addWalletButton(rightX, buttonY, 74, "Meta", "metamask", () => this.handleWalletConnect("metamask"));
     this.addWalletButton(rightX + 80, buttonY, 82, "Phantom", "phantom", () => this.handleWalletConnect("phantom"));
-    this.addWalletButton(rightX + 168, buttonY, 46, "Sair", null, () => this.walletSystem.disconnect());
+    this.addWalletButton(rightX + 168, buttonY, 46, "Disconnect", null, () => this.walletSystem.disconnect());
 
     const loginY = y + 78;
     const guestSelected = this.loginMode === "guest";
     const walletSelected = this.loginMode === "wallet";
-    this.addLoginModeButton(x + 16, loginY, 118, "Convidado", "guest", guestSelected);
-    this.addLoginModeButton(x + 142, loginY, 150, "Logar carteira", "wallet", walletSelected);
+    this.addLoginModeButton(x + 16, loginY, 118, "Guest", "guest", guestSelected);
+    this.addLoginModeButton(x + 142, loginY, 150, "Wallet Login", "wallet", walletSelected);
   }
 
   addWalletButton(x, y, w, label, icon, onClick) {
@@ -264,9 +264,9 @@ export default class TitleScene extends Phaser.Scene {
         this.loginMode = mode;
         localStorage.setItem("eldervalley-login-mode", mode);
         if (mode === "wallet" && !this.walletSystem.connected) {
-          this.walletSystem.status = "Escolha MetaMask ou Phantom para entrar com carteira.";
+          this.walletSystem.status = "Choose MetaMask or Phantom to enter with a wallet.";
         } else {
-          this.walletSystem.status = mode === "guest" ? "Entrada como convidado ativa." : "Login por carteira ativo.";
+          this.walletSystem.status = mode === "guest" ? "Guest entry enabled." : "Wallet login enabled.";
         }
         this.refreshWalletDock();
       });
@@ -325,7 +325,7 @@ export default class TitleScene extends Phaser.Scene {
         this.selectedCharacter = this.walletSystem.profile.selectedCharacter;
       }
     } catch (error) {
-      this.walletSystem.status = error?.message ?? "Nao foi possivel conectar.";
+      this.walletSystem.status = error?.message ?? "Could not connect.";
     }
     this.refreshWalletDock();
   }
@@ -442,10 +442,10 @@ export default class TitleScene extends Phaser.Scene {
 
   drawTabs(x, y, width) {
     const tabs = [
-      { id: "houses", label: "Casas" },
-      { id: "characters", label: "Personagens" },
-      { id: "market", label: "Mercado" },
-      { id: "notices", label: "Avisos" }
+      { id: "houses", label: "Houses" },
+      { id: "characters", label: "Characters" },
+      { id: "market", label: "Market" },
+      { id: "notices", label: "Notices" }
     ];
     const tabW = width / tabs.length;
     this.tabButtons = tabs.map((tab, index) => {
@@ -492,18 +492,18 @@ export default class TitleScene extends Phaser.Scene {
       return;
     }
     if (this.activePanel === "market") {
-      this.renderInfo("Mercado", [
-        "Compra e venda de casas do vale.",
-        "Recursos, trabalho automatico e economia entram depois.",
-        "Nada de taberna, mercado ou ferreiro como casa residencial."
+      this.renderInfo("Market", [
+        "Buy and sell valley houses.",
+        "Resources, automatic work, and economy arrive later.",
+        "Taverns, markets, and forges are not residential houses."
       ]);
       return;
     }
     if (this.activePanel === "notices") {
-      this.renderInfo("Avisos", [
-        "Proximas atualizacoes entram primeiro na versao demo.",
-        "Novas casas, personagens e decoracoes estao em desenvolvimento.",
-        "Sistema online, economia e recompensas chegam em etapas futuras."
+      this.renderInfo("Notices", [
+        "Upcoming updates arrive first in the demo version.",
+        "New houses, characters, and decorations are in development.",
+        "Online systems, economy, and rewards arrive in future stages."
       ]);
       return;
     }
@@ -512,32 +512,32 @@ export default class TitleScene extends Phaser.Scene {
 
   getHouseCatalog() {
     return [
-      { name: "Casa Nobre", key: "creative-house-manor", price: "6.500 EV", maxW: 0.96, maxH: 0.76 },
-      { name: "Casa Alta", key: "creative-house-cottage", price: "1.900 EV", maxW: 0.96, maxH: 0.78 },
-      { name: "Casa Vermelha", key: "creative-house-red-lodge", price: "2.600 EV", maxW: 0.96, maxH: 0.76 },
-      { name: "Casa Verde", key: "creative-house-green-cottage", price: "2.400 EV", maxW: 0.96, maxH: 0.78 },
-      { name: "Casa Arcana", key: "creative-house-alchemist", price: "4.800 EV", maxW: 0.96, maxH: 0.82 },
-      { name: "Mansao Esmeralda", key: "creative-house-ivy-manor", price: "7.800 EV", maxW: 0.96, maxH: 0.8 },
-      { name: "Casa de Palha", key: "creative-house-thatch-cottage", price: "2.200 EV", maxW: 0.96, maxH: 0.8 },
-      { name: "Casa Azul", key: "creative-house-blue-cottage", price: "2.900 EV", maxW: 0.88, maxH: 0.84 },
-      { name: "Casa Torre", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 },
-      { name: "Mansao Azul", key: "creative-house-blue-arcane-manor", price: "8.200 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Mansao Elfica", key: "creative-house-elf-green-manor", price: "8.800 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Mansao Torre Azul", key: "creative-house-blue-gold-tower", price: "8.600 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Mansao Turquesa", key: "creative-house-teal-roof-manor", price: "7.900 EV", maxW: 0.96, maxH: 0.86 }
+      { name: "Noble House", key: "creative-house-manor", price: "6.500 EV", maxW: 0.96, maxH: 0.76 },
+      { name: "Tall House", key: "creative-house-cottage", price: "1.900 EV", maxW: 0.96, maxH: 0.78 },
+      { name: "Red Lodge", key: "creative-house-red-lodge", price: "2.600 EV", maxW: 0.96, maxH: 0.76 },
+      { name: "Green House", key: "creative-house-green-cottage", price: "2.400 EV", maxW: 0.96, maxH: 0.78 },
+      { name: "Arcane House", key: "creative-house-alchemist", price: "4.800 EV", maxW: 0.96, maxH: 0.82 },
+      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "7.800 EV", maxW: 0.96, maxH: 0.8 },
+      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "2.200 EV", maxW: 0.96, maxH: 0.8 },
+      { name: "Blue House", key: "creative-house-blue-cottage", price: "2.900 EV", maxW: 0.88, maxH: 0.84 },
+      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 },
+      { name: "Blue Manor", key: "creative-house-blue-arcane-manor", price: "8.200 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "8.800 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "8.600 EV", maxW: 0.96, maxH: 0.86 },
+      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "7.900 EV", maxW: 0.96, maxH: 0.86 }
     ];
   }
 
   getCharacterCatalog() {
     return [
-      { id: "mage-1", name: "Mago", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
-      { id: "adventurer", name: "Aventureiro", key: "adventurer-sheet", frame: 0, scale: 0.82 }
+      { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
+      { id: "adventurer", name: "Adventurer", key: "adventurer-sheet", frame: 0, scale: 0.82 }
     ];
   }
 
   renderHouses() {
     const { x, y, w, h } = this.layout.side;
-    this.drawPanelFrame(x, y, w, h, "Casas do Vale", 32, true);
+    this.drawPanelFrame(x, y, w, h, "Valley Houses", 32, true);
     this.drawAccountSummary(x + 24, y + 56, w - 48);
 
     const houses = this.getHouseCatalog();
@@ -566,7 +566,7 @@ export default class TitleScene extends Phaser.Scene {
       scroller.content.add(image);
       this.addContentText(cx + 12, cy + cardH - 35, house.name, 14, "#ffd889", cardW - 24, scroller.content);
       const owned = this.walletSystem.isHouseOwned(house.key);
-      this.addContentText(cx + 12, cy + cardH - 16, owned ? "Comprada nesta carteira" : house.price, 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - 104, scroller.content);
+      this.addContentText(cx + 12, cy + cardH - 16, owned ? "Owned by this wallet" : house.price, 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - 104, scroller.content);
       this.addBuyButton(cx + cardW - 88, cy + cardH - 24, house, scroller.content);
     });
   }
@@ -598,7 +598,7 @@ export default class TitleScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(60)
       .on("pointerdown", () => this.handleHousePurchase(house));
-    const label = this.add.text(x + 37, y, owned ? "Minha" : "Comprar", this.textStyle(10, "#ffe0a0"))
+    const label = this.add.text(x + 37, y, owned ? "Owned" : "Buy", this.textStyle(10, "#ffe0a0"))
       .setOrigin(0.5)
       .setDepth(61);
     parent.add([button, label]);
@@ -609,14 +609,14 @@ export default class TitleScene extends Phaser.Scene {
       const result = await this.walletSystem.prepareHousePurchase(house);
       this.walletSystem.status = result.message;
     } catch (error) {
-      this.walletSystem.status = error?.message ?? "Nao foi possivel iniciar compra.";
+      this.walletSystem.status = error?.message ?? "Could not start purchase.";
     }
     this.refreshWalletDock();
   }
 
   renderCharacters() {
     const { x, y, w, h } = this.layout.side;
-    this.drawPanelFrame(x, y, w, h, "Seu Personagem", 32, true);
+    this.drawPanelFrame(x, y, w, h, "Your Character", 32, true);
     this.drawAccountSummary(x + 24, y + 56, w - 48);
 
     const chars = this.getCharacterCatalog();
@@ -642,7 +642,7 @@ export default class TitleScene extends Phaser.Scene {
         .setDepth(36);
       scroller.content.add(sprite);
       this.addContentText(listX + 106, cy + 34, character.name, 18, "#ffd889", cardW - 132, scroller.content);
-      this.addContentText(listX + 106, cy + 64, selected ? "Selecionado" : (owned ? "Escolher" : "Nao comprado"), 12, selected ? "#a7ffb3" : (owned ? "#d8c6a1" : "#d97878"), cardW - 132, scroller.content);
+      this.addContentText(listX + 106, cy + 64, selected ? "Selected" : (owned ? "Choose" : "Not owned"), 12, selected ? "#a7ffb3" : (owned ? "#d8c6a1" : "#d97878"), cardW - 132, scroller.content);
       const zone = this.add.zone(listX + 6, cy, cardW, cardH)
         .setOrigin(0)
         .setInteractive({ useHandCursor: true })
@@ -651,7 +651,7 @@ export default class TitleScene extends Phaser.Scene {
           if (owned) {
             this.selectCharacter(character.id);
           } else {
-            this.walletSystem.status = `${character.name} ainda nao pertence a esta carteira.`;
+            this.walletSystem.status = `${character.name} does not belong to this wallet yet.`;
             this.renderPanel();
           }
         });
@@ -890,7 +890,7 @@ export default class TitleScene extends Phaser.Scene {
     g.fillRect(x + 24, y + 24, panelW - 48, 44);
     this.loginOverlay.add([shade, g]);
 
-    const titleText = this.walletSystem.connected ? "Seu Perfil ElderValley" : "Entrar em ElderValley";
+    const titleText = this.walletSystem.connected ? "Your ElderValley Profile" : "Enter ElderValley";
     const title = this.add.text(width / 2, y + 46, titleText, {
       fontFamily: "Georgia, 'Times New Roman', serif",
       fontSize: "30px",
@@ -899,22 +899,22 @@ export default class TitleScene extends Phaser.Scene {
       strokeThickness: 5
     }).setOrigin(0.5);
     const subtitleText = this.walletSystem.connected
-      ? "Confira o que esta carteira possui antes de entrar no mundo."
-      : "Conecte uma carteira para carregar seu perfil, casas e personagens.";
+      ? "Review what this wallet owns before entering the world."
+      : "Connect a wallet to load your profile, houses, and characters.";
     const subtitle = this.add.text(width / 2, y + 92, subtitleText, this.textStyle(14, "#d8c6a1"))
       .setOrigin(0.5);
     this.loginOverlay.add([title, subtitle]);
 
     if (this.walletSystem.connected) {
       this.drawWalletProfilePanel(x + 24, y + 118, panelW - 48, panelH - 198);
-      this.addModalButton(width / 2 - 248, y + panelH - 58, 150, "Entrar", () => this.beginGame());
+      this.addModalButton(width / 2 - 248, y + panelH - 58, 150, "Enter", () => this.beginGame());
       this.addModalButton(width / 2 - 76, y + panelH - 58, 150, "Desconectar", () => {
         this.walletSystem.disconnect();
         this.loginMode = "wallet";
         localStorage.setItem("eldervalley-login-mode", "wallet");
         this.showLoginOverlay(true);
       });
-      this.addModalButton(width / 2 + 96, y + panelH - 58, 150, "Voltar", () => {
+      this.addModalButton(width / 2 + 96, y + panelH - 58, 150, "Back", () => {
         this.loginOverlay?.destroy(true);
         this.loginOverlay = null;
       });
@@ -923,17 +923,17 @@ export default class TitleScene extends Phaser.Scene {
 
     const cardY = y + 126;
     const cardW = (panelW - 84) / 3;
-    this.addLoginChoiceCard(x + 24, cardY, cardW, 172, "Visitante", "Explorar sem carteira. Compras ficam bloqueadas.", null, () => {
+    this.addLoginChoiceCard(x + 24, cardY, cardW, 172, "Guest", "Explore without a wallet. Purchases stay locked.", null, () => {
       this.loginMode = "guest";
       localStorage.setItem("eldervalley-login-mode", "guest");
-      this.walletSystem.status = "Visitante ativo. Compras e perfil ficam bloqueados sem carteira.";
+      this.walletSystem.status = "Guest mode active. Purchases and profile stay locked without a wallet.";
       this.beginGame();
     });
-    this.addLoginChoiceCard(x + 42 + cardW, cardY, cardW, 172, "MetaMask", "Entrar com carteira EVM.", "metamask", () => this.handleWalletConnect("metamask"));
-    this.addLoginChoiceCard(x + 60 + cardW * 2, cardY, cardW, 172, "Phantom", "Entrar com Phantom.", "phantom", () => this.handleWalletConnect("phantom"));
+    this.addLoginChoiceCard(x + 42 + cardW, cardY, cardW, 172, "MetaMask", "Enter with an EVM wallet.", "metamask", () => this.handleWalletConnect("metamask"));
+    this.addLoginChoiceCard(x + 60 + cardW * 2, cardY, cardW, 172, "Phantom", "Enter with Phantom.", "phantom", () => this.handleWalletConnect("phantom"));
 
     const summaryY = cardY + 204;
-    const summary = this.add.text(x + 42, summaryY, `Visitante: entra para testar sem salvar compras.\nCarteira: carrega casas, personagens e itens da conta.\n${this.walletSystem.status}`, {
+    const summary = this.add.text(x + 42, summaryY, `Guest: enter to test without saving purchases.\nWallet: loads account houses, characters, and items.\n${this.walletSystem.status}`, {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#e9d5a0",
@@ -944,7 +944,7 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0);
     this.loginOverlay.add(summary);
 
-    this.addModalButton(width / 2 - 78, y + panelH - 58, 156, "Voltar", () => {
+    this.addModalButton(width / 2 - 78, y + panelH - 58, 156, "Back", () => {
       this.loginOverlay?.destroy(true);
       this.loginOverlay = null;
     });
@@ -981,19 +981,19 @@ export default class TitleScene extends Phaser.Scene {
       .setScale(selected.scale * 1.35);
     this.loginOverlay.add(avatar);
     const charName = this.add.text(x + 93, y + h - 44, selected.name, this.textStyle(14, "#ffd889")).setOrigin(0.5);
-    const charLabel = this.add.text(x + 93, y + h - 22, "Personagem ativo", this.textStyle(10, "#d8c6a1")).setOrigin(0.5);
+    const charLabel = this.add.text(x + 93, y + h - 22, "Active Character", this.textStyle(10, "#d8c6a1")).setOrigin(0.5);
     this.loginOverlay.add([charName, charLabel]);
 
     const infoX = x + 190;
     const infoW = w - 214;
     const info = [
-      `Carteira: ${this.walletSystem.getShortAddress()}`,
+      `Wallet: ${this.walletSystem.getShortAddress()}`,
       `Rede: ${this.walletSystem.wallet?.chain ?? "EVM"}`,
-      `Casas compradas: ${houses.length}`,
+      `Purchased houses: ${houses.length}`,
       `Personagens: ${ownedCharacterIds.length}`
     ];
     this.addProfileBox(infoX, y + 22, infoW, 104, "Resumo da Conta", info.join("\n"));
-    this.addProfileBox(infoX, y + 138, infoW, 96, "Suas Casas", ownedHouses);
+    this.addProfileBox(infoX, y + 138, infoW, 96, "Your Houses", ownedHouses);
     this.addProfileBox(infoX, y + 246, infoW, Math.max(70, h - 268), "Seus Personagens", ownedCharacters);
   }
 
@@ -1014,8 +1014,8 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   addLoginChoiceCard(x, y, w, h, title, description, icon, onClick) {
-    const selected = (title === "Visitante" && this.loginMode === "guest")
-      || (title !== "Visitante" && this.loginMode === "wallet" && this.walletSystem.connected);
+    const selected = (title === "Guest" && this.loginMode === "guest")
+      || (title !== "Guest" && this.loginMode === "wallet" && this.walletSystem.connected);
     const g = this.add.graphics();
     g.fillStyle(selected ? 0x17395c : 0x0a0d12, 0.96);
     g.fillRoundedRect(x, y, w, h, 8);
@@ -1112,7 +1112,7 @@ export default class TitleScene extends Phaser.Scene {
     if (this.loginMode === "wallet" && !this.walletSystem.connected) {
       this.loginMode = "wallet";
       localStorage.setItem("eldervalley-login-mode", "wallet");
-      this.walletSystem.status = "Conecte MetaMask ou Phantom para entrar com carteira.";
+      this.walletSystem.status = "Connect MetaMask or Phantom to enter with a wallet.";
       this.showLoginOverlay(true);
       return;
     }
@@ -1121,7 +1121,7 @@ export default class TitleScene extends Phaser.Scene {
     const profileReady = await this.loadProfileBeforeGame();
     if (!profileReady) {
       this.started = false;
-      this.walletSystem.status = "Assine a carteira novamente para carregar seu perfil.";
+      this.walletSystem.status = "Sign with the wallet again to load your profile.";
       this.showLoginOverlay(true);
       return;
     }
@@ -1199,7 +1199,7 @@ export default class TitleScene extends Phaser.Scene {
         this.selectedCharacter = profile.selectedCharacter;
       }
     } catch {
-      // Se o servidor nao responder, entra com o cache local.
+      // If the server does not respond, fall back to the local cache.
     }
     return true;
   }

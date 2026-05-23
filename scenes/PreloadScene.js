@@ -54,7 +54,7 @@ export default class PreloadScene extends Phaser.Scene {
       try {
         localStorage.setItem("eldervalley-dev-mode", "1");
       } catch {
-        // Se o navegador bloquear storage, apenas nao persiste o modo dev.
+        // If the browser blocks storage, dev mode simply does not persist.
       }
     }
     const isDev = (() => {

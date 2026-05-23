@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
 
 export default class ReferenceHouseInteriorScene extends InteriorBaseScene {
   constructor() {
@@ -9,7 +9,7 @@ export default class ReferenceHouseInteriorScene extends InteriorBaseScene {
     this.makeRoom({
       width: 640,
       height: 512,
-      title: "Casa de Morador",
+      title: "Resident House",
       spawnX: 320,
       spawnY: 432
     });
@@ -19,11 +19,11 @@ export default class ReferenceHouseInteriorScene extends InteriorBaseScene {
     this.add.image(320, 334, "tile-rug").setScale(3.4, 1.25).setDepth(120);
     this.add.image(178, 214, "tile-rug").setScale(1.6, 1.2).setDepth(120);
 
-    this.addFurniture(138, 184, "bed", 46, 24, "A cama fica no canto mais quente da casa.", "Cama");
-    this.addFurniture(268, 206, "table", 58, 24, "Ha uma xicara, um mapa pequeno e duas cartas viradas para baixo.", "Mesa");
+    this.addFurniture(138, 184, "bed", 46, 24, "The bed sits in the warmest corner of the house.", "Bed");
+    this.addFurniture(268, 206, "table", 58, 24, "There is a cup, a small map, and two face-down cards.", "Table");
     this.addFurniture(306, 234, "chair", 20, 16);
-    this.addFurniture(466, 180, "bookcase", 38, 18, "Livros de receitas, comercio e lendas curtas da vila.", "Estante");
-    this.addFurniture(512, 304, "plant", 20, 18, "Um vaso perto da janela pega bastante luz durante o dia.", "Vaso");
+    this.addFurniture(466, 180, "bookcase", 38, 18, "Books of recipes, trade, and short village legends.", "Shelf");
+    this.addFurniture(512, 304, "plant", 20, 18, "A pot near the window gets plenty of daylight.", "Plant");
 
     const chestId = "reference-house-chest";
     const opened = this.registry.get("openedChests") ?? {};
@@ -33,23 +33,23 @@ export default class ReferenceHouseInteriorScene extends InteriorBaseScene {
       x: 430,
       y: 374,
       promptY: 338,
-      promptText: "E Abrir",
+      promptText: "E Open",
       radius: 44,
       onInteract: () => {
         const state = this.registry.get("openedChests") ?? {};
         if (state[chestId]) {
-          this.dialog.show("Bau", "O bau esta vazio agora.");
+          this.dialog.show("Chest", "The chest is empty now.");
           return;
         }
         state[chestId] = true;
         this.registry.set("openedChests", state);
         chest.setTexture("chest-open");
         this.addCardToInventory("Warm Window Card");
-        this.dialog.show("Bau", "Voce encontrou uma Warm Window Card.");
+        this.dialog.show("Chest", "You found a Warm Window Card.");
       }
     });
 
-    this.addNpc(208, 316, 0, "Morador", "A fachada e grande, mas a parte mais usada da casa fica perto da lareira.");
+    this.addNpc(208, 316, 0, "Resident", "The facade is large, but the most used part of the house is near the fireplace.");
     this.addExitDoor(320, 472, "house01");
   }
 

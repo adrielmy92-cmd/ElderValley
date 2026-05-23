@@ -9,7 +9,7 @@ export default class WindmillLoadScene extends Phaser.Scene {
 
   preload() {
     this.cameras.main.setBackgroundColor("#151b22");
-    this.add.text(24, 24, "Carregando moinho...", {
+    this.add.text(24, 24, "Loading windmill...", {
       fontFamily: "monospace",
       fontSize: "18px",
       color: "#ffffff",

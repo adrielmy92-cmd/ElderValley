@@ -85,7 +85,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
     this.add.rectangle(0, 0, width, height, 0x08111d, 1).setOrigin(0);
-    this.add.text(width / 2, height / 2 - 22, "Carregando ElderValley", {
+    this.add.text(width / 2, height / 2 - 22, "Loading ElderValley", {
       fontFamily: "monospace",
       fontSize: "22px",
       color: "#f3d08a",

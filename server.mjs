@@ -138,11 +138,11 @@ function validateWalletSocketSession(payload) {
   }
   const session = verifySessionToken(sanitizeText(payload.sessionToken, 2000));
   if (!session?.profileId || !isWalletProfile(session.profileId)) {
-    return { ok: false, error: "Carteira precisa assinar a sessao novamente." };
+    return { ok: false, error: "Wallet must sign the session again." };
   }
   const walletAddress = sanitizeText(payload.walletAddress, 90).toLowerCase();
   if (walletAddress && session.address && walletAddress !== String(session.address).toLowerCase()) {
-    return { ok: false, error: "Sessao da carteira nao corresponde ao endereco conectado." };
+    return { ok: false, error: "Wallet session does not match the connected address." };
   }
   return {
     ok: true,
@@ -268,15 +268,15 @@ function getServerClockMinutes() {
 const workDefinitions = {
   alchemy: {
     id: "alchemy",
-    label: "Alquimia",
+    label: "Alchemy",
     totalGameMinutes: 360,
     coinsPerGameHour: 10,
     taskBonusGameMinutes: 30,
-    ingredients: ["Folha viva", "Sal cristalino", "Raiz lunar", "Cinza azul", "Essencia verde"],
+    ingredients: ["Living Leaf", "Crystal Salt", "Moonroot", "Blue Ash", "Green Essence"],
     prompts: [
-      "Misture os ingredientes na ordem correta.",
-      "Estabilize a pocao seguindo a sequencia.",
-      "Ajuste o caldeirao antes que a energia escape."
+      "Mix the ingredients in the correct order.",
+      "Stabilize the potion by following the sequence.",
+      "Adjust the cauldron before the energy escapes."
     ]
   }
 };
@@ -396,7 +396,7 @@ function supersedeOlderWalletClients(activeClient) {
     peer.superseded = true;
     sendWs(peer.socket, {
       type: "walletSessionReplaced",
-      message: "Essa carteira entrou em outro navegador. Esta sessao foi encerrada para evitar farm duplicado."
+      message: "This wallet logged in from another browser. This session was closed to prevent duplicate farming."
     });
     peer.socket.end();
   }
@@ -451,7 +451,7 @@ function handleWsPayload(client, payload) {
     }
     client.presenceId = sanitizeText(payload.presenceId, 80) || client.presenceId || client.id;
     supersedeOlderPresenceClients(client);
-    client.name = sanitizeText(payload.name, 24) || `Jogador ${client.id}`;
+    client.name = sanitizeText(payload.name, 24) || `Player ${client.id}`;
     client.scene = sanitizeText(payload.scene, 48) || "WorldScene";
     client.sceneChannel = canonicalSceneChannel(client.scene, sanitizeText(payload.sceneChannel, 80));
     client.x = finiteNumber(payload.x, 0);
@@ -484,7 +484,7 @@ function handleWsPayload(client, payload) {
     if (client.walletProfileId) {
       const walletAuth = validateWalletSocketSession(payload);
       if (!walletAuth.ok || walletAuth.profileId !== client.walletProfileId) {
-        sendWs(client.socket, { type: "authRejected", message: "Sessao de carteira invalida." });
+        sendWs(client.socket, { type: "authRejected", message: "Invalid wallet session." });
         client.superseded = true;
         client.socket.end();
         return;
@@ -903,7 +903,7 @@ const server = createServer(async (req, res) => {
       if (isWalletProfile(profileId) && !hasActiveWalletPresence(profileId, payload.presenceId)) {
         sendJson(res, 409, {
           ok: false,
-          error: "Carteira sem presenca ativa no servidor. Reentre no jogo para evitar farm duplicado."
+          error: "Wallet has no active server presence. Rejoin the game to prevent duplicate farming."
         });
         return;
       }
@@ -1005,11 +1005,11 @@ const server = createServer(async (req, res) => {
       const message = [
         "ElderValley Login",
         "",
-        "Assine para entrar com seguranca.",
-        `Carteira: ${address}`,
-        `Rede: ${chain}`,
+        "Sign to enter securely.",
+        `Wallet: ${address}`,
+        `Network: ${chain}`,
         `Nonce: ${nonce}`,
-        `Emitido em: ${issuedAt}`
+        `Issued at: ${issuedAt}`
       ].join("\n");
       const key = `${chain.toLowerCase()}:${address.toLowerCase()}`;
       authNonces.set(key, { nonce, message, provider, expiresAt: Date.now() + 5 * 60 * 1000 });
@@ -1226,7 +1226,7 @@ server.on("upgrade", (req, socket) => {
     id,
     presenceId: id,
     socket,
-    name: `Jogador ${id}`,
+    name: `Player ${id}`,
     scene: "WorldScene",
     x: 0,
     y: 0,

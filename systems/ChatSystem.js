@@ -156,7 +156,7 @@ export default class ChatSystem {
       return;
     }
 
-    this.addMessage("Você", message);
+    this.addMessage("You", message);
     this.showBubble(message);
     this.scene.multiplayer?.sendChat(message);
     this.close();

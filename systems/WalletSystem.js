@@ -6,7 +6,7 @@ export default class WalletSystem {
     this.scene = scene;
     this.wallet = null;
     this.profile = null;
-    this.status = "Conecte uma carteira para comprar casas.";
+    this.status = "Connect a wallet to buy houses.";
     this.loadSavedWallet();
     this.bindProviderEvents();
     if (this.connected) {
@@ -39,12 +39,12 @@ export default class WalletSystem {
           return;
         }
         if (!accounts?.length) {
-          this.disconnect("MetaMask desconectada.");
+          this.disconnect("MetaMask disconnected.");
           return;
         }
         this.wallet.address = accounts[0];
         this.saveWallet();
-        this.status = "MetaMask atualizada.";
+        this.status = "MetaMask updated.";
         this.scene.refreshWalletDock?.();
       });
       ethereum.on("chainChanged", (chainId) => {
@@ -53,7 +53,7 @@ export default class WalletSystem {
         }
         this.wallet.chainId = chainId;
         this.saveWallet();
-        this.status = "Rede atualizada.";
+        this.status = "Network updated.";
         this.scene.refreshWalletDock?.();
       });
     }
@@ -65,7 +65,7 @@ export default class WalletSystem {
 
   getShortAddress() {
     if (!this.wallet?.address) {
-      return "Carteira nao conectada";
+      return "Wallet not connected";
     }
     return `${this.wallet.label}: ${this.wallet.address.slice(0, 6)}...${this.wallet.address.slice(-4)}`;
   }
@@ -73,11 +73,11 @@ export default class WalletSystem {
   async connectMetaMask() {
     const provider = window.ethereum;
     if (!provider?.request) {
-      throw new Error("MetaMask nao encontrada neste navegador.");
+      throw new Error("MetaMask was not found in this browser.");
     }
     const accounts = await provider.request({ method: "eth_requestAccounts" });
     if (!accounts?.length) {
-      throw new Error("Nenhuma conta foi autorizada.");
+      throw new Error("No account was authorized.");
     }
     const chainId = await provider.request({ method: "eth_chainId" }).catch(() => null);
     this.wallet = {
@@ -99,7 +99,7 @@ export default class WalletSystem {
     if (evmProvider?.request) {
       const accounts = await evmProvider.request({ method: "eth_requestAccounts" });
       if (!accounts?.length) {
-        throw new Error("Nenhuma conta Phantom EVM foi autorizada.");
+        throw new Error("No Phantom EVM account was authorized.");
       }
       const chainId = await evmProvider.request({ method: "eth_chainId" }).catch(() => null);
       this.wallet = {
@@ -111,20 +111,20 @@ export default class WalletSystem {
       };
       await this.authenticateEvmWallet(evmProvider);
       await this.loadProfile();
-      this.status = "Phantom EVM conectada.";
+      this.status = "Phantom EVM connected.";
       this.saveWallet();
       return this.wallet;
     }
 
     const solanaProvider = window.phantom?.solana ?? (window.solana?.isPhantom ? window.solana : null);
     if (!solanaProvider?.connect) {
-      throw new Error("Phantom nao encontrada neste navegador.");
+      throw new Error("Phantom was not found in this browser.");
     }
     const response = await solanaProvider.connect();
     const publicKey = response?.publicKey ?? solanaProvider.publicKey;
     const address = publicKey?.toString?.();
     if (!address) {
-      throw new Error("A Phantom nao retornou carteira valida.");
+      throw new Error("Phantom did not return a valid wallet.");
     }
     this.wallet = {
       provider: "phantom",
@@ -133,12 +133,12 @@ export default class WalletSystem {
       address
     };
     await this.loadProfile();
-    this.status = "Phantom conectada.";
+    this.status = "Phantom connected.";
     this.saveWallet();
     return this.wallet;
   }
 
-  disconnect(message = "Carteira desconectada.") {
+  disconnect(message = "Wallet disconnected.") {
     const provider = this.wallet?.provider === "phantom"
       ? (window.phantom?.solana ?? (window.solana?.isPhantom ? window.solana : null))
       : null;
@@ -156,7 +156,7 @@ export default class WalletSystem {
 
   requireWallet() {
     if (!this.connected) {
-      throw new Error("Conecte MetaMask ou Phantom primeiro.");
+      throw new Error("Connect MetaMask or Phantom first.");
     }
   }
 
@@ -174,12 +174,12 @@ export default class WalletSystem {
       await this.saveProfile();
       return {
         ok: true,
-        message: `${house.name} salva nessa carteira. Compra on-chain entra quando o contrato estiver pronto.`
+        message: `${house.name} saved to this wallet. On-chain purchase comes when the contract is ready.`
       };
     }
     return {
       ok: true,
-      message: `${house.name} ja pertence a esta carteira.`
+      message: `${house.name} already belongs to this wallet.`
     };
   }
 
@@ -216,7 +216,7 @@ export default class WalletSystem {
 
   async authenticateEvmWallet(provider) {
     if (!this.wallet?.address || !provider?.request) {
-      throw new Error("Carteira EVM invalida.");
+      throw new Error("Invalid EVM wallet.");
     }
     const challengeResponse = await fetch("/api/auth/nonce", {
       method: "POST",
@@ -229,7 +229,7 @@ export default class WalletSystem {
     });
     const challenge = await challengeResponse.json();
     if (!challengeResponse.ok || !challenge?.message) {
-      throw new Error(challenge?.error ?? "Nao foi possivel criar o desafio da carteira.");
+      throw new Error(challenge?.error ?? "Could not create the wallet challenge.");
     }
     const signature = await provider.request({
       method: "personal_sign",
@@ -249,7 +249,7 @@ export default class WalletSystem {
     });
     const verified = await verifyResponse.json();
     if (!verifyResponse.ok || !verified?.token) {
-      throw new Error(verified?.error ?? "Assinatura da carteira nao foi validada.");
+      throw new Error(verified?.error ?? "Wallet signature was not validated.");
     }
     this.wallet.sessionToken = verified.token;
     this.wallet.profileId = verified.profileId;
@@ -358,7 +358,7 @@ export default class WalletSystem {
         body: JSON.stringify(this.profile)
       });
     } catch {
-      this.status = "Perfil salvo no navegador. Servidor local nao respondeu.";
+      this.status = "Profile saved in the browser. Local server did not respond.";
     }
   }
 

@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=194";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;
@@ -15,7 +15,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.makeRoom({
       width: WIDTH,
       height: HEIGHT,
-      title: "Casa Arcana",
+      title: "Arcane House",
       spawnX: 628,
       spawnY: 1084
     });
@@ -65,7 +65,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       x: 628,
       y: 760,
       promptY: 690,
-      promptText: "E Trabalhar (6h | 10 moedas/h)",
+      promptText: "E Work (6h | 10 coins/h)",
       radius: 82,
       enabled: () => !this.isWorking,
       onInteract: () => this.startServerWork({ jobId: "alchemy" })
@@ -86,7 +86,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       promptY: 628,
       promptText: "E Ver",
       radius: 72,
-      onInteract: () => this.dialog.show("Bancada", "Frascos, ossos e paginas abertas indicam estudos de alquimia antiga.")
+      onInteract: () => this.dialog.show("Workbench", "Flasks, bones, and open pages suggest old alchemy studies.")
     });
 
     this.interactions.add({
@@ -115,7 +115,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       x: 628,
       y: 1068,
       promptY: 1028,
-      promptText: "E Sair",
+      promptText: "E Exit",
       radius: 62,
       onInteract: () => this.fadeTo(returnScene, { spawnKey })
     });
