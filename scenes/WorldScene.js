@@ -21,6 +21,22 @@ const SPAWNS = {
 
 const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
 
+const PUBLIC_HOUSE_KEYS = new Set(["creative-house-alchemist"]);
+const WALLET_LOCKED_HOUSE_KEYS = new Set([
+  "creative-house-manor",
+  "creative-house-cottage",
+  "creative-house-red-lodge",
+  "creative-house-green-cottage",
+  "creative-house-ivy-manor",
+  "creative-house-thatch-cottage",
+  "creative-house-blue-cottage",
+  "creative-house-red-tower-cottage",
+  "creative-house-blue-arcane-manor",
+  "creative-house-elf-green-manor",
+  "creative-house-blue-gold-tower",
+  "creative-house-teal-roof-manor"
+]);
+
 const HOUSE_DEFS = [
   {
     id: "blacksmith",
@@ -981,13 +997,90 @@ export default class WorldScene extends BaseGameScene {
         promptY: y + def.doorOffset.y - 38,
         promptText: "E Enter",
         radius: 46,
-        onInteract: () => this.fadeTo(def.sceneKey, { exitSpawnKey: def.id, doorId: def.doorId, returnScene: this.scene.key })
+        onInteract: () => this.tryEnterEditableHouse(def)
       }
     };
 
     this.interactions.add(house.interaction);
     this.editableHouses.push(house);
     return house;
+  }
+
+  isWalletLockedHouse(def) {
+    return Boolean(def?.key)
+      && !PUBLIC_HOUSE_KEYS.has(def.key)
+      && WALLET_LOCKED_HOUSE_KEYS.has(def.key);
+  }
+
+  async loadAuthoritativePlayerProfile() {
+    const profileId = this.registry.get("playerProfileId") ?? localStorage.getItem("eldervalley-profile-id");
+    const token = this.registry.get("playerSessionToken") ?? localStorage.getItem("eldervalley-session-token");
+    if (!profileId || !String(profileId).startsWith("wallet:") || !token) {
+      return null;
+    }
+
+    const response = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+    if (result?.profile) {
+      this.registry.set("playerProfile", result.profile);
+      this.setCoins?.(result.profile.coins ?? this.getCoins?.() ?? 0);
+    }
+    return result?.profile ?? null;
+  }
+
+  ownsHouseInProfile(profile, def) {
+    if (profile?.isDeveloper) {
+      return true;
+    }
+    const ownedHouses = Array.isArray(profile?.ownedHouses) ? profile.ownedHouses : [];
+    return ownedHouses.some((house) => {
+      if (typeof house === "string") {
+        return house === def.key || house === def.id;
+      }
+      return house?.id === def.key || house?.id === def.id || house?.houseKey === def.key;
+    });
+  }
+
+  async canEnterEditableHouse(def) {
+    if (!this.isWalletLockedHouse(def)) {
+      return true;
+    }
+
+    const profile = await this.loadAuthoritativePlayerProfile();
+    return this.ownsHouseInProfile(profile, def);
+  }
+
+  showHouseAccessDenied(def) {
+    const label = def?.label ?? "This house";
+    this.dialog?.show(
+      "Private House",
+      `${label} is private. Connect the buyer wallet that owns this house to enter.`
+    );
+  }
+
+  async tryEnterEditableHouse(def) {
+    if (this.isTransitioning || this.checkingHouseAccess) {
+      return;
+    }
+
+    this.checkingHouseAccess = true;
+    try {
+      const allowed = await this.canEnterEditableHouse(def);
+      if (!allowed) {
+        this.showHouseAccessDenied(def);
+        return;
+      }
+      this.fadeTo(def.sceneKey, { exitSpawnKey: def.id, doorId: def.doorId, returnScene: this.scene.key });
+    } finally {
+      this.checkingHouseAccess = false;
+    }
   }
 
   restoreEditableHouse(def, x, y) {
