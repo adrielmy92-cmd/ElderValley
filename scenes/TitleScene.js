@@ -512,19 +512,19 @@ export default class TitleScene extends Phaser.Scene {
 
   getHouseCatalog() {
     return [
-      { name: "Noble House", key: "creative-house-manor", price: "6.500 EV", maxW: 0.96, maxH: 0.76 },
-      { name: "Tall House", key: "creative-house-cottage", price: "1.900 EV", maxW: 0.96, maxH: 0.78 },
-      { name: "Red Lodge", key: "creative-house-red-lodge", price: "2.600 EV", maxW: 0.96, maxH: 0.76 },
-      { name: "Green House", key: "creative-house-green-cottage", price: "2.400 EV", maxW: 0.96, maxH: 0.78 },
-      { name: "Arcane House", key: "creative-house-alchemist", price: "4.800 EV", maxW: 0.96, maxH: 0.82 },
-      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "7.800 EV", maxW: 0.96, maxH: 0.8 },
-      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "2.200 EV", maxW: 0.96, maxH: 0.8 },
-      { name: "Blue House", key: "creative-house-blue-cottage", price: "2.900 EV", maxW: 0.88, maxH: 0.84 },
-      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "3.200 EV", maxW: 0.82, maxH: 0.88 },
-      { name: "Blue Manor", key: "creative-house-blue-arcane-manor", price: "8.200 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "8.800 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "8.600 EV", maxW: 0.96, maxH: 0.86 },
-      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "7.900 EV", maxW: 0.96, maxH: 0.86 }
+      { name: "Noble House", key: "creative-house-manor", price: "0.16 ETH", maxW: 0.96, maxH: 0.76 },
+      { name: "Tall House", key: "creative-house-cottage", price: "0.10 ETH", maxW: 0.96, maxH: 0.78 },
+      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.12 ETH", maxW: 0.96, maxH: 0.76 },
+      { name: "Green House", key: "creative-house-green-cottage", price: "0.12 ETH", maxW: 0.96, maxH: 0.78 },
+      { name: "Arcane House", key: "creative-house-alchemist", price: "0.22 ETH", maxW: 0.96, maxH: 0.82 },
+      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.26 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.11 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.13 ETH", maxW: 0.88, maxH: 0.84 },
+      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "0.14 ETH", maxW: 0.82, maxH: 0.88 },
+      { name: "Blue Manor", key: "creative-house-blue-arcane-manor", price: "0.28 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "0.29 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "0.27 ETH", maxW: 0.96, maxH: 0.86 }
     ];
   }
 
