@@ -514,17 +514,17 @@ export default class TitleScene extends Phaser.Scene {
     return [
       { name: "Noble House", key: "creative-house-manor", price: "0.16 ETH", maxW: 0.96, maxH: 0.76 },
       { name: "Tall House", key: "creative-house-cottage", price: "0.10 ETH", maxW: 0.96, maxH: 0.78 },
-      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.12 ETH", maxW: 0.96, maxH: 0.76 },
-      { name: "Green House", key: "creative-house-green-cottage", price: "0.12 ETH", maxW: 0.96, maxH: 0.78 },
+      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.30 ETH", maxW: 0.96, maxH: 0.76 },
+      { name: "Green House", key: "creative-house-green-cottage", price: "0.15 ETH", maxW: 0.96, maxH: 0.78 },
       { name: "Arcane House", key: "creative-house-alchemist", price: "0.22 ETH", maxW: 0.96, maxH: 0.82 },
-      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.26 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.11 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.13 ETH", maxW: 0.88, maxH: 0.84 },
-      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "0.14 ETH", maxW: 0.82, maxH: 0.88 },
+      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.20 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.20 ETH", maxW: 0.88, maxH: 0.84 },
+      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "0.20 ETH", maxW: 0.82, maxH: 0.88 },
       { name: "Blue Manor", key: "creative-house-blue-arcane-manor", price: "0.28 ETH", maxW: 0.96, maxH: 0.86 },
       { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "0.29 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "0.27 ETH", maxW: 0.96, maxH: 0.86 }
+      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 }
     ];
   }
 
@@ -598,10 +598,15 @@ export default class TitleScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(60)
       .on("pointerdown", () => this.handleHousePurchase(house));
+    const hitZone = this.add.zone(x - 5, y - 17, 84, 34)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(62)
+      .on("pointerdown", () => this.handleHousePurchase(house));
     const label = this.add.text(x + 37, y, owned ? "Owned" : "Buy", this.textStyle(10, "#ffe0a0"))
       .setOrigin(0.5)
-      .setDepth(61);
-    parent.add([button, label]);
+      .setDepth(63);
+    parent.add([button, label, hitZone]);
   }
 
   async handleHousePurchase(house) {
