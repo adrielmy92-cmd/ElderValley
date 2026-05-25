@@ -12,8 +12,11 @@
     "contracts:test": "hardhat test",
     "contracts:slither": "node scripts/run-slither.cjs --exclude-informational",
     "contracts:slither:raw": "node scripts/run-slither.cjs",
+    "contracts:preflight:base": "node scripts/preflight-base-deploy.cjs",
     "contracts:deploy:base": "hardhat run scripts/deploy-houses.cjs --network base",
-    "contracts:verify:base": "hardhat run scripts/verify-houses.cjs --network base"
+    "contracts:deploy:base:full": "npm run contracts:compile && npm run contracts:test && npm run contracts:slither && npm run contracts:preflight:base && npm run contracts:deploy:base",
+    "contracts:verify:base": "hardhat run scripts/verify-houses.cjs --network base",
+    "contracts:railway-vars:base": "node scripts/print-railway-contract-vars.cjs"
   },
   "dependencies": {
     "ethers": "^6.16.0",

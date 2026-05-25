@@ -81,18 +81,33 @@ VERIFY_CONTRACTS=false
 Then run:
 
 ```bash
-npm run contracts:deploy:base
+npm run contracts:deploy:base:full
 ```
 
 The deployer writes `deployments/base.json` with constructor arguments, contract
 addresses, and `ELDERVALLEY_HOUSE_INDEXER_START_BLOCK`. Use that block in Railway
 so the server indexer starts from the first house event and does not miss sales.
 
+To print the exact Railway variables after deploy:
+
+```bash
+npm run contracts:railway-vars:base
+```
+
 To verify contracts after deploy:
 
 ```bash
 npm run contracts:verify:base
 ```
+
+The preflight command is also available by itself:
+
+```bash
+npm run contracts:preflight:base
+```
+
+It checks the Base RPC, deployer wallet address, ETH balance, treasury address,
+marketplace fee, and BaseScan API key status without printing the private key.
 
 ## Security Notes
 
