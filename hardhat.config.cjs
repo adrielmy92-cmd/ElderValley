@@ -1,8 +1,10 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-verify");
 
 const privateKey = process.env.PRIVATE_KEY;
 const baseRpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
+const baseScanApiKey = process.env.BASESCAN_API_KEY || "";
 
 module.exports = {
   solidity: {
@@ -31,5 +33,23 @@ module.exports = {
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"
+  },
+  etherscan: {
+    apiKey: {
+      base: baseScanApiKey
+    },
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org"
+        }
+      }
+    ]
+  },
+  sourcify: {
+    enabled: false
   }
 };

@@ -61,8 +61,38 @@ progress in `web3_indexer_state`. Public read endpoints:
 2. Run `npm run contracts:test`.
 3. Run `npm run contracts:slither`.
 4. Deploy to Base with `npm run contracts:deploy:base`.
-5. Connect the game's `Buy` button to `buyHouseByKey(key)`.
-6. Add the contract address and deployment block to Railway variables.
+5. Check `deployments/base.json` for the saved contract addresses and deployment block.
+6. Verify later with `npm run contracts:verify:base` if `VERIFY_CONTRACTS=true` was not used during deploy.
+7. Connect the game's `Buy` button to `buyHouseByKey(key)`.
+8. Add the contract address and deployment block to Railway variables.
+
+## Base Deploy
+
+Create a local `.env` based on `.env.example` and fill these values manually:
+
+```txt
+BASE_RPC_URL=https://mainnet.base.org
+PRIVATE_KEY=never_commit_this_value
+TREASURY_ADDRESS=0x_wallet_that_receives_house_sales
+BASESCAN_API_KEY=optional_for_verification
+VERIFY_CONTRACTS=false
+```
+
+Then run:
+
+```bash
+npm run contracts:deploy:base
+```
+
+The deployer writes `deployments/base.json` with constructor arguments, contract
+addresses, and `ELDERVALLEY_HOUSE_INDEXER_START_BLOCK`. Use that block in Railway
+so the server indexer starts from the first house event and does not miss sales.
+
+To verify contracts after deploy:
+
+```bash
+npm run contracts:verify:base
+```
 
 ## Security Notes
 
