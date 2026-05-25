@@ -38,8 +38,22 @@ It should unlock only after confirming one of these:
 
 ## Next Steps
 
-1. Add Hardhat or Foundry.
-2. Compile these contracts.
-3. Deploy first to Base Sepolia testnet.
-4. Connect the game's `Buy` button to `buyHouseByKey(key)`.
-5. Add a server indexer that watches `HousePurchased` and updates Postgres.
+1. Run `npm run contracts:compile`.
+2. Run `npm run contracts:test`.
+3. Run `npm run contracts:slither`.
+4. Deploy to Base with `npm run contracts:deploy:base`.
+5. Connect the game's `Buy` button to `buyHouseByKey(key)`.
+6. Add a server indexer that watches `HousePurchased` and updates Postgres.
+
+## Security Notes
+
+Latest Slither pass reduced the findings to expected warnings:
+
+- OpenZeppelin uses `^0.8.20` while ElderValley contracts use `^0.8.24`.
+- ETH payments use `.call`, protected by `nonReentrant` and explicit success checks.
+
+Use `npm run contracts:slither:raw` to see the full report including accepted
+warnings. Use `npm run contracts:slither` for the clean pre-deploy check.
+
+Before putting meaningful money through the contracts, run the full checklist again
+and do a focused external review.

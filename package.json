@@ -10,6 +10,8 @@
     "start": "node server.mjs",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test",
+    "contracts:slither": "node scripts/run-slither.cjs --exclude-informational",
+    "contracts:slither:raw": "node scripts/run-slither.cjs",
     "contracts:deploy:base": "hardhat run scripts/deploy-houses.cjs --network base"
   },
   "dependencies": {
