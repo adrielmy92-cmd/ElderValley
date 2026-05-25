@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { verifyMessage } from "ethers";
+import { Contract, JsonRpcProvider, verifyMessage } from "ethers";
 import pg from "pg";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +30,18 @@ const dbPool = databaseUrl ? new pg.Pool({
   connectionString: databaseUrl,
   ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false }
 }) : null;
+const web3ChainId = Number(process.env.ELDERVALLEY_CHAIN_ID ?? process.env.CHAIN_ID ?? 8453);
+const web3RpcUrl = process.env.ELDERVALLEY_BASE_RPC_URL ?? process.env.BASE_RPC_URL ?? "";
+const housesContractAddress = String(process.env.ELDERVALLEY_HOUSES_CONTRACT ?? "").trim();
+const houseIndexerStartBlock = Math.max(0, Number(process.env.ELDERVALLEY_HOUSE_INDEXER_START_BLOCK ?? 0) || 0);
+const houseIndexerBatchSize = Math.max(100, Math.min(5000, Number(process.env.ELDERVALLEY_HOUSE_INDEXER_BATCH_SIZE ?? 2000) || 2000));
+const housesContractAbi = [
+  "event HousePurchased(address indexed buyer,uint256 indexed tokenId,uint256 indexed houseTypeId,string key,string name,uint256 price)",
+  "event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
+  "function tokenHouseTypeId(uint256 tokenId) view returns (uint256)",
+  "function houseTypes(uint256 houseTypeId) view returns (string key,string name,uint256 price,uint256 maxSupply,uint256 minted,bool active)"
+];
 let dbReadyPromise = null;
 let storageSeedPromise = null;
 let storageSeedCache = null;
@@ -592,6 +604,24 @@ async function ensureDatabase() {
         saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS profile_history_profile_time_idx ON profile_history (profile_id, saved_at DESC);
+      CREATE TABLE IF NOT EXISTS web3_house_ownership (
+        token_id TEXT PRIMARY KEY,
+        wallet_address TEXT NOT NULL,
+        house_type_id TEXT NOT NULL DEFAULT '',
+        house_key TEXT NOT NULL,
+        house_name TEXT NOT NULL DEFAULT '',
+        price_wei TEXT NOT NULL DEFAULT '0',
+        transaction_hash TEXT NOT NULL DEFAULT '',
+        block_number BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS web3_house_ownership_wallet_idx ON web3_house_ownership (wallet_address);
+      CREATE INDEX IF NOT EXISTS web3_house_ownership_house_key_idx ON web3_house_ownership (house_key);
+      CREATE TABLE IF NOT EXISTS web3_indexer_state (
+        state_key TEXT PRIMARY KEY,
+        state_value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `).then(() => true).catch((error) => {
       dbReadyPromise = null;
       console.error("[database] profile init failed:", error.message);
@@ -714,10 +744,101 @@ function rowToProfile(row) {
   });
 }
 
+function normalizeWalletAddress(address) {
+  const value = String(address ?? "").trim().toLowerCase();
+  return /^0x[a-f0-9]{40}$/.test(value) ? value : "";
+}
+
+function normalizeIndexedHouse(row) {
+  if (!row) {
+    return null;
+  }
+  const tokenId = sanitizeText(row.token_id ?? row.tokenId, 80);
+  const houseKey = sanitizeText(row.house_key ?? row.houseKey ?? row.key, 140);
+  if (!tokenId || !houseKey) {
+    return null;
+  }
+  return {
+    source: "base-contract",
+    tokenId,
+    walletAddress: normalizeWalletAddress(row.wallet_address ?? row.walletAddress),
+    houseTypeId: sanitizeText(row.house_type_id ?? row.houseTypeId, 80),
+    key: houseKey,
+    houseKey,
+    name: sanitizeText(row.house_name ?? row.houseName ?? row.name, 120),
+    priceWei: sanitizeText(row.price_wei ?? row.priceWei, 100),
+    transactionHash: sanitizeText(row.transaction_hash ?? row.transactionHash, 90),
+    blockNumber: Math.max(0, Number(row.block_number ?? row.blockNumber ?? 0) || 0),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()
+  };
+}
+
+function mergeProfileHouses(profileHouses = [], indexedHouses = []) {
+  const merged = new Map();
+  for (const house of Array.isArray(profileHouses) ? profileHouses : []) {
+    const key = sanitizeText(house?.tokenId ?? house?.key ?? house?.houseKey ?? JSON.stringify(house), 160);
+    if (key) {
+      merged.set(key, house);
+    }
+  }
+  for (const house of indexedHouses) {
+    const normalized = normalizeIndexedHouse(house);
+    if (normalized) {
+      merged.set(`token:${normalized.tokenId}`, normalized);
+    }
+  }
+  return [...merged.values()];
+}
+
+async function readIndexedHousesForWallet(walletAddress) {
+  const wallet = normalizeWalletAddress(walletAddress);
+  if (!wallet || !(await ensureDatabase())) {
+    return [];
+  }
+  const result = await dbPool.query(`
+    SELECT *
+    FROM web3_house_ownership
+    WHERE wallet_address = $1
+    ORDER BY block_number ASC, token_id ASC
+  `, [wallet]);
+  return result.rows.map(normalizeIndexedHouse).filter(Boolean);
+}
+
+async function readIndexedHouseByKey(walletAddress, houseKey) {
+  const wallet = normalizeWalletAddress(walletAddress);
+  const key = sanitizeText(houseKey, 140);
+  if (!wallet || !key || !(await ensureDatabase())) {
+    return null;
+  }
+  const result = await dbPool.query(`
+    SELECT *
+    FROM web3_house_ownership
+    WHERE wallet_address = $1 AND house_key = $2
+    ORDER BY block_number ASC, token_id ASC
+    LIMIT 1
+  `, [wallet, key]);
+  return normalizeIndexedHouse(result.rows[0]);
+}
+
+async function syncProfileWithIndexedHouses(profile) {
+  if (!profile?.walletAddress) {
+    return profile;
+  }
+  const indexedHouses = await readIndexedHousesForWallet(profile.walletAddress);
+  if (indexedHouses.length === 0) {
+    return profile;
+  }
+  return {
+    ...profile,
+    ownedHouses: mergeProfileHouses(profile.ownedHouses, indexedHouses)
+  };
+}
+
 async function readProfile(profileId) {
   if (await ensureDatabase()) {
     const result = await dbPool.query("SELECT * FROM profiles WHERE profile_id = $1", [profileId]);
-    return { profile: rowToProfile(result.rows[0]), mtimeMs: result.rows[0]?.updated_at ? new Date(result.rows[0].updated_at).getTime() : 0, source: "postgres" };
+    const profile = await syncProfileWithIndexedHouses(rowToProfile(result.rows[0]));
+    return { profile, mtimeMs: result.rows[0]?.updated_at ? new Date(result.rows[0].updated_at).getTime() : 0, source: "postgres" };
   }
 
   const profilePath = profilePathFor(profileId);
@@ -727,7 +848,7 @@ async function readProfile(profileId) {
 }
 
 async function writeProfile(profileId, data) {
-  const profile = normalizeProfile(profileId, data);
+  const profile = await syncProfileWithIndexedHouses(normalizeProfile(profileId, data));
   if (await ensureDatabase()) {
     const previous = await dbPool.query("SELECT data FROM profiles WHERE profile_id = $1", [profile.profileId]);
     if (previous.rows[0]?.data !== undefined) {
@@ -789,6 +910,81 @@ async function writeProfile(profileId, data) {
   await writeFile(profilePath, JSON.stringify(profile, null, 2), "utf8");
   const info = await stat(profilePath);
   return { profile, mtimeMs: info.mtimeMs, source: "json" };
+}
+
+async function upsertIndexedHouseOwnership({
+  tokenId,
+  walletAddress,
+  houseTypeId = "",
+  houseKey,
+  houseName = "",
+  priceWei = "0",
+  transactionHash = "",
+  blockNumber = 0
+}) {
+  const token = sanitizeText(tokenId, 80);
+  const wallet = normalizeWalletAddress(walletAddress);
+  const key = sanitizeText(houseKey, 140);
+  if (!token || !wallet || !key || !(await ensureDatabase())) {
+    return false;
+  }
+  await dbPool.query(`
+    INSERT INTO web3_house_ownership (
+      token_id,
+      wallet_address,
+      house_type_id,
+      house_key,
+      house_name,
+      price_wei,
+      transaction_hash,
+      block_number,
+      updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    ON CONFLICT (token_id) DO UPDATE SET
+      wallet_address = EXCLUDED.wallet_address,
+      house_type_id = EXCLUDED.house_type_id,
+      house_key = EXCLUDED.house_key,
+      house_name = EXCLUDED.house_name,
+      price_wei = EXCLUDED.price_wei,
+      transaction_hash = EXCLUDED.transaction_hash,
+      block_number = GREATEST(web3_house_ownership.block_number, EXCLUDED.block_number),
+      updated_at = NOW()
+  `, [
+    token,
+    wallet,
+    sanitizeText(houseTypeId, 80),
+    key,
+    sanitizeText(houseName, 120),
+    sanitizeText(priceWei, 100),
+    sanitizeText(transactionHash, 90),
+    Math.max(0, Number(blockNumber) || 0)
+  ]);
+  return true;
+}
+
+async function readIndexerState(stateKey, fallback = "0") {
+  if (!(await ensureDatabase())) {
+    return fallback;
+  }
+  const key = sanitizeText(stateKey, 120);
+  const result = await dbPool.query("SELECT state_value FROM web3_indexer_state WHERE state_key = $1", [key]);
+  return sanitizeText(result.rows[0]?.state_value ?? fallback, 200);
+}
+
+async function writeIndexerState(stateKey, stateValue) {
+  if (!(await ensureDatabase())) {
+    return false;
+  }
+  const key = sanitizeText(stateKey, 120);
+  await dbPool.query(`
+    INSERT INTO web3_indexer_state (state_key, state_value, updated_at)
+    VALUES ($1, $2, NOW())
+    ON CONFLICT (state_key) DO UPDATE SET
+      state_value = EXCLUDED.state_value,
+      updated_at = NOW()
+  `, [key, String(stateValue)]);
+  return true;
 }
 
 function backupPathFor(key) {
@@ -898,6 +1094,40 @@ const server = createServer(async (req, res) => {
         websocket: true,
         playersOnline: [...clients.values()].filter((client) => client.ready).length
       });
+      return;
+    }
+
+    if (url.pathname === "/api/web3/config") {
+      sendJson(res, 200, {
+        ok: true,
+        chainId: web3ChainId,
+        housesContract: housesContractAddress || null,
+        indexerEnabled: Boolean(web3RpcUrl && housesContractAddress)
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/web3/indexer/status") {
+      const lastBlock = await readIndexerState("houses:lastBlock", "0");
+      sendJson(res, 200, {
+        ok: true,
+        chainId: web3ChainId,
+        housesContract: housesContractAddress || null,
+        lastIndexedBlock: Number(lastBlock) || 0,
+        indexerEnabled: Boolean(web3RpcUrl && housesContractAddress)
+      });
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/web3/houses/")) {
+      const wallet = decodeURIComponent(url.pathname.slice("/api/web3/houses/".length));
+      const normalizedWallet = normalizeWalletAddress(wallet);
+      if (!normalizedWallet) {
+        sendJson(res, 400, { ok: false, error: "Invalid wallet address" });
+        return;
+      }
+      const houses = await readIndexedHousesForWallet(normalizedWallet);
+      sendJson(res, 200, { ok: true, walletAddress: normalizedWallet, houses });
       return;
     }
 
@@ -1300,8 +1530,136 @@ server.on("upgrade", (req, socket) => {
   socket.on("error", removeClient);
 });
 
+async function readHouseMetadata(contract, tokenId, fallback = {}) {
+  try {
+    const houseTypeId = await contract.tokenHouseTypeId(tokenId);
+    const houseType = await contract.houseTypes(houseTypeId);
+    return {
+      houseTypeId: houseTypeId.toString(),
+      houseKey: String(houseType.key ?? houseType[0] ?? fallback.houseKey ?? ""),
+      houseName: String(houseType.name ?? houseType[1] ?? fallback.houseName ?? ""),
+      priceWei: (houseType.price ?? houseType[2] ?? fallback.priceWei ?? 0).toString()
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+async function applyHousePurchasedEvent(log, parsed) {
+  const args = parsed.args;
+  const tokenId = args.tokenId?.toString?.() ?? args[1]?.toString?.() ?? "";
+  const walletAddress = normalizeWalletAddress(args.buyer ?? args[0]);
+  const houseTypeId = args.houseTypeId?.toString?.() ?? args[2]?.toString?.() ?? "";
+  const houseKey = String(args.key ?? args[3] ?? "");
+  const houseName = String(args.name ?? args[4] ?? "");
+  const priceWei = (args.price ?? args[5] ?? 0).toString();
+  return upsertIndexedHouseOwnership({
+    tokenId,
+    walletAddress,
+    houseTypeId,
+    houseKey,
+    houseName,
+    priceWei,
+    transactionHash: log.transactionHash,
+    blockNumber: log.blockNumber
+  });
+}
+
+async function applyHouseTransferEvent(contract, log, parsed) {
+  const args = parsed.args;
+  const tokenId = args.tokenId?.toString?.() ?? args[2]?.toString?.() ?? "";
+  const walletAddress = normalizeWalletAddress(args.to ?? args[1]);
+  if (!tokenId || !walletAddress) {
+    return false;
+  }
+  const metadata = await readHouseMetadata(contract, tokenId, {});
+  if (!metadata.houseKey) {
+    return false;
+  }
+  return upsertIndexedHouseOwnership({
+    tokenId,
+    walletAddress,
+    ...metadata,
+    transactionHash: log.transactionHash,
+    blockNumber: log.blockNumber
+  });
+}
+
+async function runHouseIndexerTick(contract, provider) {
+  if (!(await ensureDatabase())) {
+    return;
+  }
+  const latestBlock = await provider.getBlockNumber();
+  const savedBlock = Math.max(0, Number(await readIndexerState("houses:lastBlock", "0")) || 0);
+  let fromBlock = savedBlock > 0 ? savedBlock + 1 : houseIndexerStartBlock;
+  if (fromBlock <= 0) {
+    await writeIndexerState("houses:lastBlock", latestBlock);
+    console.log(`[web3] House indexer armed at block ${latestBlock}. Set ELDERVALLEY_HOUSE_INDEXER_START_BLOCK to backfill older buys.`);
+    return;
+  }
+  if (fromBlock > latestBlock) {
+    return;
+  }
+
+  while (fromBlock <= latestBlock) {
+    const toBlock = Math.min(latestBlock, fromBlock + houseIndexerBatchSize - 1);
+    const logs = await provider.getLogs({
+      address: housesContractAddress,
+      fromBlock,
+      toBlock
+    });
+    logs.sort((left, right) => (left.blockNumber - right.blockNumber) || (left.index - right.index));
+    for (const log of logs) {
+      let parsed = null;
+      try {
+        parsed = contract.interface.parseLog(log);
+      } catch {
+        continue;
+      }
+      if (parsed?.name === "HousePurchased") {
+        await applyHousePurchasedEvent(log, parsed);
+      } else if (parsed?.name === "Transfer") {
+        await applyHouseTransferEvent(contract, log, parsed);
+      }
+    }
+    await writeIndexerState("houses:lastBlock", toBlock);
+    fromBlock = toBlock + 1;
+  }
+}
+
+function startHouseIndexer() {
+  if (!web3RpcUrl || !housesContractAddress) {
+    console.log("[web3] House indexer disabled: set ELDERVALLEY_BASE_RPC_URL and ELDERVALLEY_HOUSES_CONTRACT.");
+    return;
+  }
+  if (!/^0x[a-fA-F0-9]{40}$/.test(housesContractAddress)) {
+    console.error("[web3] House indexer disabled: invalid ELDERVALLEY_HOUSES_CONTRACT.");
+    return;
+  }
+  const provider = new JsonRpcProvider(web3RpcUrl, web3ChainId);
+  const contract = new Contract(housesContractAddress, housesContractAbi, provider);
+  let running = false;
+  const tick = async () => {
+    if (running) {
+      return;
+    }
+    running = true;
+    try {
+      await runHouseIndexerTick(contract, provider);
+    } catch (error) {
+      console.error("[web3] House indexer tick failed:", error.message);
+    } finally {
+      running = false;
+    }
+  };
+  tick();
+  setInterval(tick, 15000).unref();
+  console.log(`[web3] House indexer watching ${housesContractAddress} on chain ${web3ChainId}.`);
+}
+
 server.listen(port, host, () => {
   console.log(`ElderValley server listening on ${host}:${port}`);
+  startHouseIndexer();
 });
 
 setInterval(() => {

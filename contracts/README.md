@@ -36,6 +36,25 @@ It should unlock only after confirming one of these:
 1. The wallet owns a matching house NFT on-chain.
 2. The server received and verified a `HousePurchased` event.
 
+## Server Indexer
+
+The Node server now has a Base house indexer. Set these Railway variables after
+deploying `ElderValleyHouses`:
+
+```txt
+ELDERVALLEY_BASE_RPC_URL=https://mainnet.base.org
+ELDERVALLEY_CHAIN_ID=8453
+ELDERVALLEY_HOUSES_CONTRACT=0x_contract_address_after_deploy
+ELDERVALLEY_HOUSE_INDEXER_START_BLOCK=deployment_block_number
+```
+
+The server stores ownership in Postgres table `web3_house_ownership` and keeps
+progress in `web3_indexer_state`. Public read endpoints:
+
+- `/api/web3/config`
+- `/api/web3/indexer/status`
+- `/api/web3/houses/0x_wallet`
+
 ## Next Steps
 
 1. Run `npm run contracts:compile`.
@@ -43,7 +62,7 @@ It should unlock only after confirming one of these:
 3. Run `npm run contracts:slither`.
 4. Deploy to Base with `npm run contracts:deploy:base`.
 5. Connect the game's `Buy` button to `buyHouseByKey(key)`.
-6. Add a server indexer that watches `HousePurchased` and updates Postgres.
+6. Add the contract address and deployment block to Railway variables.
 
 ## Security Notes
 
