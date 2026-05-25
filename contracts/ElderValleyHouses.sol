@@ -132,18 +132,18 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
 
     function createHouseType(
         string calldata key,
-        string calldata name,
+        string calldata displayName,
         uint256 price,
         uint256 maxSupply,
         bool active
     ) external onlyOwner returns (uint256 houseTypeId) {
-        return _createHouseType(key, name, price, maxSupply, active);
+        return _createHouseType(key, displayName, price, maxSupply, active);
     }
 
     function updateHouseType(
         uint256 houseTypeId,
         string calldata key,
-        string calldata name,
+        string calldata displayName,
         uint256 price,
         uint256 maxSupply,
         bool active
@@ -161,12 +161,12 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         }
 
         houseType.key = key;
-        houseType.name = name;
+        houseType.name = displayName;
         houseType.price = price;
         houseType.maxSupply = maxSupply;
         houseType.active = active;
 
-        emit HouseTypeUpdated(houseTypeId, key, name, price, maxSupply, active);
+        emit HouseTypeUpdated(houseTypeId, key, displayName, price, maxSupply, active);
     }
 
     function setTreasury(address payable newTreasury) external onlyOwner {
@@ -193,13 +193,13 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
 
     function _createHouseType(
         string memory key,
-        string memory name,
+        string memory displayName,
         uint256 price,
         uint256 maxSupply,
         bool active
     ) internal returns (uint256 houseTypeId) {
         require(bytes(key).length != 0, "Empty key");
-        require(bytes(name).length != 0, "Empty name");
+        require(bytes(displayName).length != 0, "Empty name");
         require(price > 0, "Price must be positive");
 
         bytes32 keyHash = keccak256(bytes(key));
@@ -208,7 +208,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         houseTypeId = nextHouseTypeId++;
         houseTypes[houseTypeId] = HouseType({
             key: key,
-            name: name,
+            name: displayName,
             price: price,
             maxSupply: maxSupply,
             minted: 0,
@@ -216,6 +216,6 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         });
         houseTypeIdByKeyHash[keyHash] = houseTypeId;
 
-        emit HouseTypeCreated(houseTypeId, key, name, price, maxSupply, active);
+        emit HouseTypeCreated(houseTypeId, key, displayName, price, maxSupply, active);
     }
 }

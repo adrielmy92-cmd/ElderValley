@@ -48,9 +48,10 @@ contract ElderValleyHouseMarketplace is IERC721Receiver, Ownable, Pausable, Reen
     function list(uint256 tokenId, uint256 price) external whenNotPaused nonReentrant {
         require(price > 0, "Price must be positive");
         require(houseNft.ownerOf(tokenId) == msg.sender, "Not token owner");
+        require(listings[tokenId].seller == address(0), "Already listed");
 
-        houseNft.safeTransferFrom(msg.sender, address(this), tokenId);
         listings[tokenId] = Listing({ seller: msg.sender, price: price });
+        houseNft.safeTransferFrom(msg.sender, address(this), tokenId);
 
         emit Listed(msg.sender, tokenId, price);
     }
