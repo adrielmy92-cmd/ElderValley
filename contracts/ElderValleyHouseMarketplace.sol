@@ -117,7 +117,9 @@ contract ElderValleyHouseMarketplace is IERC721Receiver, Ownable, Pausable, Reen
         address,
         uint256,
         bytes calldata
-    ) external pure override returns (bytes4) {
+    ) external view override returns (bytes4) {
+        // Rejeita NFTs de contratos não autorizados para evitar que fiquem presos aqui.
+        require(msg.sender == address(houseNft), "Unauthorized NFT contract");
         return IERC721Receiver.onERC721Received.selector;
     }
 }

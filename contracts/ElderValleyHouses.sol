@@ -17,6 +17,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         uint256 maxSupply;
         uint256 minted;
         bool active;
+        uint8 tier; // 0=Common 1=Uncommon 2=Rare 3=Legendary
     }
 
     address payable public treasury;
@@ -60,61 +61,35 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         require(initialTreasury != address(0), "Invalid treasury");
         treasury = initialTreasury;
 
-        _createHouseType("creative-house-teal-roof-manor", "Turquoise Manor", 0.30 ether, 0, true);
-        _createHouseType("creative-house-blue-gold-tower", "Blue Tower Manor", 0.30 ether, 0, true);
-        _createHouseType("creative-house-red-tower-cottage", "Tower House", 0.20 ether, 0, true);
-        _createHouseType("creative-house-blue-cottage", "Blue House", 0.20 ether, 0, true);
-        _createHouseType("creative-house-thatch-cottage", "Thatch Cottage", 0.20 ether, 0, true);
-        _createHouseType("creative-house-ivy-manor", "Emerald Manor", 0.30 ether, 0, true);
-        _createHouseType("creative-house-green-cottage", "Green House", 0.15 ether, 0, true);
-        _createHouseType("creative-house-red-lodge", "Red Lodge", 0.30 ether, 0, true);
+        // Genesis Collection — 50 casas totais
+        // Common (tier 0, peso 1x, 4 visitantes) — 25 unidades
+        _createHouseType("creative-house-cottage",       "Tall House",     0.025 ether, 7,  true, 0);
+        _createHouseType("creative-house-thatch-cottage","Thatch Cottage",  0.025 ether, 6,  true, 0);
+        _createHouseType("creative-house-red-lodge",     "Red Lodge",       0.025 ether, 6,  true, 0);
+        _createHouseType("creative-house-green-cottage", "Green House",     0.025 ether, 6,  true, 0);
+        // Uncommon (tier 1, peso 2x, 8 visitantes) — 12 unidades
+        _createHouseType("creative-house-blue-cottage",  "Blue House",      0.050 ether, 4,  true, 1);
+        _createHouseType("creative-house-ivy-manor",     "Emerald Manor",   0.050 ether, 4,  true, 1);
+        _createHouseType("creative-house-elf-green-manor","Elvish Manor",   0.050 ether, 4,  true, 1);
+        // Rare (tier 2, peso 4x, 16 visitantes) — 8 unidades
+        _createHouseType("creative-house-blue-arcane-manor","Arcane Manor", 0.100 ether, 3,  true, 2);
+        _createHouseType("creative-house-blue-gold-tower",  "Golden Tower", 0.100 ether, 3,  true, 2);
+        _createHouseType("creative-house-teal-roof-manor",  "Teal Manor",   0.100 ether, 2,  true, 2);
+        // Legendary (tier 3, peso 8x, visitantes ilimitados) — 5 unidades
+        _createHouseType("creative-house-manor",          "Grand Manor",    0.200 ether, 3,  true, 3);
+        _createHouseType("creative-house-red-tower-cottage","Red Tower",    0.200 ether, 2,  true, 3);
     }
 
-    function buyHouse(uint256 houseTypeId) external payable nonReentrant whenNotPaused returns (uint256 tokenId) {
-        HouseType storage houseType = houseTypes[houseTypeId];
-        require(bytes(houseType.key).length != 0, "Unknown house type");
-        require(houseType.active, "House type inactive");
-        require(msg.value == houseType.price, "Incorrect ETH amount");
-        require(houseType.maxSupply == 0 || houseType.minted < houseType.maxSupply, "Sold out");
-
-        tokenId = nextTokenId++;
-        houseType.minted += 1;
-        tokenHouseTypeId[tokenId] = houseTypeId;
-
-        _safeMint(msg.sender, tokenId);
-
-        emit HousePurchased(
-            msg.sender,
-            tokenId,
-            houseTypeId,
-            houseType.key,
-            houseType.name,
-            msg.value
-        );
+    function buyHouse(uint256 houseTypeId)
+        external payable nonReentrant whenNotPaused returns (uint256 tokenId)
+    {
+        return _executeBuy(houseTypeId);
     }
 
-    function buyHouseByKey(string calldata key) external payable nonReentrant whenNotPaused returns (uint256 tokenId) {
-        uint256 houseTypeId = houseTypeIdByKeyHash[keccak256(bytes(key))];
-        HouseType storage houseType = houseTypes[houseTypeId];
-        require(bytes(houseType.key).length != 0, "Unknown house type");
-        require(houseType.active, "House type inactive");
-        require(msg.value == houseType.price, "Incorrect ETH amount");
-        require(houseType.maxSupply == 0 || houseType.minted < houseType.maxSupply, "Sold out");
-
-        tokenId = nextTokenId++;
-        houseType.minted += 1;
-        tokenHouseTypeId[tokenId] = houseTypeId;
-
-        _safeMint(msg.sender, tokenId);
-
-        emit HousePurchased(
-            msg.sender,
-            tokenId,
-            houseTypeId,
-            houseType.key,
-            houseType.name,
-            msg.value
-        );
+    function buyHouseByKey(string calldata key)
+        external payable nonReentrant whenNotPaused returns (uint256 tokenId)
+    {
+        return _executeBuy(houseTypeIdByKeyHash[keccak256(bytes(key))]);
     }
 
     function walletOfOwner(address ownerAddress) external view returns (uint256[] memory tokenIds) {
@@ -130,14 +105,29 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         return houseTypes[tokenHouseTypeId[tokenId]];
     }
 
+    /// @notice Retorna o peso de taxa do token. Common=1 Uncommon=2 Rare=4 Legendary=8.
+    function feeWeightOf(uint256 tokenId) external view returns (uint256) {
+        require(_ownerOf(tokenId) != address(0), "Unknown token");
+        uint8 tier = houseTypes[tokenHouseTypeId[tokenId]].tier;
+        return uint256(1) << tier;
+    }
+
+    /// @notice Retorna o peso de taxa de um tipo de casa.
+    function feeWeightOfType(uint256 houseTypeId) external view returns (uint256) {
+        require(bytes(houseTypes[houseTypeId].key).length != 0, "Unknown type");
+        return uint256(1) << houseTypes[houseTypeId].tier;
+    }
+
     function createHouseType(
         string calldata key,
         string calldata displayName,
         uint256 price,
         uint256 maxSupply,
-        bool active
+        bool active,
+        uint8 tier
     ) external onlyOwner returns (uint256 houseTypeId) {
-        return _createHouseType(key, displayName, price, maxSupply, active);
+        require(tier <= 3, "Invalid tier");
+        return _createHouseType(key, displayName, price, maxSupply, active, tier);
     }
 
     function updateHouseType(
@@ -146,11 +136,15 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         string calldata displayName,
         uint256 price,
         uint256 maxSupply,
-        bool active
+        bool active,
+        uint8 tier
     ) external onlyOwner {
+        require(tier <= 3, "Invalid tier");
         HouseType storage houseType = houseTypes[houseTypeId];
         require(bytes(houseType.key).length != 0, "Unknown house type");
         require(maxSupply == 0 || maxSupply >= houseType.minted, "Max below minted");
+        // Tier é imutável após o primeiro mint para garantir direitos já adquiridos pelos holders.
+        if (houseType.minted > 0) require(tier == houseType.tier, "Tier immutable after mint");
 
         bytes32 oldKeyHash = keccak256(bytes(houseType.key));
         bytes32 newKeyHash = keccak256(bytes(key));
@@ -165,6 +159,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         houseType.price = price;
         houseType.maxSupply = maxSupply;
         houseType.active = active;
+        houseType.tier = tier;
 
         emit HouseTypeUpdated(houseTypeId, key, displayName, price, maxSupply, active);
     }
@@ -176,11 +171,12 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         emit TreasuryUpdated(oldTreasury, newTreasury);
     }
 
-    function withdraw() external onlyOwner nonReentrant {
+    /// @notice Drena ETH residual (ex: recebido via selfdestruct) para a treasury. Fluxo normal não acumula ETH.
+    function drainETH() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No ETH to withdraw");
+        require(balance > 0, "No ETH to drain");
         (bool ok, ) = treasury.call{value: balance}("");
-        require(ok, "Withdraw failed");
+        require(ok, "Transfer failed");
     }
 
     function pause() external onlyOwner {
@@ -191,12 +187,37 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         _unpause();
     }
 
+    // -------------------------------------------------------------------------
+    // Internal
+    // -------------------------------------------------------------------------
+
+    function _executeBuy(uint256 houseTypeId) internal returns (uint256 tokenId) {
+        HouseType storage houseType = houseTypes[houseTypeId];
+        require(bytes(houseType.key).length != 0, "Unknown house type");
+        require(houseType.active, "House type inactive");
+        require(msg.value == houseType.price, "Incorrect ETH amount");
+        require(houseType.maxSupply == 0 || houseType.minted < houseType.maxSupply, "Sold out");
+
+        tokenId = nextTokenId++;
+        houseType.minted += 1;
+        tokenHouseTypeId[tokenId] = houseTypeId;
+
+        // Forward ETH imediatamente para a treasury — o contrato nunca acumula fundos.
+        (bool ok, ) = treasury.call{value: msg.value}("");
+        require(ok, "Treasury transfer failed");
+
+        _safeMint(msg.sender, tokenId);
+
+        emit HousePurchased(msg.sender, tokenId, houseTypeId, houseType.key, houseType.name, msg.value);
+    }
+
     function _createHouseType(
         string memory key,
         string memory displayName,
         uint256 price,
         uint256 maxSupply,
-        bool active
+        bool active,
+        uint8 tier
     ) internal returns (uint256 houseTypeId) {
         require(bytes(key).length != 0, "Empty key");
         require(bytes(displayName).length != 0, "Empty name");
@@ -212,7 +233,8 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
             price: price,
             maxSupply: maxSupply,
             minted: 0,
-            active: active
+            active: active,
+            tier: tier
         });
         houseTypeIdByKeyHash[keyHash] = houseTypeId;
 
