@@ -60,6 +60,23 @@ const worldClockStartedAt = Date.now();
 const worldClockStartMinutes = 8 * 60;
 const worldClockMinutesPerSecond = 5;
 
+// Capacidade máxima de visitantes por interior de casa (doorId → limite).
+// Common=4, Uncommon=8, Rare=16, Legendary=sem limite (999).
+const ROOM_CAPACITY = new Map([
+  ["door_cozy_cottage",           4],
+  ["door_thatch_cottage_house",   4],
+  ["door_red_lodge_house",        4],
+  ["door_green_cottage_house",    4],
+  ["door_blue_cottage_house",     8],
+  ["door_ivy_manor_house",        8],
+  ["door_elf_green_manor_house",  8],
+  ["door_blue_arcane_manor_house",16],
+  ["door_blue_gold_tower_house",  16],
+  ["door_teal_roof_manor_house",  16],
+  ["door_large_manor",           999],
+  ["door_red_tower_cottage_house",999],
+]);
+
 function sendJson(res, status, value) {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -361,7 +378,7 @@ async function awardWorkCoins(profileId, coins) {
   return result.profile;
 }
 
-function publicPeers(exceptClient = null) {
+function publicPeers(exceptClient = null, sceneChannel = null) {
   const exceptId = typeof exceptClient === "object" ? exceptClient?.id : exceptClient;
   const exceptPresenceId = typeof exceptClient === "object" ? exceptClient?.presenceId : null;
   const latestByPresence = new Map();
@@ -370,15 +387,21 @@ function publicPeers(exceptClient = null) {
     if (peer.id === exceptId || peer.superseded || !peer.ready || (exceptPresenceId && peerPresenceId === exceptPresenceId)) {
       continue;
     }
+    if (sceneChannel !== null && peer.sceneChannel !== sceneChannel) {
+      continue;
+    }
     latestByPresence.set(peerPresenceId, peer);
   }
   return [...latestByPresence.values()].map(publicPlayer);
 }
 
-function broadcast(payload, exceptId = null, exceptPresenceId = null) {
+function broadcast(payload, exceptId = null, exceptPresenceId = null, sceneChannel = null) {
   for (const client of clients.values()) {
     const clientPresenceId = client.presenceId || client.id;
     if (client.id === exceptId || client.superseded || !client.ready || (exceptPresenceId && clientPresenceId === exceptPresenceId)) {
+      continue;
+    }
+    if (sceneChannel !== null && client.sceneChannel !== sceneChannel) {
       continue;
     }
     sendWs(client.socket, payload);
@@ -437,6 +460,24 @@ function sanitizeText(value, maxLength = 120) {
     .slice(0, maxLength);
 }
 
+function getChannelDoorId(sceneChannel) {
+  const colon = (sceneChannel ?? "").indexOf(":");
+  return colon >= 0 ? sceneChannel.slice(colon + 1) : null;
+}
+
+function countPlayersInChannel(sceneChannel, excludeClientId) {
+  let count = 0;
+  for (const peer of clients.values()) {
+    if (peer.id === excludeClientId || peer.superseded || !peer.ready) {
+      continue;
+    }
+    if (peer.sceneChannel === sceneChannel) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 function canonicalSceneChannel(scene, sceneChannel) {
   if (scene === "WorldScene") {
     return "world:main";
@@ -477,14 +518,28 @@ function handleWsPayload(client, payload) {
     client.moving = false;
     client.ready = true;
     supersedeOlderWalletClients(client);
+
+    const doorId = getChannelDoorId(client.sceneChannel);
+    const capacity = ROOM_CAPACITY.get(doorId ?? "");
+    if (capacity !== undefined) {
+      const current = countPlayersInChannel(client.sceneChannel, client.id);
+      if (current >= capacity) {
+        sendWs(client.socket, { type: "roomFull", capacity, current });
+        client.ready = false;
+        client.superseded = true;
+        client.socket.end();
+        return;
+      }
+    }
+
     sendWs(client.socket, {
       type: "welcome",
       id: client.id,
       clockMinutes: getServerClockMinutes(),
-      peers: publicPeers(client)
+      peers: publicPeers(client, client.sceneChannel)
     });
     if (!wasReady) {
-      broadcast({ type: "playerJoined", player: publicPlayer(client) }, client.id, client.presenceId);
+      broadcast({ type: "playerJoined", player: publicPlayer(client) }, client.id, client.presenceId, client.sceneChannel);
     }
     return;
   }
@@ -511,7 +566,7 @@ function handleWsPayload(client, payload) {
     client.characterId = sanitizeText(payload.characterId, 24) || client.characterId;
     client.loginMode = client.walletProfileId ? "wallet" : (sanitizeText(payload.loginMode, 16) || client.loginMode || "guest");
     client.moving = Boolean(payload.moving);
-    broadcast({ type: "state", player: publicPlayer(client) }, client.id, client.presenceId);
+    broadcast({ type: "state", player: publicPlayer(client) }, client.id, client.presenceId, client.sceneChannel);
     return;
   }
 
@@ -527,7 +582,7 @@ function handleWsPayload(client, payload) {
     sendWs(client.socket, {
       type: "snapshot",
       clockMinutes: getServerClockMinutes(),
-      peers: publicPeers(client)
+      peers: publicPeers(client, client.sceneChannel)
     });
     return;
   }
@@ -548,7 +603,7 @@ function handleWsPayload(client, payload) {
       scene: client.scene,
       sceneChannel: client.sceneChannel,
       message
-    }, client.id, client.presenceId);
+    }, client.id, client.presenceId, client.sceneChannel);
   }
 }
 
@@ -1520,9 +1575,10 @@ server.on("upgrade", (req, socket) => {
     }
     client.closed = true;
     const presenceId = client.presenceId || id;
+    const lastSceneChannel = client.sceneChannel ?? null;
     clients.delete(id);
     if (!client.superseded && !hasActivePresence(presenceId)) {
-      broadcast({ type: "playerLeft", id, presenceId });
+      broadcast({ type: "playerLeft", id, presenceId }, null, null, lastSceneChannel);
     }
   };
 
@@ -1675,7 +1731,7 @@ setInterval(() => {
     sendWs(client.socket, {
       type: "snapshot",
       clockMinutes,
-      peers: publicPeers(client)
+      peers: publicPeers(client, client.sceneChannel)
     });
   }
 }, 2000).unref();
