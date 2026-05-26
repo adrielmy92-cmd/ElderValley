@@ -6,7 +6,7 @@ const MIN_RECOMMENDED_ETH = 0.002;
 
 function assertEnv(name) {
   const value = process.env[name];
-  if (!value || value === "never_commit_your_private_key_here") {
+  if (!value || value.includes("never_commit")) {
     throw new Error(`Missing ${name}. Fill it manually in .env before deploying.`);
   }
   return value;
@@ -16,6 +16,10 @@ async function main() {
   const rpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
   const privateKey = assertEnv("PRIVATE_KEY");
   const treasury = assertEnv("TREASURY_ADDRESS");
+
+  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey.trim())) {
+    throw new Error("PRIVATE_KEY must be a 64-byte hex private key starting with 0x. Check the .env file.");
+  }
 
   if (!isAddress(treasury)) {
     throw new Error("TREASURY_ADDRESS is not a valid EVM address.");

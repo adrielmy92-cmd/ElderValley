@@ -5,6 +5,7 @@ require("@nomicfoundation/hardhat-verify");
 const privateKey = process.env.PRIVATE_KEY;
 const baseRpcUrl = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 const baseScanApiKey = process.env.BASESCAN_API_KEY || "";
+const deployerAccounts = /^0x[0-9a-fA-F]{64}$/.test(privateKey || "") ? [privateKey] : [];
 
 module.exports = {
   solidity: {
@@ -23,9 +24,7 @@ module.exports = {
     base: {
       url: baseRpcUrl,
       chainId: 8453,
-      accounts: privateKey && privateKey !== "never_commit_your_private_key_here"
-        ? [privateKey]
-        : []
+      accounts: deployerAccounts
     }
   },
   paths: {
