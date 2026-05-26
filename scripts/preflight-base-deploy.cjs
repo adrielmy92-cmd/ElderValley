@@ -33,6 +33,23 @@ async function main() {
   }
 
   const deployer = new Wallet(privateKey, provider);
+  const expectedDeployer = process.env.EXPECTED_DEPLOYER_ADDRESS;
+  if (expectedDeployer && isAddress(expectedDeployer) && deployer.address.toLowerCase() !== expectedDeployer.toLowerCase()) {
+    throw new Error(`PRIVATE_KEY resolves to ${deployer.address}, but EXPECTED_DEPLOYER_ADDRESS is ${expectedDeployer}.`);
+  }
+
+  if (treasury.toLowerCase() === deployer.address.toLowerCase()) {
+    throw new Error("TREASURY_ADDRESS must be separate from the deployer wallet.");
+  }
+
+  const devWallets = String(process.env.ELDERVALLEY_DEV_WALLETS || "")
+    .split(",")
+    .map((wallet) => wallet.trim().toLowerCase())
+    .filter(Boolean);
+  if (devWallets.includes(treasury.toLowerCase())) {
+    throw new Error("TREASURY_ADDRESS is listed as a dev wallet. Use a separate treasury wallet.");
+  }
+
   const balanceWei = await provider.getBalance(deployer.address);
   const balanceEth = Number(formatEther(balanceWei));
 
