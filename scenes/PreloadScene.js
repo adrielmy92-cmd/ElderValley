@@ -45,6 +45,10 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 56,
       frameHeight: 84
     });
+    this.load.spritesheet("dark-wanderer-sheet", "./assets/sprites/dark-wanderer-sheet.png?v=3", {
+      frameWidth: 96,
+      frameHeight: 128
+    });
     createPixelArtTextures(this);
   }
 
