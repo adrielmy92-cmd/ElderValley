@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=179";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=209";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -830,6 +830,16 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateInventoryHud();
   }
 
+  handleRoomFull(capacity, current) {
+    const returnScene = this.entryData?.returnScene ?? "WorldScene";
+    const spawnKey = this.entryData?.exitSpawnKey ?? this.entryData?.spawnKey;
+    const msg = capacity >= 999
+      ? `Esta casa esta cheia no momento (${current} visitantes). Tente novamente em breve.`
+      : `Esta casa atingiu o limite de ${capacity} visitantes (${current}/${capacity}). Tente novamente em breve.`;
+    this.dialog?.show("Casa Cheia", msg);
+    this.time.delayedCall(2800, () => this.fadeTo(returnScene, { spawnKey }));
+  }
+
   fadeTo(sceneKey, data) {
     if (this.isTransitioning) {
       return;
@@ -1481,6 +1491,77 @@ export default class BaseGameScene extends Phaser.Scene {
     });
 
     return true;
+  }
+
+  ensureArrowTexture() {
+    if (this.textures.exists("spell-arrow")) {
+      return;
+    }
+    const texture = this.textures.createCanvas("spell-arrow", 24, 6);
+    const ctx = texture.getContext();
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 24, 6);
+    // Ponta
+    ctx.fillStyle = "#c8c8c8";
+    ctx.fillRect(20, 2, 4, 2);
+    ctx.fillRect(22, 1, 2, 4);
+    // Haste
+    ctx.fillStyle = "#8b6340";
+    ctx.fillRect(4, 2, 18, 2);
+    // Penas
+    ctx.fillStyle = "#e8e8d0";
+    ctx.fillRect(0, 0, 5, 2);
+    ctx.fillRect(0, 4, 5, 2);
+    ctx.fillStyle = "#b0b098";
+    ctx.fillRect(0, 2, 4, 2);
+    texture.refresh();
+  }
+
+  spawnArrow(x, y, facing = "down") {
+    if (!this.physics || this.isTransitioning) {
+      return null;
+    }
+    this.ensureArrowTexture();
+    const vectors = {
+      down:  { x: 0,  y: 1,  angle: Math.PI / 2,  offsetX: 0,   offsetY: 28 },
+      up:    { x: 0,  y: -1, angle: -Math.PI / 2, offsetX: 0,   offsetY: -32 },
+      left:  { x: -1, y: 0,  angle: Math.PI,       offsetX: -30, offsetY: -4 },
+      right: { x: 1,  y: 0,  angle: 0,             offsetX: 30,  offsetY: -4 }
+    };
+    const vector = vectors[facing] ?? vectors.right;
+    const arrow = this.physics.add.sprite(x + vector.offsetX, y + vector.offsetY, "spell-arrow")
+      .setDepth(y + 1800)
+      .setRotation(vector.angle);
+    arrow.body.setAllowGravity(false);
+    arrow.body.setSize(20, 4);
+    arrow.setVelocity(vector.x * 420, vector.y * 420);
+    arrow.skipPerformanceCull = true;
+
+    const updateDepth = this.time.addEvent({
+      delay: 16,
+      repeat: 50,
+      callback: () => {
+        if (arrow.active) {
+          arrow.setDepth(arrow.y + 1800);
+        } else {
+          updateDepth.remove(false);
+        }
+      }
+    });
+
+    const destroyArrow = () => {
+      updateDepth.remove(false);
+      arrow.destroy();
+    };
+    if (this.solids) {
+      this.physics.add.collider(arrow, this.solids, destroyArrow);
+    }
+    this.time.delayedCall(900, () => {
+      if (arrow.active) {
+        destroyArrow();
+      }
+    });
+    return arrow;
   }
 
   ensureFireballTextures() {

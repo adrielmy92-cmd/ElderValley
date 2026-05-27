@@ -19,7 +19,7 @@ export default class TitleScene extends Phaser.Scene {
       this.selectedCharacter = "adventurer";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
-    if (!["mage-1", "adventurer"].includes(this.selectedCharacter)) {
+    if (!["mage-1", "adventurer", "skeleton-archer"].includes(this.selectedCharacter)) {
       this.selectedCharacter = "mage-1";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
@@ -531,7 +531,8 @@ export default class TitleScene extends Phaser.Scene {
   getCharacterCatalog() {
     return [
       { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
-      { id: "adventurer", name: "Adventurer", key: "adventurer-sheet", frame: 0, scale: 0.82 }
+      { id: "adventurer", name: "Adventurer", key: "adventurer-sheet", frame: 0, scale: 0.82 },
+      { id: "skeleton-archer", name: "Skeleton Archer", key: "skeleton-archer-idle-sheet", frame: 0, scale: 0.52 }
     ];
   }
 
@@ -1200,7 +1201,7 @@ export default class TitleScene extends Phaser.Scene {
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
       this.registry.set("coinsProfileId", profileId);
-      if (profile.selectedCharacter && ["mage-1", "adventurer"].includes(profile.selectedCharacter)) {
+      if (profile.selectedCharacter && ["mage-1", "adventurer", "skeleton-archer"].includes(profile.selectedCharacter)) {
         this.selectedCharacter = profile.selectedCharacter;
       }
     } catch {

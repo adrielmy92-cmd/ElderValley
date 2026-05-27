@@ -32,6 +32,29 @@ const PLAYER_CHARACTERS = {
     body: { width: 18, height: 14, offsetX: 15, offsetY: 52 },
     speed: 145,
     depthBias: 120
+  },
+  "skeleton-archer": {
+    id: "skeleton-archer",
+    label: "Skeleton Archer",
+    walkTexture: "skeleton-archer-walk-sheet",
+    idleTexture: "skeleton-archer-idle-sheet",
+    attackTexture: "skeleton-archer-attack-sheet",
+    attackFrameWidth: 132,
+    attackFrameHeight: 132,
+    attackFrames: 8,
+    sideAttackTexture: "skeleton-archer-attack-sheet",
+    sideAttackFrameWidth: 132,
+    sideAttackFrameHeight: 132,
+    sideAttackFrames: 8,
+    animatedIdle: true,
+    mirrorLeftRight: true,
+    projectileSpawn: "spawnArrow",
+    frameWidth: 132,
+    frameHeight: 132,
+    framesPerDirection: 8,
+    body: { width: 22, height: 16, offsetX: 55, offsetY: 110 },
+    speed: 145,
+    depthBias: 130
   }
 };
 
@@ -41,6 +64,8 @@ export function getPlayerCharacterProfile(id) {
   }
   return PLAYER_CHARACTERS[id] ?? PLAYER_CHARACTERS["mage-1"];
 }
+
+const VALID_CHARACTER_IDS = new Set(Object.keys(PLAYER_CHARACTERS));
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -138,6 +163,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       }
 
       this.play(`${this.animPrefix}-walk-${this.facing}`, true);
+      if (this.profile.mirrorLeftRight) {
+        this.setFlipX(this.facing === "left");
+      }
       return;
     }
 
@@ -147,6 +175,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   playIdle() {
     this.play(`${this.animPrefix}-idle-${this.facing}`, true);
+    if (this.profile.mirrorLeftRight) {
+      this.setFlipX(this.facing === "left");
+    }
   }
 
   attack() {
@@ -171,7 +202,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.time.delayedCall(170, () => {
       if (this.active && this.isAttacking) {
-        this.scene.spawnFireball?.(this.x, this.y, this.facing);
+        const spawnMethod = this.profile.projectileSpawn ?? "spawnFireball";
+        this.scene[spawnMethod]?.(this.x, this.y, this.facing);
       }
     });
 

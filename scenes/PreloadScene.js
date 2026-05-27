@@ -45,6 +45,18 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 56,
       frameHeight: 84
     });
+    this.load.spritesheet("skeleton-archer-walk-sheet", "./assets/sprites/skeleton-archer-walk-sheet.png?v=1", {
+      frameWidth: 132,
+      frameHeight: 132
+    });
+    this.load.spritesheet("skeleton-archer-idle-sheet", "./assets/sprites/skeleton-archer-idle-sheet.png?v=1", {
+      frameWidth: 132,
+      frameHeight: 132
+    });
+    this.load.spritesheet("skeleton-archer-attack-sheet", "./assets/sprites/skeleton-archer-attack-sheet.png?v=1", {
+      frameWidth: 132,
+      frameHeight: 132
+    });
     createPixelArtTextures(this);
   }
 
