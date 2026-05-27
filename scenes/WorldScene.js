@@ -1663,8 +1663,8 @@ export default class WorldScene extends BaseGameScene {
       skeletonArcher: {
         key: "creative-npc-skeleton-archer",
         label: "Arqueiro Esqueleto",
-        scale: 0.55,
-        colliders: [[0, -24, 40, 36]],
+        scale: 0.7,
+        colliders: [[0, -30, 50, 44]],
         depthOffset: 64,
         snap: 8,
         flipable: true,
