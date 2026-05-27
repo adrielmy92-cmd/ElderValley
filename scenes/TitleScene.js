@@ -635,14 +635,19 @@ export default class TitleScene extends Phaser.Scene {
     const cardH = 118;
     const contentH = chars.length * cardH + Math.max(0, chars.length - 1) * gap;
     const scroller = this.createScrollArea("characters", listX, listY, listW, listH, contentH);
+    const BASE_CHARACTERS = ["mage-1", "adventurer", "skeleton-archer"];
+    const charOwnedMap = chars.map((character) => ({
+      character,
+      owned: this.loginMode !== "wallet"
+        || !this.walletSystem.connected
+        || BASE_CHARACTERS.includes(character.id)
+        || this.walletSystem.profile?.ownedCharacters?.includes(character.id)
+    }));
+
     chars.forEach((character, index) => {
       const cy = listY + index * (cardH + gap);
       const selected = this.selectedCharacter === character.id;
-      const BASE_CHARACTERS = ["mage-1", "adventurer", "skeleton-archer"];
-      const owned = this.loginMode !== "wallet"
-        || !this.walletSystem.connected
-        || BASE_CHARACTERS.includes(character.id)
-        || this.walletSystem.profile?.ownedCharacters?.includes(character.id);
+      const owned = charOwnedMap[index].owned;
       this.addCard(listX + 6, cy, cardW, cardH, selected, scroller.content);
       const sprite = this.add.sprite(listX + 54, cy + cardH - 16, character.key, character.frame)
         .setOrigin(0.5, 1)
@@ -651,19 +656,32 @@ export default class TitleScene extends Phaser.Scene {
       scroller.content.add(sprite);
       this.addContentText(listX + 106, cy + 34, character.name, 18, "#ffd889", cardW - 132, scroller.content);
       this.addContentText(listX + 106, cy + 64, selected ? "Selected" : (owned ? "Choose" : "Not owned"), 12, selected ? "#a7ffb3" : (owned ? "#d8c6a1" : "#d97878"), cardW - 132, scroller.content);
-      const zone = this.add.zone(listX + 6, cy, cardW, cardH)
-        .setOrigin(0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(60)
-        .on("pointerdown", () => {
-          if (owned) {
-            this.selectCharacter(character.id);
-          } else {
-            this.walletSystem.status = `${character.name} does not belong to this wallet yet.`;
-            this.renderPanel();
-          }
-        });
-      scroller.content.add(zone);
+    });
+
+    // Clique registrado fora do container aninhado para evitar conflito de input no Phaser 3
+    const clickZone = this.add.zone(listX, listY, listW, Math.max(listH, contentH))
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(62);
+    this.contentRoot.add(clickZone);
+    clickZone.on("pointerdown", (pointer) => {
+      const scrollOffset = this.scrollOffsets["characters"] ?? 0;
+      const relY = pointer.y - listY + scrollOffset;
+      const index = Math.floor(relY / (cardH + gap));
+      if (index < 0 || index >= chars.length) {
+        return;
+      }
+      const slotStart = index * (cardH + gap);
+      if (relY > slotStart + cardH) {
+        return; // clique no gap entre cards
+      }
+      const { character, owned } = charOwnedMap[index];
+      if (owned) {
+        this.selectCharacter(character.id);
+      } else {
+        this.walletSystem.status = `${character.name} does not belong to this wallet yet.`;
+        this.renderPanel();
+      }
     });
   }
 
