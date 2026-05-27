@@ -46,6 +46,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("creative-structure-campfire", "./assets/sprites/creative-structure-campfire-sheet.png?v=204", 384, 352);
     this.loadSheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=176", 96, 96);
     this.loadSheet("creative-animal-bull", "./assets/sprites/creative-animal-bull-sheet.png?v=176", 96, 96);
+    this.loadSheet("creative-npc-hooded", "./assets/sprites/creative-npc-hooded-sheet.png?v=1", 194, 194);
 
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     for (let index = 1; index <= 19; index += 1) {

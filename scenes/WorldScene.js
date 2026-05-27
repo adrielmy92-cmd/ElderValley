@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=209";
+import BaseGameScene from "./BaseGameScene.js?v=220";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -1647,6 +1647,18 @@ export default class WorldScene extends BaseGameScene {
         animated: true,
         frames: 8,
         frameRate: 6
+      },
+      hooded: {
+        key: "creative-npc-hooded",
+        label: "Encapuzado",
+        scale: 0.42,
+        colliders: [[0, -20, 36, 32]],
+        depthOffset: 60,
+        snap: 8,
+        flipable: true,
+        animated: true,
+        frames: 8,
+        frameRate: 7
       }
     };
     this.windowLightPieces = {
