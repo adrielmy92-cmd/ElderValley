@@ -33,19 +33,6 @@ const PLAYER_CHARACTERS = {
     speed: 145,
     depthBias: 120
   },
-  "dark-wanderer": {
-    id: "dark-wanderer",
-    label: "Dark Wanderer",
-    walkTexture: "dark-wanderer-sheet",
-    idleTexture: "dark-wanderer-sheet",
-    animatedIdle: false,
-    frameWidth: 132,
-    frameHeight: 132,
-    framesPerDirection: 8,
-    body: { width: 22, height: 18, offsetX: 55, offsetY: 112 },
-    speed: 145,
-    depthBias: 148
-  }
 };
 
 export function getPlayerCharacterProfile(id) {

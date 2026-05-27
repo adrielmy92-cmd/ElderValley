@@ -19,7 +19,7 @@ export default class TitleScene extends Phaser.Scene {
       this.selectedCharacter = "adventurer";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
-    if (!["mage-1", "adventurer", "dark-wanderer"].includes(this.selectedCharacter)) {
+    if (!["mage-1", "adventurer"].includes(this.selectedCharacter)) {
       this.selectedCharacter = "mage-1";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
@@ -532,7 +532,6 @@ export default class TitleScene extends Phaser.Scene {
     return [
       { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
       { id: "adventurer", name: "Adventurer", key: "adventurer-sheet", frame: 0, scale: 0.82 },
-      { id: "dark-wanderer", name: "Dark Wanderer", key: "dark-wanderer-sheet", frame: 0, scale: 0.52 }
     ];
   }
 
@@ -635,7 +634,7 @@ export default class TitleScene extends Phaser.Scene {
     const cardH = 118;
     const contentH = chars.length * cardH + Math.max(0, chars.length - 1) * gap;
     const scroller = this.createScrollArea("characters", listX, listY, listW, listH, contentH);
-    const BASE_CHARACTERS = ["mage-1", "adventurer", "dark-wanderer"];
+    const BASE_CHARACTERS = ["mage-1", "adventurer"];
     const charOwnedMap = chars.map((character) => ({
       character,
       owned: this.loginMode !== "wallet"
@@ -1221,7 +1220,7 @@ export default class TitleScene extends Phaser.Scene {
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
       this.registry.set("coinsProfileId", profileId);
-      if (profile.selectedCharacter && ["mage-1", "adventurer", "dark-wanderer"].includes(profile.selectedCharacter)) {
+      if (profile.selectedCharacter && ["mage-1", "adventurer"].includes(profile.selectedCharacter)) {
         this.selectedCharacter = profile.selectedCharacter;
       }
     } catch {
