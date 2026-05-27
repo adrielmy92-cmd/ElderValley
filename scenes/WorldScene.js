@@ -1659,6 +1659,18 @@ export default class WorldScene extends BaseGameScene {
         animated: true,
         frames: 8,
         frameRate: 7
+      },
+      skeletonArcher: {
+        key: "creative-npc-skeleton-archer",
+        label: "Arqueiro Esqueleto",
+        scale: 0.55,
+        colliders: [[0, -24, 40, 36]],
+        depthOffset: 64,
+        snap: 8,
+        flipable: true,
+        animated: true,
+        frames: 8,
+        frameRate: 7
       }
     };
     this.windowLightPieces = {
