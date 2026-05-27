@@ -1651,8 +1651,8 @@ export default class WorldScene extends BaseGameScene {
       hooded: {
         key: "creative-npc-hooded",
         label: "Encapuzado",
-        scale: 0.42,
-        colliders: [[0, -20, 36, 32]],
+        scale: 0.7,
+        colliders: [[0, -30, 54, 48]],
         depthOffset: 60,
         snap: 8,
         flipable: true,
