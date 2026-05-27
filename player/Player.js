@@ -42,8 +42,9 @@ const PLAYER_CHARACTERS = {
     frameWidth: 96,
     frameHeight: 128,
     framesPerDirection: 8,
+    walkFrameRate: 8,
     body: { width: 24, height: 14, offsetX: 36, offsetY: 112 },
-    speed: 145,
+    speed: 130,
     depthBias: 128
   }
 };
@@ -82,11 +83,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     const profile = this.profile;
     const makeFrames = (row) => Array.from({ length: profile.framesPerDirection }, (_, index) => row * profile.framesPerDirection + index);
     const makeIdleFrames = (row) => profile.animatedIdle ? makeFrames(row) : [row * profile.framesPerDirection];
+    const walkFps = profile.walkFrameRate ?? 10;
     const defs = [
-      [`${prefix}-walk-down`, profile.walkTexture, makeFrames(0), 10],
-      [`${prefix}-walk-left`, profile.walkTexture, makeFrames(1), 10],
-      [`${prefix}-walk-right`, profile.walkTexture, makeFrames(2), 10],
-      [`${prefix}-walk-up`, profile.walkTexture, makeFrames(3), 10],
+      [`${prefix}-walk-down`, profile.walkTexture, makeFrames(0), walkFps],
+      [`${prefix}-walk-left`, profile.walkTexture, makeFrames(1), walkFps],
+      [`${prefix}-walk-right`, profile.walkTexture, makeFrames(2), walkFps],
+      [`${prefix}-walk-up`, profile.walkTexture, makeFrames(3), walkFps],
       [`${prefix}-idle-down`, profile.idleTexture, makeIdleFrames(0), 5],
       [`${prefix}-idle-left`, profile.idleTexture, makeIdleFrames(1), 5],
       [`${prefix}-idle-right`, profile.idleTexture, makeIdleFrames(2), 5],
