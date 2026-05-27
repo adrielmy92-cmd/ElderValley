@@ -638,8 +638,10 @@ export default class TitleScene extends Phaser.Scene {
     chars.forEach((character, index) => {
       const cy = listY + index * (cardH + gap);
       const selected = this.selectedCharacter === character.id;
+      const BASE_CHARACTERS = ["mage-1", "adventurer", "skeleton-archer"];
       const owned = this.loginMode !== "wallet"
         || !this.walletSystem.connected
+        || BASE_CHARACTERS.includes(character.id)
         || this.walletSystem.profile?.ownedCharacters?.includes(character.id);
       this.addCard(listX + 6, cy, cardW, cardH, selected, scroller.content);
       const sprite = this.add.sprite(listX + 54, cy + cardH - 16, character.key, character.frame)

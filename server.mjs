@@ -1117,7 +1117,7 @@ function normalizeProfile(profileId, data = {}) {
     isDeveloper: Boolean(data.isDeveloper) || isDeveloperWallet(walletAddress),
     selectedCharacter: sanitizeText(data.selectedCharacter, 32) || "mage-1",
     coins: Math.max(0, Math.floor(Number(data.coins ?? 0) || 0)),
-    ownedCharacters: Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : ["mage-1"],
+    ownedCharacters: [...new Set(["mage-1", "adventurer", "skeleton-archer", ...(Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : [])])],
     ownedHouses: Array.isArray(data.ownedHouses) ? data.ownedHouses : [],
     items: Array.isArray(data.items) ? data.items : [],
     position: data.position && typeof data.position === "object" ? {
