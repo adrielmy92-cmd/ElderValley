@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
+    "sync": "node scripts/sync-storage-from-prod.mjs",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test",
     "contracts:slither": "node scripts/run-slither.cjs --exclude-informational",
@@ -27,6 +28,7 @@
     "@nomicfoundation/hardhat-verify": "^2.1.0",
     "@openzeppelin/contracts": "^5.0.2",
     "dotenv": "^16.4.5",
-    "hardhat": "^2.22.0"
+    "hardhat": "^2.22.0",
+    "sharp": "^0.34.5"
   }
 }

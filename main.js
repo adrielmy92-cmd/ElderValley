@@ -1,8 +1,8 @@
 import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=209";
-import GamePreloadScene from "./scenes/GamePreloadScene.js?v=209";
+import GamePreloadScene from "./scenes/GamePreloadScene.js?v=214";
 import TitleScene from "./scenes/TitleScene.js?v=218";
-import WorldScene from "./scenes/WorldScene.js?v=217";
+import WorldScene from "./scenes/WorldScene.js?v=221";
 import CityScene from "./scenes/CityScene.js?v=210";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=209";
 import ShopInteriorScene from "./scenes/ShopInteriorScene.js?v=209";
@@ -13,6 +13,8 @@ import ReferenceHouseInteriorScene from "./scenes/ReferenceHouseInteriorScene.js
 import WindmillLoadScene from "./scenes/WindmillLoadScene.js?v=209";
 import WindmillInteriorScene from "./scenes/WindmillInteriorScene.js?v=209";
 import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=209";
+import ForestScene from "./scenes/ForestScene.js?v=24";
+import SwampScene from "./scenes/SwampScene.js?v=17";
 
 const config = {
   type: Phaser.AUTO,
@@ -39,6 +41,8 @@ const config = {
     TitleScene,
     WorldScene,
     CityScene,
+    ForestScene,
+    SwampScene,
     HouseInteriorScene,
     CardShopHouseScene,
     MiddleForgeInteriorScene,

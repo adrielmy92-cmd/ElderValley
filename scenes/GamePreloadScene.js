@@ -49,6 +49,23 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("creative-npc-hooded", "./assets/sprites/creative-npc-hooded-sheet.png?v=1", 194, 194);
     this.loadSheet("creative-npc-skeleton-archer", "./assets/sprites/skeleton-archer-idle-sheet.png?v=1", 132, 132);
 
+    this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=2");
+    this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=2");
+    this.loadSheet("swamp-troll", "./assets/sprites/swamp-troll-sheet.png?v=1", 86, 86);
+    this.loadSheet("swamp-attacks", "./assets/sprites/swamp-attacks-sheet.png?v=1", 192, 160);
+    this.loadAudio("swamp-troll-aggro",  "./assets/audio/swamp-troll-aggro.ogg");
+    this.loadAudio("swamp-troll-death",  "./assets/audio/swamp-troll-death.ogg");
+    this.loadAudio("swamp-troll-hurt",   "./assets/audio/swamp-troll-hurt.wav");
+    this.loadAudio("swamp-ambient",      "./assets/audio/swamp-ambient.ogg?v=2");
+    this.loadAudio("swamp-bubble-warn",  "./assets/audio/swamp-bubble-warn.ogg");
+    this.loadAudio("swamp-bubble-burst", "./assets/audio/swamp-bubble-burst.ogg");
+    this.loadAudio("swamp-spike",        "./assets/audio/swamp-spike.ogg");
+    this.loadAudio("swamp-sludge",       "./assets/audio/swamp-sludge.ogg");
+    this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=2", 200, 200);
+    this.loadSheet("boss-golem-attack", "./assets/sprites/boss-golem-attack-sheet.png?v=2", 200, 200);
+    this.loadSheet("boss-meteor", "./assets/sprites/boss-meteor-sheet.png?v=1", 128, 128);
+    this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=1", 160, 160);
+    this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
@@ -74,6 +91,12 @@ export default class GamePreloadScene extends Phaser.Scene {
   loadImage(key, url) {
     if (!this.textures.exists(key)) {
       this.load.image(key, url);
+    }
+  }
+
+  loadAudio(key, url) {
+    if (!this.cache.audio.exists(key)) {
+      this.load.audio(key, url);
     }
   }
 

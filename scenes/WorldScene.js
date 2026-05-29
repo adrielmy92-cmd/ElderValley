@@ -16,7 +16,9 @@ const SPAWNS = {
   windmill: { x: 1970, y: 704 },
   cityGate: { x: 2760, y: 704 },
   shop: { x: 640, y: 328 },
-  collector: { x: 930, y: 626 }
+  collector: { x: 930, y: 626 },
+  forestGate: { x: 1460, y: -44 },
+  swampGate:  { x: 420,  y: 1220 }
 };
 
 const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
@@ -541,6 +543,8 @@ export default class WorldScene extends BaseGameScene {
     this.addKnightCharacter();
     this.addNpc();
     this.addCityTransition();
+    this.addForestTransition();
+    this.addSwampTransition();
     this.addWorldBounds();
   }
 
@@ -3164,6 +3168,111 @@ export default class WorldScene extends BaseGameScene {
       onInteract: () => this.fadeTo("CityScene", { spawnKey: "fromVillage" })
     });
     return { post, board, label };
+  }
+
+  addForestTransition() {
+    const x = 1460;
+    const y = -60;
+
+    const g = this.add.graphics().setDepth(y + 80);
+    // Left pillar — pedra vulcânica
+    g.fillStyle(0x2e1a0e, 1);
+    g.fillRect(x - 52, y - 96, 22, 96);
+    g.fillStyle(0x3d2412, 1);
+    g.fillRect(x - 56, y - 102, 30, 12);
+    // Right pillar
+    g.fillStyle(0x2e1a0e, 1);
+    g.fillRect(x + 30, y - 96, 22, 96);
+    g.fillStyle(0x3d2412, 1);
+    g.fillRect(x + 26, y - 102, 30, 12);
+    // Top arch
+    g.fillStyle(0x261408, 1);
+    g.fillRect(x - 56, y - 112, 112, 18);
+    // Runas incandescentes
+    g.fillStyle(0xff4400, 0.55);
+    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
+      g.fillRect(rx - 4, ry - 4, 8, 8);
+    });
+    // Inner glow — vermelho/laranja
+    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
+    pg.fillStyle(0xff3300, 0.28);
+    pg.fillEllipse(x, y - 54, 56, 86);
+    pg.fillStyle(0xff7700, 0.12);
+    pg.fillEllipse(x, y - 54, 88, 116);
+    // Sign post
+    g.fillStyle(0x1a0800, 1);
+    g.fillRect(x - 4, y - 130, 8, 26);
+    g.fillStyle(0x2e1206, 1);
+    g.fillRect(x - 56, y - 158, 112, 30);
+    const label = this.add.text(x, y - 143, "Mapa do Fogo", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#ff9966",
+      stroke: "#1a0000",
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(y + 100);
+
+    this.interactions.add({
+      id: "door_forest_gate",
+      x,
+      y,
+      promptY: y - 170,
+      promptText: "E Entrar no Mapa do Fogo",
+      radius: 72,
+      onInteract: () => this.fadeTo("ForestScene", { spawnKey: "fromVillage" })
+    });
+    return { g, label };
+  }
+
+  addSwampTransition() {
+    const x = 420;
+    const y = 1260;
+
+    const g = this.add.graphics().setDepth(y + 80);
+
+    // Pilares de madeira velha cobertos de musgo
+    g.fillStyle(0x2a3d1a, 1);
+    g.fillRect(x - 52, y - 96, 22, 96);
+    g.fillStyle(0x3a5222, 1);
+    g.fillRect(x - 56, y - 102, 30, 12);
+    g.fillStyle(0x2a3d1a, 1);
+    g.fillRect(x + 30, y - 96, 22, 96);
+    g.fillStyle(0x3a5222, 1);
+    g.fillRect(x + 26, y - 102, 30, 12);
+    g.fillStyle(0x1e2e12, 1);
+    g.fillRect(x - 56, y - 112, 112, 18);
+
+    // Runas verdes brilhantes
+    g.fillStyle(0x44ff88, 0.55);
+    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
+      g.fillRect(rx - 4, ry - 4, 8, 8);
+    });
+
+    // Glow verde do portal
+    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
+    pg.fillStyle(0x22cc44, 0.28);
+    pg.fillEllipse(x, y - 54, 56, 86);
+    pg.fillStyle(0x88ffaa, 0.12);
+    pg.fillEllipse(x, y - 54, 88, 116);
+
+    // Placa
+    g.fillStyle(0x1a2a0a, 1);
+    g.fillRect(x - 4, y - 130, 8, 26);
+    g.fillStyle(0x2a4010, 1);
+    g.fillRect(x - 52, y - 158, 104, 30);
+    this.add.text(x, y - 143, "Pântano", {
+      fontFamily: "monospace", fontSize: "13px",
+      color: "#88ffaa", stroke: "#0a1a0a", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(y + 100);
+
+    this.interactions.add({
+      id: "door_swamp_gate",
+      x, y,
+      promptY: y - 170,
+      promptText: "E Entrar no Pântano",
+      radius: 72,
+      onInteract: () => this.fadeTo("SwampScene", { spawnKey: "fromVillage" })
+    });
   }
 
   addStreetLamp(x, y, index = 0) {

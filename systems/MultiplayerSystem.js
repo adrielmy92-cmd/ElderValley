@@ -147,6 +147,13 @@ export default class MultiplayerSystem {
       return;
     }
 
+    if (payload.type === "roomFull") {
+      this.connected = false;
+      this.clearRemotePlayers();
+      this.socket?.close();
+      this.scene.handleRoomFull?.(payload.capacity, payload.current);
+      return;
+    }
     if (payload.type === "welcome") {
       this.id = payload.id;
       this.applyServerClock(payload.clockMinutes);
@@ -195,6 +202,55 @@ export default class MultiplayerSystem {
     if (payload.type === "chat") {
       this.receiveChat(payload);
     }
+    if (payload.type === "bossCountdown") {
+      this.scene.onBossCountdown?.(payload.remainingMs);
+      return;
+    }
+    if (payload.type === "bossSpawned") {
+      this.scene.onBossSpawned?.();
+      return;
+    }
+    if (payload.type === "bossSync") {
+      this.scene.onBossSync?.(payload);
+      return;
+    }
+    if (payload.type === "bossAttack") {
+      this.scene.onBossAttack?.(payload.event, payload);
+      return;
+    }
+    if (payload.type === "bossPhase") {
+      this.scene.onBossPhaseChange?.(payload.phase);
+      return;
+    }
+    if (payload.type === "bossMeleeHit") {
+      this.scene.takeDamage?.(payload.damage ?? 22);
+      return;
+    }
+    // legado — mantém compatibilidade
+    if (payload.type === "bossEvent") {
+      this.scene.onRemoteBossEvent?.(payload.event, payload.data ?? {});
+    }
+    // ── Swamp trolls ────────────────────────────────────────────
+    if (payload.type === "trollSync") {
+      this.scene.onTrollSync?.(payload);
+      return;
+    }
+    if (payload.type === "trollAttack") {
+      this.scene.onTrollAttack?.(payload);
+      return;
+    }
+    if (payload.type === "trollDied") {
+      this.scene.onTrollDied?.(payload.i);
+      return;
+    }
+    if (payload.type === "trollRespawn") {
+      this.scene.onTrollRespawn?.(payload);
+      return;
+    }
+  }
+
+  sendHitTroll(index, damage) {
+    this.send({ type: "hitTroll", index, damage });
   }
 
   update(time) {
@@ -395,6 +451,25 @@ export default class MultiplayerSystem {
 
   sendChat(message) {
     this.send({ type: "chat", message });
+  }
+
+  sendBossEvent(event, data = {}) {
+    this.send({ type: "bossEvent", event, data });
+  }
+
+  sendHitBoss(damage) {
+    this.send({ type: "hitBoss", damage });
+  }
+
+  // Retorna true se este cliente deve controlar o boss AI
+  isBossController() {
+    if (!this.connected || !this.id) return true;
+    for (const remote of this.remotePlayers.values()) {
+      if (remote.sceneChannel === this.getLocalState().sceneChannel) {
+        if (String(remote.id) < String(this.id)) return false;
+      }
+    }
+    return true;
   }
 
   removeRemotePlayer(id) {

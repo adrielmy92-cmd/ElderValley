@@ -605,6 +605,38 @@ function handleWsPayload(client, payload) {
       message
     }, client.id, client.presenceId, client.sceneChannel);
   }
+
+  if (payload.type === "hitTroll") {
+    if (!client.ready || client.superseded) return;
+    const idx = Math.floor(Number(payload.index ?? -1));
+    if (idx < 0 || idx >= 4) return;
+    const damage = Math.min(500, Math.max(0, Number(payload.damage) || 0));
+    applyTrollDamage(idx, damage);
+    return;
+  }
+
+  if (payload.type === "hitBoss") {
+    if (!client.ready || client.superseded) return;
+    if (!bossState.spawned) return; // boss ainda não nasceu
+    const damage = Math.min(500, Math.max(0, Number(payload.damage) || 0));
+    if (damage > 0) applyBossDamage(damage);
+    return;
+  }
+
+  if (payload.type === "bossEvent") {
+    if (!client.ready || client.superseded) {
+      return;
+    }
+    const event = sanitizeText(payload.event, 40);
+    if (!event) {
+      return;
+    }
+    broadcast({
+      type: "bossEvent",
+      event,
+      data: payload.data ?? {}
+    }, client.id, client.presenceId, client.sceneChannel);
+  }
 }
 
 function storagePathFor(key) {
@@ -1712,6 +1744,456 @@ function startHouseIndexer() {
   setInterval(tick, 15000).unref();
   console.log(`[web3] House indexer watching ${housesContractAddress} on chain ${web3ChainId}.`);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BOSS ARENA — lógica server-side (Golem de Lava)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BOSS_SCENE = "ForestScene";
+const BOSS_W = 1920;
+const BOSS_H = 1920;
+const BOSS_MAX_HP = 5000;
+const BOSS_ORIGIN = { x: 960, y: 960 };
+
+const BOSS_PHASE_DATA = [
+  { speed: 75,  cooldown: 1800, attackRange: 95,  aggroRange: 420, chaseStamina: 5000, tiredDuration: 1200, meteorCount: 3, meteorInterval: 7000,  eruptionCount: 4,  eruptionInterval: 9000  },
+  { speed: 100, cooldown: 1300, attackRange: 115, aggroRange: 480, chaseStamina: 4000, tiredDuration: 1000, meteorCount: 5, meteorInterval: 5000,  eruptionCount: 6,  eruptionInterval: 6500  },
+  { speed: 135, cooldown: 900,  attackRange: 125, aggroRange: 540, chaseStamina: 3000, tiredDuration: 800,  meteorCount: 9, meteorInterval: 3500,  eruptionCount: 10, eruptionInterval: 4000  },
+];
+
+function createBossState() {
+  return {
+    hp: BOSS_MAX_HP,
+    phase: 1,
+    x: BOSS_ORIGIN.x,
+    y: BOSS_ORIGIN.y,
+    vx: 0, vy: 0,
+    state: "idle",
+    flipX: false,
+    anim: "golem-walk",
+    cooldown: 0,
+    tiredTimer: 0,
+    chaseTime: 0,
+    meteorCooldown: 8000,
+    eruptionCooldown: 10000,
+    projectileCooldown: 3000,
+    dead: false,
+    spawned: true, // nasce imediatamente
+  };
+}
+
+let bossState = createBossState();
+
+function isInArena(client) {
+  // sceneChannel pode ser "ForestScene" ou "ForestScene:fromVillage" etc.
+  return client.ready && !client.superseded && client.sceneChannel.startsWith(BOSS_SCENE);
+}
+
+function getArenaPlayers() {
+  return [...clients.values()].filter(isInArena);
+}
+
+function sendToArena(payload) {
+  for (const client of clients.values()) {
+    if (isInArena(client)) sendWs(client.socket, payload);
+  }
+}
+
+function bossPhaseData() {
+  return BOSS_PHASE_DATA[Math.min(bossState.phase - 1, 2)];
+}
+
+function nearestArenaPlayer() {
+  const players = getArenaPlayers();
+  if (!players.length) return null;
+  let best = null, bestDist = Infinity;
+  for (const p of players) {
+    const d = Math.hypot(p.x - bossState.x, p.y - bossState.y);
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best ? { ...best, dist: bestDist } : null;
+}
+
+function bossSpawnMeteors(targetX, targetY) {
+  const count = bossPhaseData().meteorCount;
+  const targets = Array.from({ length: count }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 60 + Math.random() * 220;
+    return {
+      tx: Math.round(Math.max(120, Math.min(BOSS_W - 120, targetX + Math.cos(angle) * r))),
+      ty: Math.round(Math.max(120, Math.min(BOSS_H - 120, targetY + Math.sin(angle) * r))),
+      delay: i * 420
+    };
+  });
+  sendToArena({ type: "bossAttack", event: "meteor", targets });
+}
+
+function bossSpawnEruptions(targetX, targetY) {
+  const count = bossPhaseData().eruptionCount;
+  const targets = Array.from({ length: count }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 30 + Math.random() * 290;
+    return {
+      tx: Math.round(Math.max(100, Math.min(BOSS_W - 100, targetX + Math.cos(angle) * r))),
+      ty: Math.round(Math.max(100, Math.min(BOSS_H - 100, targetY + Math.sin(angle) * r))),
+      delay: i * 280
+    };
+  });
+  sendToArena({ type: "bossAttack", event: "eruption", targets });
+}
+
+function bossSpawnProjectile(targetX, targetY) {
+  const bx = bossState.x;
+  const by = bossState.y - 40;
+  const dx = targetX - bx;
+  const dy = targetY - by;
+  const d = Math.hypot(dx, dy) || 1;
+  sendToArena({ type: "bossAttack", event: "projectile", bx: Math.round(bx), by: Math.round(by), dx: dx / d, dy: dy / d });
+}
+
+const BOSS_RESPAWN_MS = 60_000;
+
+function applyBossDamage(amount) {
+  if (bossState.dead) return;
+  bossState.hp = Math.max(0, bossState.hp - Math.max(0, Math.floor(amount)));
+  if (bossState.hp <= 0) {
+    bossState.dead = true;
+    bossState.respawnAt = Date.now() + BOSS_RESPAWN_MS;
+    sendToArena({ type: "bossSync", hp: 0, maxHp: BOSS_MAX_HP, phase: bossState.phase, x: Math.round(bossState.x), y: Math.round(bossState.y), flipX: bossState.flipX, anim: "golem-walk", dead: true });
+    sendToArena({ type: "bossAttack", event: "died" });
+    console.log("[boss] Golem derrotado! Renascendo em 60s.");
+  }
+}
+
+let lastBossTick = Date.now();
+
+function tickBoss() {
+  const now = Date.now();
+  const delta = Math.min(now - lastBossTick, 200);
+  lastBossTick = now;
+
+  const players = getArenaPlayers();
+
+  // Respawn automático após 1 min (independente de players na arena)
+  if (bossState.dead) {
+    if (bossState.respawnAt && now >= bossState.respawnAt) {
+      bossState = createBossState();
+      console.log("[boss] Golem renasceu!");
+      sendToArena({ type: "bossSpawned" });
+    }
+    return;
+  }
+
+  // AI só roda se tem players
+  if (players.length === 0) return;
+
+  const b = bossState;
+  const pd = bossPhaseData();
+  const target = nearestArenaPlayer();
+  if (!target) return;
+
+  const dx = target.x - b.x;
+  const dy = target.y - b.y;
+  const dist = Math.hypot(dx, dy);
+  b.flipX = dx < 0;
+
+  // ── Transição de fase ──────────────────────────────────────────────────────
+  const pct = b.hp / BOSS_MAX_HP;
+  const newPhase = pct <= 0.25 ? 3 : pct <= 0.5 ? 2 : 1;
+  if (newPhase > b.phase) {
+    b.phase = newPhase;
+    b.meteorCooldown = 2000;
+    b.eruptionCooldown = 3000;
+    sendToArena({ type: "bossPhase", phase: newPhase });
+    console.log(`[boss] Fase ${newPhase}!`);
+  }
+
+  // ── Cooldowns de ataque ────────────────────────────────────────────────────
+  if (dist <= pd.aggroRange) {
+    b.meteorCooldown -= delta;
+    b.eruptionCooldown -= delta;
+    if (b.phase >= 3) b.projectileCooldown -= delta;
+
+    if (b.meteorCooldown <= 0 && b.state !== "meteor" && b.state !== "attack") {
+      b.state = "meteor";
+      b.vx = 0; b.vy = 0;
+      b.anim = "golem-walk";
+      bossSpawnMeteors(target.x, target.y);
+      b.meteorCooldown = pd.meteorInterval;
+      const totalDuration = pd.meteorCount * 420 + 1400;
+      setTimeout(() => {
+        if (b.state === "meteor") { b.state = "cooldown"; b.cooldown = 800; }
+      }, totalDuration);
+    }
+    if (b.eruptionCooldown <= 0 && b.state !== "meteor") {
+      b.eruptionCooldown = pd.eruptionInterval;
+      bossSpawnEruptions(target.x, target.y);
+    }
+    if (b.phase >= 3 && b.projectileCooldown <= 0 && dist > pd.attackRange) {
+      b.projectileCooldown = 2800;
+      bossSpawnProjectile(target.x, target.y);
+    }
+  }
+
+  // ── Máquina de estados ─────────────────────────────────────────────────────
+  if (b.state === "tired") {
+    b.tiredTimer -= delta;
+    b.vx = 0; b.vy = 0;
+    if (b.tiredTimer <= 0) { b.state = "idle"; b.chaseTime = 0; b.anim = "golem-walk"; }
+    return;
+  }
+  if (b.state === "meteor") {
+    b.vx = 0; b.vy = 0;
+    return;
+  }
+  if (b.state === "cooldown") {
+    b.cooldown -= delta;
+    b.vx = 0; b.vy = 0;
+    if (b.cooldown <= 0) { b.state = "idle"; b.anim = "golem-walk"; }
+    return;
+  }
+  if (b.state === "attack") {
+    b.cooldown -= delta;
+    b.vx = 0; b.vy = 0;
+    if (b.cooldown <= 0) { b.state = "cooldown"; b.cooldown = pd.cooldown; b.anim = "golem-walk"; }
+    return;
+  }
+
+  if (dist <= pd.aggroRange) {
+    if (dist <= pd.attackRange) {
+      if (b.state !== "attack") {
+        b.state = "attack";
+        b.anim = "golem-attack";
+        b.cooldown = 1000;
+        b.vx = 0; b.vy = 0;
+        // Dano em todos os players próximos
+        for (const p of players) {
+          if (Math.hypot(p.x - b.x, p.y - b.y) <= pd.attackRange) {
+            sendWs(p.socket, { type: "bossMeleeHit", damage: 22 });
+          }
+        }
+        sendToArena({ type: "bossAttack", event: "melee" });
+      }
+    } else {
+      b.chaseTime += delta;
+      if (b.chaseTime >= pd.chaseStamina) {
+        b.state = "tired";
+        b.tiredTimer = pd.tiredDuration;
+        b.chaseTime = 0;
+        b.anim = "golem-walk";
+        b.vx = 0; b.vy = 0;
+        return;
+      }
+      b.state = "chase";
+      b.anim = "golem-walk";
+      b.vx = (dx / dist) * pd.speed;
+      b.vy = (dy / dist) * pd.speed;
+    }
+  } else {
+    b.chaseTime = 0;
+    const ox = BOSS_ORIGIN.x - b.x;
+    const oy = BOSS_ORIGIN.y - b.y;
+    const od = Math.hypot(ox, oy);
+    if (od > 8) {
+      b.vx = (ox / od) * pd.speed * 0.4;
+      b.vy = (oy / od) * pd.speed * 0.4;
+    } else {
+      b.vx = 0; b.vy = 0;
+    }
+    b.state = "idle";
+    b.anim = "golem-walk";
+  }
+
+  b.x = Math.max(50, Math.min(BOSS_W - 50, b.x + b.vx * (delta / 1000)));
+  b.y = Math.max(50, Math.min(BOSS_H - 50, b.y + b.vy * (delta / 1000)));
+}
+
+// Broadcast de estado a cada 100ms
+setInterval(() => {
+  const b = bossState;
+  if (getArenaPlayers().length === 0) return;
+
+  // Sempre envia bossSync — cliente usa dead+countdown para tudo
+  sendToArena({
+    type: "bossSync",
+    hp: b.hp,
+    maxHp: BOSS_MAX_HP,
+    phase: b.phase,
+    x: Math.round(b.x),
+    y: Math.round(b.y),
+    flipX: b.flipX,
+    anim: b.anim,
+    dead: b.dead,
+    spawned: b.spawned,
+    countdownMs: (b.dead && b.respawnAt) ? Math.max(0, b.respawnAt - Date.now()) : null,
+  });
+}, 100).unref();
+
+// Tick do boss a 20fps
+setInterval(() => tickBoss(), 50).unref();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SWAMP TROLLS — server-authoritative, mesmo padrão do boss
+// ═══════════════════════════════════════════════════════════════════════════════
+const SWAMP_SCENE        = "SwampScene";
+const SWAMP_W            = 1920;
+const SWAMP_H            = 1920;
+const TROLL_MAX_HP       = 2500;
+const TROLL_RESPAWN_MS   = 25000;
+const TROLL_SPEED_IDLE   = 38;
+const TROLL_SPEED_AGGRO  = 62;
+const TROLL_ATK_INTERVAL = 3200;
+const TROLL_FIRE_PAUSE   = 900;
+const TROLL_PATROL       = { x1: 400, x2: 1520, y1: 400, y2: 1440 };
+
+const TROLL_SPAWNS = [
+  { x: 680, y: 680 }, { x: 1240, y: 680 },
+  { x: 680, y: 1240 }, { x: 1240, y: 1240 }
+];
+
+function createTrollState(i) {
+  const s = TROLL_SPAWNS[i];
+  return {
+    i, x: s.x, y: s.y,
+    hp: TROLL_MAX_HP, maxHp: TROLL_MAX_HP,
+    aggro: false, dead: false,
+    isFiring: false, firingUntil: 0,
+    speed: TROLL_SPEED_IDLE,
+    waitUntil: 0, walkUntil: 0,
+    wanderDx: 0, wanderDy: 0,
+    nextAtkAt: Date.now() + 2000,
+    respawnAt: 0, flipX: false,
+  };
+}
+
+let swampTrolls = [0, 1, 2, 3].map(createTrollState);
+let lastSwampSync = 0;
+
+function isInSwamp(client) {
+  return client.ready && !client.superseded && (client.sceneChannel ?? "").startsWith(SWAMP_SCENE);
+}
+
+function getSwampPlayers() {
+  return [...clients.values()].filter(isInSwamp);
+}
+
+function sendToSwamp(payload) {
+  for (const c of clients.values()) {
+    if (isInSwamp(c)) sendWs(c.socket, payload);
+  }
+}
+
+function nearestSwampPlayer(tx, ty) {
+  let best = null, bestDist = Infinity;
+  for (const p of getSwampPlayers()) {
+    const d = Math.hypot((p.x ?? 960) - tx, (p.y ?? 960) - ty);
+    if (d < bestDist) { bestDist = d; best = { ...p, dist: d }; }
+  }
+  return best;
+}
+
+function pickTrollWander(troll, now) {
+  troll.waitUntil = now + 600 + Math.random() * 900;
+  troll.walkUntil = troll.waitUntil + 1000 + Math.random() * 1200;
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const [dx, dy] = dirs[Math.floor(Math.random() * 4)];
+  troll.wanderDx = dx; troll.wanderDy = dy;
+}
+
+function serializeTroll(t) {
+  return {
+    i: t.i, x: Math.round(t.x), y: Math.round(t.y),
+    hp: t.hp, maxHp: t.maxHp,
+    dead: t.dead, aggro: t.aggro, flipX: t.flipX,
+  };
+}
+
+function applyTrollDamage(idx, damage) {
+  const troll = swampTrolls[idx];
+  if (!troll || troll.dead) return;
+  troll.hp = Math.max(0, troll.hp - damage);
+  if (!troll.aggro) {
+    troll.aggro = true;
+    troll.speed = TROLL_SPEED_AGGRO;
+    troll.nextAtkAt = Date.now() + 800;
+  }
+  if (troll.hp <= 0) {
+    troll.dead = true;
+    troll.respawnAt = Date.now() + TROLL_RESPAWN_MS;
+    sendToSwamp({ type: "trollDied", i: idx });
+  }
+  sendToSwamp({ type: "trollSync", trolls: swampTrolls.map(serializeTroll) });
+}
+
+function tickSwamp() {
+  const now = Date.now();
+  const dt  = 50;
+  const players = getSwampPlayers();
+
+  for (const troll of swampTrolls) {
+    if (troll.dead) {
+      if (now >= troll.respawnAt) {
+        const s = TROLL_SPAWNS[troll.i];
+        const i = troll.i;
+        Object.assign(troll, createTrollState(i));
+        sendToSwamp({ type: "trollRespawn", i, x: s.x, y: s.y });
+      }
+      continue;
+    }
+
+    if (troll.isFiring) {
+      if (now >= troll.firingUntil) troll.isFiring = false;
+      continue;
+    }
+
+    const nearest = nearestSwampPlayer(troll.x, troll.y);
+
+    if (troll.aggro && nearest) {
+      const dx   = (nearest.x ?? 960) - troll.x;
+      const dy   = (nearest.y ?? 960) - troll.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > 8) {
+        troll.x += (dx / dist) * troll.speed * (dt / 1000);
+        troll.y += (dy / dist) * troll.speed * (dt / 1000);
+        troll.flipX = dx < 0;
+      }
+      troll.x = Math.max(60, Math.min(SWAMP_W - 60, troll.x));
+      troll.y = Math.max(80, Math.min(SWAMP_H - 80, troll.y));
+
+      if (now >= troll.nextAtkAt) {
+        const attacks = ["bubble", "spike", "sludge"];
+        const atk = attacks[Math.floor(Math.random() * attacks.length)];
+        sendToSwamp({
+          type: "trollAttack", i: troll.i, atk,
+          fromX: Math.round(troll.x), fromY: Math.round(troll.y),
+          toX: Math.round(nearest.x ?? 960), toY: Math.round(nearest.y ?? 960)
+        });
+        troll.isFiring   = true;
+        troll.firingUntil = now + TROLL_FIRE_PAUSE;
+        troll.nextAtkAt  = now + TROLL_ATK_INTERVAL + (Math.random() * 1000 - 500);
+      }
+    } else {
+      const outOfPatrol = troll.x < TROLL_PATROL.x1 || troll.x > TROLL_PATROL.x2
+                       || troll.y < TROLL_PATROL.y1 || troll.y > TROLL_PATROL.y2;
+      if (now < troll.waitUntil) {
+        // parado
+      } else if (now >= troll.walkUntil || outOfPatrol) {
+        pickTrollWander(troll, now);
+      } else {
+        troll.x += troll.wanderDx * troll.speed * (dt / 1000);
+        troll.y += troll.wanderDy * troll.speed * (dt / 1000);
+        troll.flipX = troll.wanderDx < 0;
+      }
+    }
+  }
+
+  if (now - lastSwampSync >= 100 && players.length > 0) {
+    lastSwampSync = now;
+    sendToSwamp({ type: "trollSync", trolls: swampTrolls.map(serializeTroll) });
+  }
+}
+
+setInterval(() => tickSwamp(), 50).unref();
 
 server.listen(port, host, () => {
   console.log(`ElderValley server listening on ${host}:${port}`);

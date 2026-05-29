@@ -598,6 +598,7 @@ export default class BaseGameScene extends Phaser.Scene {
         this.scale.off("resize", this.handleHudResize);
       }
     });
+    this.createPlayerHpBar();
     this.updateInventoryHud();
     this.updateClockHud();
     this.updateCurrencyHud();
@@ -612,6 +613,71 @@ export default class BaseGameScene extends Phaser.Scene {
       this.multiplayer = new MultiplayerSystem(this);
     }
     this.createProfilePersistence();
+  }
+
+  createPlayerHpBar() {
+    this.playerMaxHp = 100;
+    this.playerHp = this.playerHp ?? this.playerMaxHp;
+    this.playerInvincible = false;
+
+    const BAR_W = 160;
+    const BAR_H = 14;
+    const X = 16;
+    const Y = 72;
+    const DEPTH = 3000;
+
+    this.hpLabel = this.add.text(X, Y - 2, "❤ HP", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#ff6666", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+
+    this.hpBarBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH);
+    this.hpBarFg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    this.hpBarBg.fillStyle(0x1a0000, 0.85);
+    this.hpBarBg.fillRoundedRect(X + 38, Y - 1, BAR_W, BAR_H + 2, 4);
+
+    this.hpValueText = this.add.text(X + 38 + BAR_W + 6, Y - 1, "", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#ffcccc", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+
+    this._hpBarW = BAR_W;
+    this._hpBarX = X + 38;
+    this._hpBarY = Y;
+    this.updatePlayerHpBar();
+  }
+
+  updatePlayerHpBar() {
+    if (!this.hpBarFg) return;
+    const pct = Math.max(0, Math.min(1, this.playerHp / this.playerMaxHp));
+    const color = pct > 0.5 ? 0x44dd44 : pct > 0.25 ? 0xffaa00 : 0xff2222;
+    this.hpBarFg.clear();
+    this.hpBarFg.fillStyle(color, 1);
+    this.hpBarFg.fillRoundedRect(this._hpBarX, this._hpBarY - 1, Math.max(0, this._hpBarW * pct), 15, 4);
+    this.hpValueText?.setText(`${Math.max(0, this.playerHp)}/${this.playerMaxHp}`);
+  }
+
+  takeDamage(amount) {
+    if (this.playerInvincible || this.playerHp <= 0) return;
+    this.playerHp = Math.max(0, this.playerHp - amount);
+    this.updatePlayerHpBar();
+    // Flash vermelho no player
+    if (this.player) {
+      this.player.setTint(0xff4444);
+      this.time.delayedCall(200, () => this.player?.clearTint());
+    }
+    // Invencibilidade temporária
+    this.playerInvincible = true;
+    this.time.delayedCall(600, () => { this.playerInvincible = false; });
+    if (this.playerHp <= 0) {
+      this.onPlayerDeath();
+    }
+  }
+
+  onPlayerDeath() {
+    // Padrão para cenas sem mecânica de morte: apenas reenchere HP
+    this.playerHp = this.playerMaxHp;
+    this.updatePlayerHpBar();
   }
 
   layoutHud(width) {
