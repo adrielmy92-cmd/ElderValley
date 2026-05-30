@@ -19,6 +19,13 @@ No Railway isso funciona para teste rapido, mas pode sumir em redeploy se nao ti
 Para teste de stress inicial, esta ok.
 Para producao, o ideal e trocar esse storage por Postgres ou adicionar um Railway Volume.
 
+## API do Railway
+
+Temos acesso à API do Railway via token pessoal. O token está salvo em `.env` como `RAILWAY_API_TOKEN`.
+Docs: https://docs.railway.com/reference/public-api
+
+Com a API é possível fazer deploy, ver logs e gerenciar serviços programaticamente via CLI (`railway`) ou HTTP.
+
 ## Variaveis
 
 O Railway define `PORT` automaticamente. Nao precisa criar essa variavel manualmente.

@@ -52,12 +52,19 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=2");
     this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=2");
     this.loadImage("bee-map", "./assets/maps/bee-map.jpg?v=1");
-    this.loadSheet("bee-boss-idle-sheet", "./assets/sprites/bee-boss-idle-sheet.png?v=1", 102, 102);
+    this.loadSheet("bee-boss-idle-sheet",   "./assets/sprites/bee-boss-idle-sheet.png?v=1", 102, 102);
+    this.loadSheet("bee-soldier-sheet",     "./assets/sprites/bee-soldier-sheet.png", 60, 60);
     this.loadAudio("bee-battle",      "./assets/audio/bee-battle.ogg");
     this.loadAudio("bee-sting-fire",  "./assets/audio/bee-sting-fire.ogg");
     this.loadAudio("bee-hit",         "./assets/audio/bee-hit.ogg");
     this.loadAudio("bee-boss-death",  "./assets/audio/bee-boss-death.ogg");
-    this.loadAudio("bee-queen-voice", "./assets/audio/bee-queen-voice.mp3");
+    this.loadAudio("bee-queen-voice",    "./assets/audio/bee-queen-voice.mp3");
+    this.loadAudio("bee-queen-soldiers", "./assets/audio/bee-queen-soldiers.mp3");
+    ["bee-queen-aggro","bee-queen-phase2","bee-queen-phase3",
+     "bee-queen-t1","bee-queen-t2","bee-queen-t3",
+     "bee-queen-t4","bee-queen-t5","bee-queen-t6",
+     "bee-queen-t7","bee-queen-t8","bee-queen-t9"
+    ].forEach(k => this.loadAudio(k, `./assets/audio/${k}.mp3`));
     this.loadSheet("swamp-troll", "./assets/sprites/swamp-troll-sheet.png?v=1", 86, 86);
     this.loadSheet("swamp-attacks", "./assets/sprites/swamp-attacks-sheet.png?v=1", 192, 160);
     this.loadAudio("swamp-troll-aggro",  "./assets/audio/swamp-troll-aggro.ogg");

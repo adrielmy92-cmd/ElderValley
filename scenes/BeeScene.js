@@ -3,7 +3,7 @@ import WorldScene from "./WorldScene.js?v=222";
 const BEE_W = 2752;
 const BEE_H = 1536;
 
-const BOSS_MAX_HP       = 6000;
+const BOSS_MAX_HP       = 12000;
 const BOSS_RESPAWN_MS   = 28000;
 const BOSS_FIREBALL_DMG = 200;
 const BOSS_STING_DMG    = 55;
@@ -12,7 +12,7 @@ const BOSS_DIVE_DMG     = 130;
 const BOSS_DASH_DMG     = 65;
 
 const PHASE_CFG = {
-  1: { speed: 110, atkInterval: 1800, orbitSpeed: 0,      atkRange: 480, specialInterval: Infinity },
+  1: { speed: 110, atkInterval: 1800, orbitSpeed: 0,      atkRange: 480, specialInterval: 18000 },
   2: { speed: 145, atkInterval: 1300, orbitSpeed: 0.0012, atkRange: 540, specialInterval: 11000 },
   3: { speed: 185, atkInterval: 900,  orbitSpeed: 0.0020, atkRange: 600, specialInterval: 7000  }
 };
@@ -68,12 +68,194 @@ export default class BeeScene extends WorldScene {
     this.initPerformanceOptimizations();
 
     this._spawnBeeBoss();
+    this._initSoldiers();
     this._startAmbient();
+  }
+
+  // ─── SOLDADOS ────────────────────────────────────────────────────────────────
+
+  _initSoldiers() {
+    if (!this.anims.exists("bee-soldier-idle")) {
+      this.anims.create({
+        key: "bee-soldier-idle",
+        frames: Array.from({ length: 8 }, (_, i) => ({ key: "bee-soldier-sheet", frame: i })),
+        frameRate: 8, repeat: -1
+      });
+    }
+    this._soldiers = [];
+    this._soldierSpawnCooldown = 0;
+  }
+
+  _spawnSoldier(fromX, fromY) {
+    if (!fromX) {
+      // Aparece de um dos lados do mapa
+      const side = Math.random() < 0.5;
+      fromX = side ? 80 : BEE_W - 80;
+      fromY = Phaser.Math.Between(BEE_H * 0.2, BEE_H * 0.8);
+    }
+
+    const s = this.physics.add.sprite(fromX, fromY, "bee-soldier-sheet", 0)
+      .setScale(1.6).setDepth(fromY + 30);
+    s.body.setSize(42, 42).setOffset(9, 9);
+    s.body.setCollideWorldBounds(true);
+    s.play("bee-soldier-idle");
+
+    s.hp        = 350;
+    s.maxHp     = 350;
+    s.dead      = false;
+    s.lastAtk   = 0;
+    s.lastSting = 0;
+
+    // Entrada dramática — aparece pequeno e cresce
+    s.setScale(0.2).setAlpha(0);
+    this.tweens.add({ targets: s, scaleX: 1.6, scaleY: 1.6, alpha: 1, duration: 400, ease: "Back.out" });
+
+    // Partículas de entrada
+    for (let i = 0; i < 8; i++) {
+      const g = this.add.graphics().setDepth(fromY + 50);
+      g.fillStyle(0xffcc00, 1);
+      g.fillCircle(0, 0, Phaser.Math.Between(3, 7));
+      g.setPosition(fromX, fromY);
+      const a = Math.random() * Math.PI * 2, spd = Phaser.Math.Between(40, 100);
+      this.tweens.add({ targets: g, x: g.x + Math.cos(a)*spd, y: g.y + Math.sin(a)*spd, alpha: 0, duration: 500, onComplete: () => g.destroy() });
+    }
+
+    this.physics.add.collider(s, this.player, () => {
+      if (s.dead || !this.player) return;
+      const now = this.time.now;
+      if (now - s.lastAtk < 900) return;
+      s.lastAtk = now;
+      this.takeDamage(30);
+      this.cameras.main.shake(120, 0.007);
+    });
+
+    if (this.solids) this.physics.add.collider(s, this.solids);
+
+    this._soldiers.push(s);
+
+    // HP bar do soldado
+    s.hpBar = this.add.graphics().setDepth(s.depth + 5);
+    this._drawSoldierHpBar(s);
+
+    return s;
+  }
+
+  _drawSoldierHpBar(s) {
+    if (!s.hpBar) return;
+    s.hpBar.clear();
+    if (s.dead || !s.active) return;
+    const W = 44, H = 5;
+    const bx = s.x - W / 2, by = s.y - 58;
+    s.hpBar.fillStyle(0x111111, 0.85);
+    s.hpBar.fillRect(bx, by, W, H);
+    const pct = Math.max(0, s.hp / s.maxHp);
+    s.hpBar.fillStyle(pct > 0.5 ? 0xffdd00 : 0xff4400, 1);
+    s.hpBar.fillRect(bx, by, W * pct, H);
+  }
+
+  _hitSoldier(soldier, amount) {
+    if (!soldier || soldier.dead) return;
+    soldier.hp -= amount;
+    soldier.setTintFill(0xffffff);
+    this.time.delayedCall(100, () => { if (!soldier.dead) soldier.clearTint(); });
+    this._drawSoldierHpBar(soldier);
+    if (soldier.hp <= 0) this._killSoldier(soldier);
+  }
+
+  _killSoldier(soldier) {
+    if (!soldier || soldier.dead) return;
+    soldier.dead = true;
+    soldier.body.enable = false;
+    soldier.hpBar?.destroy();
+    this.cameras.main.shake(180, 0.008);
+    this.tweens.add({
+      targets: soldier, alpha: 0, scaleX: 2.2, scaleY: 2.2,
+      duration: 400, ease: "Power2",
+      onComplete: () => { soldier.destroy(); }
+    });
+    for (let i = 0; i < 10; i++) {
+      const g = this.add.graphics().setDepth(soldier.y + 100);
+      g.fillStyle(i % 2 === 0 ? 0xffcc00 : 0xff8800, 1);
+      g.fillCircle(0, 0, Phaser.Math.Between(3, 8));
+      g.setPosition(soldier.x + Phaser.Math.Between(-20, 20), soldier.y + Phaser.Math.Between(-20, 10));
+      const a = Math.random() * Math.PI * 2;
+      this.tweens.add({ targets: g, x: g.x + Math.cos(a)*80, y: g.y + Math.sin(a)*80 - 30, alpha: 0, duration: 500, onComplete: () => g.destroy() });
+    }
+    this._soldiers = this._soldiers.filter(s => s !== soldier);
+  }
+
+  _callSoldiers(count) {
+    const boss = this.beeBoss;
+    if (!boss) return;
+    this._queenSpeak("bee-queen-soldiers", "SOLDADOS!! ATAQUEM!!");
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * 350, () => {
+        if (!boss.dead) this._spawnSoldier();
+      });
+    }
+  }
+
+  _updateSoldiers(time) {
+    if (!this.player || !this._soldiers) return;
+
+    const furiosos = this.beeBoss?.state === "vulnerable" || this.beeBoss?.phase === 3;
+    const speed    = furiosos ? 155 : 120;
+
+    for (const s of [...this._soldiers]) {
+      if (!s.active || s.dead) continue;
+
+      const dx   = this.player.x - s.x;
+      const dy   = this.player.y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      s.body.setVelocity((dx / dist) * speed, (dy / dist) * speed);
+      s.setFlipX(dx > 0);
+      s.setDepth(s.y + 30);
+      this._drawSoldierHpBar(s);
+
+      // Tint de fúria
+      if (furiosos && !s._furious) { s._furious = true; s.setTint(0xff5500); }
+      else if (!furiosos && s._furious) { s._furious = false; s.clearTint(); }
+
+      // Ferrão do soldado
+      if (dist < 380 && time - s.lastSting > 2500) {
+        s.lastSting = time;
+        const angle = Math.atan2(dy, dx);
+        this._fireSoldierSting(s.x, s.y, angle);
+      }
+    }
+  }
+
+  _fireSoldierSting(fromX, fromY, angle) {
+    const g = this.add.graphics().setDepth(fromY + 15);
+    g.fillStyle(0xffaa00, 1);
+    g.fillEllipse(0, 0, 14, 8);
+
+    const sting = this.physics.add.image(fromX, fromY, "__DEFAULT").setAlpha(0);
+    sting.body.setAllowGravity(false);
+    sting.body.setSize(10, 8);
+    sting.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+
+    const upd = () => {
+      if (!sting.active) { g.destroy(); return; }
+      g.setPosition(sting.x, sting.y).setRotation(angle);
+    };
+    this.events.on("update", upd);
+    sting.once("destroy", () => this.events.off("update", upd));
+
+    this.physics.add.overlap(this.player, sting, () => {
+      if (!sting.active) return;
+      sting.destroy(); g.destroy();
+      this.takeDamage(20);
+      this.cameras.main.shake(100, 0.005);
+    });
+    if (this.solids) this.physics.add.collider(sting, this.solids, () => { if (sting.active) { sting.destroy(); g.destroy(); } });
+    this.time.delayedCall(2000, () => { if (sting.active) { sting.destroy(); g.destroy(); } });
   }
 
   _startAmbient() {
     if (this.cache.audio.exists("bee-ambient")) {
-      this._ambientMusic = this.sound.add("bee-ambient", { loop: true, volume: 0.3 });
+      this._ambientMusic = this.sound.add("bee-ambient", { loop: true, volume: 0.12 });
       this._ambientMusic.play();
       this.events.once("shutdown", () => this._ambientMusic?.stop());
     }
@@ -86,7 +268,7 @@ export default class BeeScene extends WorldScene {
       this._battleMusic = this.sound.add("bee-battle", { loop: true, volume: 0 });
       this._battleMusic.play();
       // Fade in da música de batalha
-      this.tweens.add({ targets: this._battleMusic, volume: 0.55, duration: 1500 });
+      this.tweens.add({ targets: this._battleMusic, volume: 0.12, duration: 1500 });
       this.events.once("shutdown", () => this._battleMusic?.stop());
     }
   }
@@ -140,7 +322,7 @@ export default class BeeScene extends WorldScene {
 
     const boss = this.physics.add.sprite(x, y, "bee-boss-idle-sheet", 0)
       .setDepth(y + 40).setScale(2.8);
-    boss.body.setSize(70, 70).setOffset(16, 16);
+    boss.body.setSize(84, 80).setOffset(9, 11);
     boss.body.setCollideWorldBounds(true);
     boss.body.setImmovable(true);
     boss.play("bee-boss-idle");
@@ -163,10 +345,23 @@ export default class BeeScene extends WorldScene {
     boss.hpFg = this.add.graphics().setDepth(9001);
     this._drawBossHpBar(boss);
 
-    this._bossLabel = this.add.text(x, y - 220, "Rainha das Abelhas", {
+    this._bossLabel = this.add.text(x, y - 220, "Queen of Bees", {
       fontFamily: "monospace", fontSize: "14px",
       color: "#ffdd44", stroke: "#3a2000", strokeThickness: 4
     }).setOrigin(0.5).setDepth(9002);
+
+    // ── Barra de vida no topo da tela ──────────────────────────────────────────
+    const cw = this.cameras.main.width;
+    const BAR_W = 340, BAR_H = 20;
+    const tbx = (cw - BAR_W) / 2;
+
+    boss.topBg = this.add.graphics().setDepth(9950).setScrollFactor(0);
+    boss.topFg = this.add.graphics().setDepth(9951).setScrollFactor(0);
+    boss.topLabel = this.add.text(cw / 2, 12, "⚔  Rainha das Abelhas  ⚔", {
+      fontFamily: "monospace", fontSize: "13px",
+      color: "#ffdd44", stroke: "#1a0a00", strokeThickness: 4
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(9952);
+    this._drawTopHpBar(boss);
 
     this.beeBoss = boss;
   }
@@ -174,6 +369,7 @@ export default class BeeScene extends WorldScene {
   // ─── HP BAR ──────────────────────────────────────────────────────────────────
 
   _drawBossHpBar(boss) {
+    this._drawTopHpBar(boss);
     if (!boss.hpBg || !boss.hpFg) return;
     const W = 120, H = 10;
     const bx = boss.x - W / 2;
@@ -189,6 +385,32 @@ export default class BeeScene extends WorldScene {
     boss.hpFg.fillRoundedRect(bx, by, Math.max(0, W * pct), H, 3);
     boss.hpBg.lineStyle(2, 0xffffff, 0.45);
     [0.66, 0.33].forEach(t => boss.hpBg.strokeRect(bx + W * t - 1, by, 2, H));
+  }
+
+  _drawTopHpBar(boss) {
+    if (!boss.topBg || !boss.topFg) return;
+    const cw  = this.cameras.main.width;
+    const BAR_W = 340, BAR_H = 20;
+    const bx  = (cw - BAR_W) / 2;
+    const by  = 16;
+
+    boss.topBg.clear();
+    boss.topFg.clear();
+
+    if (boss.dead || !boss.visible) { boss.topLabel?.setVisible(false); return; }
+    boss.topLabel?.setVisible(true);
+
+    boss.topBg.fillStyle(0x000000, 0.78);
+    boss.topBg.fillRoundedRect(bx - 4, by - 4, BAR_W + 8, BAR_H + 8, 6);
+    boss.topBg.lineStyle(2, 0xffdd44, 0.5);
+    boss.topBg.strokeRoundedRect(bx - 4, by - 4, BAR_W + 8, BAR_H + 8, 6);
+    boss.topBg.lineStyle(2, 0xffffff, 0.25);
+    [0.66, 0.33].forEach(t => boss.topBg.strokeRect(bx + BAR_W * t - 1, by, 2, BAR_H));
+
+    const pct   = Math.max(0, boss.hp / boss.maxHp);
+    const color = pct > 0.66 ? 0xffdd00 : pct > 0.33 ? 0xff8800 : 0xff2200;
+    boss.topFg.fillStyle(color, 1);
+    boss.topFg.fillRoundedRect(bx, by, Math.max(0, BAR_W * pct), BAR_H, 4);
   }
 
   // ─── FASE ────────────────────────────────────────────────────────────────────
@@ -215,26 +437,139 @@ export default class BeeScene extends WorldScene {
     };
   }
 
-  // Voz da rainha — toca uma vez por sessão de aggro
   _triggerQueenVoice() {
     if (this._voicePlayed) return;
     this._voicePlayed = true;
-    // Delay leve para não sobrepor o início da música
     this.time.delayedCall(1200, () => {
-      this._sfx("bee-queen-voice", 0.9);
-      // Legenda da fala
-      const cx = this.cameras.main.centerX;
-      const sub = this.add.text(cx, this.cameras.main.centerY + 120,
-        "\" Sua presença aqui é uma afronta! \"", {
-          fontFamily: "monospace", fontSize: "16px",
-          color: "#ffee88", stroke: "#3a2000", strokeThickness: 4,
-          backgroundColor: "#00000066", padding: { x: 12, y: 6 }
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(9990).setAlpha(0);
-      this.tweens.add({ targets: sub, alpha: 1, duration: 300 });
-      this.time.delayedCall(3500, () => {
-        this.tweens.add({ targets: sub, alpha: 0, duration: 500, onComplete: () => sub.destroy() });
+      this._queenSpeak("bee-queen-aggro", "Sua presença aqui é uma AFRONTA à Colmeia!");
+    });
+  }
+
+  _queenSpeak(audioKey, line) {
+    if (this._queenSpeaking) return;
+    this._queenSpeaking = true;
+
+    if (this.cache.audio.exists(audioKey)) {
+      const snd = this.sound.add(audioKey, { volume: 1.0 });
+      snd.once("complete", () => { this._queenSpeaking = false; });
+      snd.once("stop",     () => { this._queenSpeaking = false; });
+      snd.play();
+    } else {
+      this._queenTTS(line, () => { this._queenSpeaking = false; });
+    }
+
+    this._showQueenScreamEffect();
+    this._showQueenSubtitle(`" ${line} "`);
+  }
+
+  _queenTTS(text, onDone) {
+    if (!window.speechSynthesis) { onDone?.(); return; }
+    window.speechSynthesis.cancel();
+    const u    = new SpeechSynthesisUtterance(text);
+    u.lang     = "pt-BR";
+    u.pitch    = 0.4;
+    u.rate     = 0.72;
+    u.volume   = 1.0;
+    u.onend    = () => onDone?.();
+    u.onerror  = () => onDone?.();
+    const speak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const pick = voices.find(v => v.lang.startsWith("pt")) ?? voices[0];
+      if (pick) u.voice = pick;
+      window.speechSynthesis.speak(u);
+    };
+    if (window.speechSynthesis.getVoices().length > 0) speak();
+    else window.speechSynthesis.addEventListener("voiceschanged", speak, { once: true });
+  }
+
+  _showQueenScreamEffect() {
+    const boss = this.beeBoss;
+    if (!boss || boss.dead) return;
+    const bx = boss.x, by = boss.y;
+
+    // Burst lines radiating outward
+    const numRays = 14;
+    for (let i = 0; i < numRays; i++) {
+      const angle = (Math.PI * 2 / numRays) * i + (Math.random() * 0.2);
+      const g = this.add.graphics().setDepth(by + 310);
+      const inner = 58 + Math.random() * 12;
+      const len   = 50 + Math.random() * 60;
+      const thick = Math.random() < 0.4 ? 4 : 2;
+      g.lineStyle(thick, i % 2 === 0 ? 0xffee00 : 0xff9900, 1);
+      g.beginPath();
+      g.moveTo(bx + Math.cos(angle) * inner, by + Math.sin(angle) * inner);
+      g.lineTo(bx + Math.cos(angle) * (inner + len), by + Math.sin(angle) * (inner + len));
+      g.strokePath();
+      this.tweens.add({ targets: g, alpha: 0, scaleX: 1.6, scaleY: 1.6, duration: 550 + Math.random() * 200, ease: "Power2", onComplete: () => g.destroy() });
+    }
+
+    // Expanding shockwave rings
+    [0, 120, 260].forEach((delay, i) => {
+      this.time.delayedCall(delay, () => {
+        const ring = this.add.graphics().setDepth(by + 308);
+        ring.lineStyle(5 - i, i === 0 ? 0xffee00 : 0xffaa00, 1);
+        ring.strokeCircle(bx, by, 48 + i * 8);
+        this.tweens.add({ targets: ring, scaleX: 4, scaleY: 4, alpha: 0, duration: 650, ease: "Power2", onComplete: () => ring.destroy() });
       });
     });
+
+    // Floating "!" shards
+    ["!", "!!", "!!!"].forEach((str, i) => {
+      const angle = -Math.PI / 2 + (i - 1) * 0.55;
+      const dist  = 80 + i * 20;
+      const ex = this.add.text(bx + Math.cos(angle) * dist, by + Math.sin(angle) * dist, str, {
+        fontFamily: "monospace", fontSize: `${18 + i * 4}px`,
+        color: "#ffee00", stroke: "#cc5500", strokeThickness: 4
+      }).setOrigin(0.5).setDepth(by + 315);
+      this.tweens.add({
+        targets: ex,
+        x: ex.x + Math.cos(angle) * 55,
+        y: ex.y + Math.sin(angle) * 55 - 30,
+        alpha: 0, scaleX: 1.8, scaleY: 1.8,
+        duration: 800, delay: i * 80, ease: "Power2",
+        onComplete: () => ex.destroy()
+      });
+    });
+
+    // Boss pulse
+    this.tweens.add({ targets: boss, scaleX: 3.3, scaleY: 3.3, duration: 140, yoyo: true, repeat: 2, ease: "Sine.inOut", onComplete: () => { if (!boss.dead) boss.setScale(2.8); } });
+  }
+
+  _showQueenSubtitle(text) {
+    const cx = this.cameras.main.centerX;
+    const cy = this.cameras.main.centerY;
+    const sub = this.add.text(cx, cy + 130, text, {
+      fontFamily: "monospace", fontSize: "17px",
+      color: "#ffee88", stroke: "#3a2000", strokeThickness: 5,
+      backgroundColor: "#000000aa", padding: { x: 16, y: 8 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9992).setAlpha(0).setScale(0.85);
+    this.tweens.add({ targets: sub, alpha: 1, scaleX: 1, scaleY: 1, duration: 280, ease: "Back.out" });
+    this.time.delayedCall(3800, () => {
+      this.tweens.add({ targets: sub, alpha: 0, y: cy + 110, duration: 500, ease: "Power2", onComplete: () => sub.destroy() });
+    });
+  }
+
+  _triggerBattleTaunt(phase) {
+    const pool = {
+      1: [
+        { k: "bee-queen-t1", t: "Intruso tolo! A Colmeia não perdoa invasores!" },
+        { k: "bee-queen-t2", t: "Sua espécie não é nada além de um inseto a ser esmagado!" },
+        { k: "bee-queen-t3", t: "Sinta a ira da Colmeia, sua pequena praga!" },
+      ],
+      2: [
+        { k: "bee-queen-t4", t: "Você está começando a me IRRITAR!" },
+        { k: "bee-queen-t5", t: "Todo o Enxame observa enquanto eu te destruo!" },
+        { k: "bee-queen-t6", t: "Você realmente achou que poderia machucar uma rainha?!" },
+      ],
+      3: [
+        { k: "bee-queen-t7", t: "Veja o que você fez! Vou te fazer SOFRER!" },
+        { k: "bee-queen-t8", t: "Seus gritos vão ecoar por esta Colmeia para sempre!" },
+        { k: "bee-queen-t9", t: "Nada pode te salvar agora. Nem mesmo os deuses!" },
+      ]
+    };
+    const lines = pool[phase] ?? pool[1];
+    const { k, t } = lines[Math.floor(Math.random() * lines.length)];
+    this._queenSpeak(k, t);
   }
 
   // Só verifica stuck quando o boss está ativamente se movendo
@@ -269,6 +604,17 @@ export default class BeeScene extends WorldScene {
   _updateBeeBoss(time, delta) {
     const boss = this.beeBoss;
     if (!boss || boss.dead || !this.player) return;
+
+    // Separação forçada — garante que o player não atravessa a boss
+    const PUSH_RADIUS = 145;
+    const _pdx = this.player.x - boss.x;
+    const _pdy = this.player.y - boss.y;
+    const _pd  = Math.sqrt(_pdx * _pdx + _pdy * _pdy);
+    if (_pd > 0 && _pd < PUSH_RADIUS) {
+      const overlap = PUSH_RADIUS - _pd;
+      this.player.x += (_pdx / _pd) * overlap;
+      this.player.y += (_pdy / _pd) * overlap;
+    }
 
     const dx   = this.player.x - boss.x;
     const dy   = this.player.y - boss.y;
@@ -307,24 +653,43 @@ export default class BeeScene extends WorldScene {
       return;
     }
 
+    if (boss.state === "special_burst") {
+      boss.body.setVelocity(0, 0);
+      boss.setDepth(boss.y + 40);
+      this._drawBossHpBar(boss);
+      this._bossLabel?.setPosition(boss.x, boss.y - 220);
+      return;
+    }
+
     // ── aggro ──
     if (dist < 560 && boss.state === "patrol") {
       boss.state = "chase";
+      boss.lastSpecial = time;
       this._startBattleMusic();
       this._triggerQueenVoice();
+      this._lastTauntTime = time;
     }
     if (dist > 900 && boss.state === "chase") {
       boss.state = "patrol";
       this._stopBattleMusic();
     }
 
+    // ── taunts periódicos durante batalha ──
+    if (boss.state === "chase" && time - (this._lastTauntTime ?? 0) > 28000) {
+      this._lastTauntTime = time;
+      this._triggerBattleTaunt(boss.phase);
+    }
+
     const cfg = PHASE_CFG[boss.phase];
 
     if (boss.state === "chase") {
       // Especial (fase 2+)
-      if (boss.phase >= 2 && time - boss.lastSpecial > cfg.specialInterval) {
+      if (time - boss.lastSpecial > cfg.specialInterval) {
         boss.lastSpecial = time;
-        Math.random() < 0.5 ? this._doRoyalDive() : this._doFranticDash();
+        const r = Math.random();
+        if (boss.phase === 1 || r < 0.33) this._doRadialBurst();
+        else if (r < 0.66) this._doRoyalDive();
+        else this._doFranticDash();
         return;
       }
 
@@ -416,7 +781,7 @@ export default class BeeScene extends WorldScene {
     boss.body.setVelocity(0, 0);
 
     // Aviso de nome do especial
-    this._showSpecialAnnounce("Mergulho Real!");
+    this._showSpecialAnnounce("Royal Dive!");
 
     // Sobe e aumenta
     const origY = boss.y;
@@ -523,7 +888,7 @@ export default class BeeScene extends WorldScene {
     boss.state = "special";
     boss.body.setVelocity(0, 0);
 
-    this._showSpecialAnnounce("Dash Frenético!");
+    this._showSpecialAnnounce("Frantic Dash!");
 
     // Gera waypoints: 4 aleatórios + 1 em cima do player (todos com margem das bordas)
     const M = 200;
@@ -615,6 +980,88 @@ export default class BeeScene extends WorldScene {
     }
   }
 
+  // ─── ESPECIAL 3: EXPLOSÃO RADIAL ─────────────────────────────────────────────
+
+  _doRadialBurst() {
+    const boss = this.beeBoss;
+    if (!boss || boss.dead) return;
+
+    boss.state = "special_burst";
+    boss.body.setVelocity(0, 0);
+    this._showSpecialAnnounce("Fúria do Enxame!");
+    boss.setTint(0xff3300);
+
+    // Chama 1-2 soldados durante o burst pra pressionar o player
+    if (this._soldiers.length < 4) {
+      const qty = boss.phase >= 3 ? 2 : 1;
+      this.time.delayedCall(400, () => this._callSoldiers(qty));
+    }
+
+    // Pulsa pra avisar que vai disparar
+    this.tweens.add({ targets: boss, alpha: 0.3, duration: 120, yoyo: true, repeat: 4,
+      onComplete: () => { if (!boss.dead) boss.setAlpha(1); }
+    });
+
+    const waves = boss.phase >= 3 ? 7 : 5;
+    for (let w = 0; w < waves; w++) {
+      this.time.delayedCall(600 + w * 650, () => {
+        if (!boss.dead) this._fireBurstWave(boss.x, boss.y, w);
+      });
+    }
+    this.time.delayedCall(600 + waves * 650 + 400, () => {
+      if (!boss.dead) this._enterVulnerable(1600);
+    });
+  }
+
+  _fireBurstWave(x, y, waveIndex) {
+    const boss = this.beeBoss;
+    this.cameras.main.shake(180, 0.014);
+    this.tweens.add({
+      targets: boss, scaleX: 3.5, scaleY: 3.5, duration: 90, yoyo: true,
+      onComplete: () => { if (!boss.dead) boss.setScale(2.8); }
+    });
+
+    // Anel 1 — 26 projéteis
+    const count  = 26;
+    const offset = waveIndex * (Math.PI / count);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + offset;
+      this._fireSingleSting(x, y, angle);
+    }
+
+    // Anel 2 — 26 projéteis rotacionados (meio espaço)
+    this.time.delayedCall(120, () => {
+      if (!this.beeBoss || this.beeBoss.dead) return;
+      const halfStep = Math.PI / count;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + offset + halfStep;
+        this._fireSingleSting(x, y, angle);
+      }
+    });
+
+    // Salva de rastreamento — projéteis espalhados em torno do player
+    this.time.delayedCall(240, () => {
+      if (!this.beeBoss || this.beeBoss.dead || !this.player) return;
+      const toPlayer = Math.atan2(this.player.y - y, this.player.x - x);
+      const spread   = 6;
+      const arc      = Math.PI / 5;
+      for (let i = 0; i < spread; i++) {
+        const angle = toPlayer - arc / 2 + (arc / (spread - 1)) * i;
+        this._fireSingleSting(x, y, angle);
+      }
+    });
+
+    // Anéis visuais de expansão
+    [0, 80, 160].forEach((delay, idx) => {
+      this.time.delayedCall(delay, () => {
+        const ring = this.add.graphics().setDepth(y + 201);
+        ring.lineStyle(idx === 0 ? 7 : 3, idx === 0 ? 0xff4400 : 0xffcc00, 1);
+        ring.strokeCircle(x, y, 28);
+        this.tweens.add({ targets: ring, scaleX: 7, scaleY: 7, alpha: 0, duration: 550, ease: "Power2", onComplete: () => ring.destroy() });
+      });
+    });
+  }
+
   _drawDashPath(pts) {
     const objs = [];
     for (let i = 0; i < pts.length - 1; i++) {
@@ -679,7 +1126,7 @@ export default class BeeScene extends WorldScene {
     boss.state = "vulnerable";
     boss.setTint(0xffffaa);
 
-    const hint = this.add.text(boss.x, boss.y - 260, "EXPOSTO!", {
+    const hint = this.add.text(boss.x, boss.y - 260, "EXPOSED!", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#ffffaa", stroke: "#553300", strokeThickness: 3
     }).setOrigin(0.5).setDepth(9500);
@@ -731,7 +1178,8 @@ export default class BeeScene extends WorldScene {
     const sting = this.physics.add.image(fromX, fromY, "__DEFAULT").setAlpha(0);
     sting.body.setAllowGravity(false);
     sting.body.setSize(14, 10);
-    sting.setVelocity(Math.cos(angle) * 230, Math.sin(angle) * 230);
+    const spd = this.beeBoss?.state === "special_burst" ? 420 : 230;
+    sting.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
     sting.skipPerformanceCull = true;
 
     const updateG = () => {
@@ -748,7 +1196,16 @@ export default class BeeScene extends WorldScene {
       this.takeDamage(BOSS_STING_DMG);
       this.cameras.main.shake(160, 0.007);
     });
-    this.time.delayedCall(2200, () => { if (sting.active) { sting.destroy(); g.destroy(); } });
+
+    if (this.solids) {
+      this.physics.add.collider(sting, this.solids, () => {
+        if (!sting.active) return;
+        sting.destroy(); g.destroy();
+      });
+    }
+
+    const lifetime = this.beeBoss?.state === "special_burst" ? 4500 : 2200;
+    this.time.delayedCall(lifetime, () => { if (sting.active) { sting.destroy(); g.destroy(); } });
   }
 
   _fireHoneyPuddle(tx, ty) {
@@ -781,14 +1238,23 @@ export default class BeeScene extends WorldScene {
 
     const finalAmount = boss.state === "vulnerable" ? amount * 2 : amount;
 
-    boss.setTint(0xffffff);
-    this.time.delayedCall(120, () => {
-      if (!boss.dead) {
-        if (boss.phase === 2) boss.setTint(0xff9944);
-        else if (boss.phase === 3) boss.setTint(0xff5522);
-        else boss.clearTint();
-      }
+    const _phaseTint = () => {
+      if (boss.dead) return;
+      if (boss.phase === 2) boss.setTint(0xff9944);
+      else if (boss.phase === 3) boss.setTint(0xff5522);
+      else boss.clearTint();
+    };
+
+
+    // setTintFill pinta o sprite INTEIRO de branco — visível de verdade
+    boss.setTintFill(0xffffff);
+    this.time.delayedCall(80, () => {
+      if (!boss.dead) boss.setTintFill(0x000000); // preto por 40ms — cria contraste
     });
+    this.time.delayedCall(120, () => {
+      if (!boss.dead) boss.setTintFill(0xffffff); // branco de novo
+    });
+    this.time.delayedCall(220, () => _phaseTint());
 
     this._sfx("bee-hit", 0.55);
     this._showBossHitEffect(boss.x, boss.y);
@@ -808,15 +1274,21 @@ export default class BeeScene extends WorldScene {
 
   _enterPhase(phase) {
     const boss = this.beeBoss;
-    const labels = { 2: "RAIVA!",        3: "FÚRIA TOTAL!" };
-    const colors = { 2: "#ff8800",       3: "#ff2200" };
-    const tints  = { 2: 0xff9944,        3: 0xff5522 };
-    const shakes = { 2: 0.014,           3: 0.024 };
+    const labels  = { 2: "RAGE!",         3: "TOTAL FURY!" };
+    const colors  = { 2: "#ff8800",       3: "#ff2200" };
+    const tints   = { 2: 0xff9944,        3: 0xff5522 };
+    const shakes  = { 2: 0.014,           3: 0.024 };
+    const taunts  = {
+      2: "Você ousa me ferir?! O Enxame vai te DEVORAR vivo!",
+      3: "CHEGA!! Vou te RASGAR com o meu próprio ferrão!!"
+    };
 
     this.cameras.main.shake(500, shakes[phase]);
     this.cameras.main.flash(400, phase === 3 ? 255 : 200, phase === 3 ? 20 : 80, 0, true);
-    // Toca voz novamente nas transições de fase
-    this.time.delayedCall(600, () => this._sfx("bee-queen-voice", 0.85));
+    this.time.delayedCall(600, () => {
+      const audioKey = { 2: "bee-queen-phase2", 3: "bee-queen-phase3" }[phase];
+      this._queenSpeak(audioKey, taunts[phase]);
+    });
 
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
@@ -834,6 +1306,12 @@ export default class BeeScene extends WorldScene {
     boss.setTint(tints[phase]);
 
     if (boss.state !== "dead") boss.state = "chase";
+
+    // Chama soldados nas transições de fase
+    const soldierCount = { 2: 2, 3: 2 }[phase];
+    if (soldierCount && this._soldiers.length < 4) {
+      this.time.delayedCall(1200, () => this._callSoldiers(soldierCount));
+    }
   }
 
   _killBeeBoss() {
@@ -845,7 +1323,14 @@ export default class BeeScene extends WorldScene {
     boss.body.enable = false;
     boss.hpBg?.clear();
     boss.hpFg?.clear();
+    boss.topBg?.clear();
+    boss.topFg?.clear();
+    boss.topLabel?.setVisible(false);
     if (this._bossLabel) this._bossLabel.setVisible(false);
+    // Mata todos os soldados junto com a rainha
+    this.time.delayedCall(300, () => {
+      [...(this._soldiers ?? [])].forEach(s => this._killSoldier(s));
+    });
 
     this._sfx("bee-boss-death", 0.8);
     this._stopBattleMusic();
@@ -871,7 +1356,7 @@ export default class BeeScene extends WorldScene {
     }
 
     const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
-    const victory = this.add.text(cx, cy - 40, "Rainha derrotada!", {
+    const victory = this.add.text(cx, cy - 40, "Queen Defeated!", {
       fontFamily: "monospace", fontSize: "24px",
       color: "#ffdd44", stroke: "#3a2000", strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
@@ -880,10 +1365,12 @@ export default class BeeScene extends WorldScene {
     this.time.delayedCall(BOSS_RESPAWN_MS, () => {
       if (!boss) return;
       const pt = PATROL_PTS[0];
-      boss.dead    = false;
-      boss.state   = "patrol";
-      boss.phase   = 1;
-      boss.hp      = BOSS_MAX_HP;
+      boss.dead       = false;
+      boss.state      = "patrol";
+      boss.phase      = 1;
+      boss.hp         = BOSS_MAX_HP;
+      this._voicePlayed    = false;
+      this._lastTauntTime  = 0;
       boss.alpha   = 0;
       boss.setScale(2.8);
       boss.clearTint();
@@ -898,26 +1385,7 @@ export default class BeeScene extends WorldScene {
 
   // ─── EFEITOS ─────────────────────────────────────────────────────────────────
 
-  _showBossHitEffect(x, y) {
-    const colors = [0xffdd00, 0xff8800, 0xffee88, 0xffaa00];
-    for (let i = 0; i < 10; i++) {
-      const g = this.add.graphics().setDepth(y + 200);
-      g.fillStyle(colors[i % colors.length], 1);
-      g.fillCircle(0, 0, Phaser.Math.Between(3, 8));
-      g.setPosition(x + Phaser.Math.Between(-28, 28), y + Phaser.Math.Between(-32, 12));
-      const a = Math.random() * Math.PI * 2, spd = Phaser.Math.Between(40, 120);
-      this.tweens.add({
-        targets: g, x: g.x + Math.cos(a)*spd, y: g.y + Math.sin(a)*spd - 30,
-        alpha: 0, scaleX: 0.2, scaleY: 0.2,
-        duration: Phaser.Math.Between(260, 460), ease: "Power2",
-        onComplete: () => g.destroy()
-      });
-    }
-    const ring = this.add.graphics().setDepth(y + 199);
-    ring.lineStyle(3, 0xffdd00, 0.85);
-    ring.strokeCircle(x, y - 10, 12);
-    this.tweens.add({ targets: ring, scaleX: 2.8, scaleY: 2.8, alpha: 0, duration: 260, ease: "Power2", onComplete: () => ring.destroy() });
-  }
+  _showBossHitEffect(_x, _y) {}
 
   _showBossDmgNumber(x, y, amount, crit = false) {
     const txt = this.add.text(x, y, crit ? `⚡${amount}` : `-${amount}`, {
@@ -957,6 +1425,19 @@ export default class BeeScene extends WorldScene {
       projectile.destroy();
       this._hitBeeBoss(damage);
     });
+    // Projétil também acerta soldados
+    this._addSoldierOverlap(projectile, damage * 0.5);
+  }
+
+  _addSoldierOverlap(projectile, damage) {
+    for (const s of (this._soldiers ?? [])) {
+      if (!s.active || s.dead) continue;
+      this.physics.add.overlap(projectile, s, () => {
+        if (!projectile.active || s.dead) return;
+        projectile.destroy();
+        this._hitSoldier(s, damage);
+      });
+    }
   }
 
   // ─── PORTAL ──────────────────────────────────────────────────────────────────
@@ -987,13 +1468,13 @@ export default class BeeScene extends WorldScene {
     g.fillRect(x - 4, y - 130, 8, 26);
     g.fillStyle(0x7a5000, 1);
     g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Colmeia", {
+    this.add.text(x, y - 143, "Hive", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#ffdd88", stroke: "#3a2000", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y + 100);
     this.interactions.add({
       id: "bee_exit", x, y, promptY: y - 170,
-      promptText: "E Retornar ao Vilarejo", radius: 72,
+      promptText: "E Return to Village", radius: 72,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "beeGate" })
     });
   }
@@ -1005,7 +1486,7 @@ export default class BeeScene extends WorldScene {
     this.playerDying = true;
     this.player?.setVelocity(0, 0);
     const cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
-    const msg = this.add.text(cx, cy, "Você foi derrotada...", {
+    const msg = this.add.text(cx, cy, "You were defeated...", {
       fontFamily: "monospace", fontSize: "28px", color: "#ff4444",
       stroke: "#000000", strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
@@ -1026,5 +1507,6 @@ export default class BeeScene extends WorldScene {
     this.updateFenceEditor();
     this.updateBase();
     this._updateBeeBoss(time, delta);
+    this._updateSoldiers(time);
   }
 }

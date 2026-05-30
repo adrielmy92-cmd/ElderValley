@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head><title>WebP Extractor</title></head>
+<body>
+<canvas id='out'></canvas>
+<div id='status'>Processing...</div>
+<script>
+async function extractFrames() {
+  const FRAME_W = 86, FRAME_H = 86, NUM_FRAMES = 8;
+  const canvas = document.getElementById('out');
+  canvas.width = FRAME_W * NUM_FRAMES;
+  canvas.height = FRAME_H;
+  const ctx = canvas.getContext('2d');
+  
+  // Use ImageDecoder if available (Chromium 94+)
+  const resp = await fetch('./swamp_source.webp');
+  const blob = await resp.blob();
+  
+  if (typeof ImageDecoder !== 'undefined') {
+    const decoder = new ImageDecoder({ data: blob.stream(), type: 'image/webp' });
+    let frame = 0;
+    while (true) {
+      try {
+        const result = await decoder.decode({ frameIndex: frame });
+        const bmp = result.image;
+        ctx.drawImage(bmp, frame * FRAME_W, 0, FRAME_W, FRAME_H);
+        bmp.close();
+        frame++;
+        if (frame >= decoder.tracks.selectedTrack.frameCount) break;
+      } catch(e) { break; }
+    }
+    document.getElementById('status').textContent = 'Done! Right-click canvas to save as PNG. Frames: ' + frame;
+  } else {
+    // Fallback: draw animated img at different times
+    const img = new Image();
+    img.src = URL.createObjectURL(blob);
+    await new Promise(r => img.onload = r);
+    ctx.drawImage(img, 0, 0);
+    document.getElementById('status').textContent = 'ImageDecoder not available - single frame only. Canvas: ' + img.naturalWidth + 'x' + img.naturalHeight;
+  }
+  
+  // Auto-download
+  const link = document.createElement('a');
+  link.download = 'swamp-troll-sheet.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+extractFrames().catch(e => document.getElementById('status').textContent = 'Error: ' + e);
+</script>
+</body>
+</html>
