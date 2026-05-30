@@ -18,7 +18,8 @@ const SPAWNS = {
   shop: { x: 640, y: 328 },
   collector: { x: 930, y: 626 },
   forestGate: { x: 1460, y: -44 },
-  swampGate:  { x: 420,  y: 1220 }
+  swampGate:  { x: 420,  y: 1220 },
+  beeGate:    { x: 2500, y: 1220 }
 };
 
 const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
@@ -545,6 +546,7 @@ export default class WorldScene extends BaseGameScene {
     this.addCityTransition();
     this.addForestTransition();
     this.addSwampTransition();
+    this.addBeeTransition();
     this.addWorldBounds();
   }
 
@@ -3272,6 +3274,57 @@ export default class WorldScene extends BaseGameScene {
       promptText: "E Entrar no Pântano",
       radius: 72,
       onInteract: () => this.fadeTo("SwampScene", { spawnKey: "fromVillage" })
+    });
+  }
+
+  addBeeTransition() {
+    const x = 2500;
+    const y = 1260;
+
+    const g = this.add.graphics().setDepth(y + 80);
+
+    // Pilares de madeira âmbar com cera
+    g.fillStyle(0x8a6200, 1);
+    g.fillRect(x - 52, y - 96, 22, 96);
+    g.fillStyle(0xc49a20, 1);
+    g.fillRect(x - 56, y - 102, 30, 12);
+    g.fillStyle(0x8a6200, 1);
+    g.fillRect(x + 30, y - 96, 22, 96);
+    g.fillStyle(0xc49a20, 1);
+    g.fillRect(x + 26, y - 102, 30, 12);
+    g.fillStyle(0x6a4800, 1);
+    g.fillRect(x - 56, y - 112, 112, 18);
+
+    // Runas hexagonais douradas
+    g.fillStyle(0xffdd44, 0.6);
+    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
+      g.fillRect(rx - 4, ry - 4, 8, 8);
+    });
+
+    // Glow dourado/âmbar
+    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
+    pg.fillStyle(0xffcc00, 0.3);
+    pg.fillEllipse(x, y - 54, 56, 86);
+    pg.fillStyle(0xffee88, 0.14);
+    pg.fillEllipse(x, y - 54, 90, 120);
+
+    // Placa
+    g.fillStyle(0x5a3800, 1);
+    g.fillRect(x - 4, y - 130, 8, 26);
+    g.fillStyle(0x7a5000, 1);
+    g.fillRect(x - 52, y - 158, 104, 30);
+    this.add.text(x, y - 143, "Colmeia", {
+      fontFamily: "monospace", fontSize: "13px",
+      color: "#ffdd88", stroke: "#3a2000", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(y + 100);
+
+    this.interactions.add({
+      id: "door_bee_gate",
+      x, y,
+      promptY: y - 170,
+      promptText: "E Entrar na Colmeia",
+      radius: 72,
+      onInteract: () => this.fadeTo("BeeScene", { spawnKey: "fromVillage" })
     });
   }
 

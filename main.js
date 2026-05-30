@@ -15,6 +15,7 @@ import WindmillInteriorScene from "./scenes/WindmillInteriorScene.js?v=209";
 import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=209";
 import ForestScene from "./scenes/ForestScene.js?v=24";
 import SwampScene from "./scenes/SwampScene.js?v=17";
+import BeeScene from "./scenes/BeeScene.js?v=1";
 
 const config = {
   type: Phaser.AUTO,
@@ -43,6 +44,7 @@ const config = {
     CityScene,
     ForestScene,
     SwampScene,
+    BeeScene,
     HouseInteriorScene,
     CardShopHouseScene,
     MiddleForgeInteriorScene,
