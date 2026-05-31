@@ -1752,7 +1752,7 @@ function startHouseIndexer() {
 const BOSS_SCENE = "ForestScene";
 const BOSS_W = 1920;
 const BOSS_H = 1920;
-const BOSS_MAX_HP = 5000;
+const BOSS_MAX_HP = 10000;
 const BOSS_ORIGIN = { x: 960, y: 960 };
 
 const BOSS_PHASE_DATA = [
@@ -1848,7 +1848,14 @@ function bossSpawnProjectile(targetX, targetY) {
   const dx = targetX - bx;
   const dy = targetY - by;
   const d = Math.hypot(dx, dy) || 1;
-  sendToArena({ type: "bossAttack", event: "projectile", bx: Math.round(bx), by: Math.round(by), dx: dx / d, dy: dy / d });
+  const ndx = dx / d, ndy = dy / d;
+  const SPREAD = 0.32; // ~18 graus
+  const angles = [-SPREAD, 0, SPREAD];
+  for (const a of angles) {
+    const rx = ndx * Math.cos(a) - ndy * Math.sin(a);
+    const ry = ndx * Math.sin(a) + ndy * Math.cos(a);
+    sendToArena({ type: "bossAttack", event: "projectile", bx: Math.round(bx), by: Math.round(by), dx: rx, dy: ry });
+  }
 }
 
 const BOSS_RESPAWN_MS = 60_000;
@@ -1929,8 +1936,8 @@ function tickBoss() {
       b.eruptionCooldown = pd.eruptionInterval;
       bossSpawnEruptions(target.x, target.y);
     }
-    if (b.phase >= 3 && b.projectileCooldown <= 0 && dist > pd.attackRange) {
-      b.projectileCooldown = 2800;
+    if (b.phase >= 2 && b.projectileCooldown <= 0 && dist > pd.attackRange) {
+      b.projectileCooldown = 2200;
       bossSpawnProjectile(target.x, target.y);
     }
   }

@@ -131,7 +131,7 @@ export default class ForestScene extends WorldScene {
     this.bossGolem = boss;
     this.bossDead = false;
     this.bossSpawned = false;
-    this.bossHp = 5000;
+    this.bossHp = 10000;
     this.bossPhase = 1;
 
     // Começa escondido — aparece quando servidor mandar bossSpawned
@@ -142,7 +142,7 @@ export default class ForestScene extends WorldScene {
   // ─── HP BAR ──────────────────────────────────────────────────────────────────
 
   createBossHpBar() {
-    this.bossMaxHp = 5000;
+    this.bossMaxHp = 10000;
     const BAR_W = 500;
     const DEPTH = 4000;
     this.bossHpContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
@@ -238,7 +238,7 @@ export default class ForestScene extends WorldScene {
     // Reseta estado local
     this.bossDead = false;
     this.bossSpawned = true;
-    this.bossHp = 5000;
+    this.bossHp = 10000;
     this.bossPhase = 1;
     this.updateBossHpBar();
     this.bossNameText?.setText("GOLEM DE LAVA  ●  Fase 1");
@@ -435,7 +435,7 @@ export default class ForestScene extends WorldScene {
   }
 
   spawnSingleMeteor(tx, ty) {
-    const WARN_MS = 1100;
+    const WARN_MS = 650;
     const IMPACT_R = 85;
     const shadow = this.add.graphics().setDepth(ty-5);
     shadow.fillStyle(0xff2200,0.32); shadow.fillCircle(tx,ty,IMPACT_R);
@@ -493,13 +493,13 @@ export default class ForestScene extends WorldScene {
 
   spawnRockProjectile(bx, by, ndx, ndy) {
     const proj = this.physics.add.sprite(bx, by, "boss-rock-proj", 0)
-      .setScale(0.85).setDepth(8000).setRotation(Math.atan2(ndy,ndx)-Math.PI/4);
+      .setScale(1.4).setDepth(8000).setRotation(Math.atan2(ndy,ndx)-Math.PI/4);
     proj.body.setAllowGravity(false);
     proj.body.setSize(40,40).setOffset(28,28);
-    proj.body.setVelocity(ndx*310, ndy*310);
+    proj.body.setVelocity(ndx*430, ndy*430);
     proj.play("boss-rock-fly");
     this.physics.add.overlap(proj, this.player, () => {
-      if (proj.active) { this.takeDamage(30); this.showHitSparks(proj.x,proj.y); proj.destroy(); }
+      if (proj.active) { this.takeDamage(65); this.showHitSparks(proj.x,proj.y); proj.destroy(); }
     });
     this.time.delayedCall(2400,()=>{ if (proj.active) proj.destroy(); });
   }
