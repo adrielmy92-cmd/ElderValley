@@ -396,6 +396,16 @@ export default class SwampScene extends WorldScene {
     return p;
   }
 
+  applyLightningDamage(wx, wy, radius) {
+    this.swampTrolls?.forEach(troll => {
+      if (!troll.active || troll.dead) return;
+      const dx = troll.x - wx, dy = troll.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        this._hitTroll(troll, 150);
+      }
+    });
+  }
+
   // ─── SFX ────────────────────────────────────────────────────────────────────
 
   _sfx(key, volume = 0.55) {

@@ -49,15 +49,23 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("creative-npc-hooded", "./assets/sprites/creative-npc-hooded-sheet.png?v=1", 194, 194);
     this.loadSheet("creative-npc-skeleton-archer", "./assets/sprites/skeleton-archer-idle-sheet.png?v=1", 132, 132);
 
+    this.loadSheet("spell-lightning-sheet", "./assets/sprites/spell-lightning-sheet.png?v=1", 192, 192);
+
     this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=2");
     this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=2");
     this.loadImage("bee-map", "./assets/maps/bee-map.jpg?v=1");
     this.loadSheet("bee-boss-idle-sheet",   "./assets/sprites/bee-boss-idle-sheet.png?v=1", 102, 102);
     this.loadSheet("bee-soldier-sheet",     "./assets/sprites/bee-soldier-sheet.png", 60, 60);
+    this.loadSheet("bee-honey-puddle-sheet","./assets/sprites/bee-honey-puddle-sheet.png?v=1", 192, 192);
+    this.loadAudio("spell-lightning-cast",   "./assets/audio/spell-lightning-cast.mp3");
+    this.loadAudio("spell-lightning-loop",   "./assets/audio/spell-lightning-loop.mp3");
+    this.loadAudio("bee-honey-puddle-drop",  "./assets/audio/bee-honey-puddle-drop.mp3");
+    this.loadAudio("bee-honey-puddle-loop",  "./assets/audio/bee-honey-puddle-loop.mp3");
     this.loadAudio("bee-battle",      "./assets/audio/bee-battle.ogg");
     this.loadAudio("bee-sting-fire",  "./assets/audio/bee-sting-fire.ogg");
     this.loadAudio("bee-hit",         "./assets/audio/bee-hit.ogg");
-    this.loadAudio("bee-boss-death",  "./assets/audio/bee-boss-death.ogg");
+    this.loadAudio("bee-boss-death",       "./assets/audio/bee-boss-death.ogg");
+    this.loadAudio("bee-queen-death-line", "./assets/audio/bee-queen-death-line.mp3");
     this.loadAudio("bee-queen-voice",    "./assets/audio/bee-queen-voice.mp3");
     this.loadAudio("bee-queen-soldiers", "./assets/audio/bee-queen-soldiers.mp3");
     ["bee-queen-aggro","bee-queen-phase2","bee-queen-phase3",

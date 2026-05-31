@@ -1,4 +1,4 @@
-import Player from "../player/Player.js?v=179";
+import Player from "../player/Player.js?v=186";
 import DialogSystem from "../systems/DialogSystem.js?v=132";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
@@ -77,7 +77,9 @@ export default class BaseGameScene extends Phaser.Scene {
       space: Phaser.Input.Keyboard.KeyCodes.SPACE,
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
       chat: Phaser.Input.Keyboard.KeyCodes.T,
-      attack: Phaser.Input.Keyboard.KeyCodes.Q
+      attack: Phaser.Input.Keyboard.KeyCodes.Q,
+      spell1: Phaser.Input.Keyboard.KeyCodes.ONE,
+      spell2: Phaser.Input.Keyboard.KeyCodes.TWO
     });
   }
 
@@ -591,7 +593,10 @@ export default class BaseGameScene extends Phaser.Scene {
     this.clockMinuteCarry = 0;
     this.lastClockTick = this.time.now;
     this.layoutHud(this.scale.width);
-    this.handleHudResize = (gameSize) => this.layoutHud(gameSize.width);
+    this.handleHudResize = (gameSize) => {
+      this.layoutHud(gameSize.width);
+      this.layoutSpellBar(gameSize.width, gameSize.height);
+    };
     this.scale.on("resize", this.handleHudResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this.handleHudResize) {
@@ -599,6 +604,7 @@ export default class BaseGameScene extends Phaser.Scene {
       }
     });
     this.createPlayerHpBar();
+    this.createSpellBar();
     this.updateInventoryHud();
     this.updateClockHud();
     this.updateCurrencyHud();
@@ -613,6 +619,82 @@ export default class BaseGameScene extends Phaser.Scene {
       this.multiplayer = new MultiplayerSystem(this);
     }
     this.createProfilePersistence();
+  }
+
+  createSpellBar() {
+    const DEPTH = 3000;
+    const SLOT_W = 52, SLOT_H = 44, GAP = 6;
+    const spells = [
+      { key: "1", name: "Fogo", bgColor: 0x5c1a00, borderColor: 0xff6a00, iconColors: ["#ff6a00", "#ffb829", "#fff4a3"], label: "Fogo" },
+      { key: "2", name: "Raio Arcano", bgColor: 0x001a3a, borderColor: 0x29b6f6, iconColors: ["#1a8fff", "#a8f4ff", "#ffffff"], label: "Raio" }
+    ];
+
+    this.spellSlots = spells.map((spell, i) => {
+      const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
+
+      const bg = this.add.graphics();
+      bg.fillStyle(spell.bgColor, 0.88);
+      bg.fillRoundedRect(0, 0, SLOT_W, SLOT_H, 6);
+      bg.lineStyle(2, spell.borderColor, 1);
+      bg.strokeRoundedRect(0, 0, SLOT_W, SLOT_H, 6);
+
+      const keyLabel = this.add.text(5, 4, `[${spell.key}]`, {
+        fontFamily: "monospace", fontSize: "10px",
+        color: "#" + spell.borderColor.toString(16).padStart(6, "0"),
+        stroke: "#000000", strokeThickness: 2
+      });
+
+      // mini icon pixel
+      const iconG = this.add.graphics();
+      if (i === 0) {
+        // fire icon
+        iconG.fillStyle(0xf05a16, 1); iconG.fillRect(20, 18, 12, 8);
+        iconG.fillStyle(0xffb629, 1); iconG.fillRect(22, 14, 8, 8);
+        iconG.fillStyle(0xfff4a3, 1); iconG.fillRect(24, 12, 4, 6);
+      } else {
+        // lightning icon
+        iconG.fillStyle(0x006fe0, 1); iconG.fillRect(18, 17, 16, 4);
+        iconG.fillStyle(0x29b6f6, 1); iconG.fillRect(20, 16, 12, 3);
+        iconG.fillStyle(0xffffff, 1);
+        iconG.fillRect(22, 17, 8, 1);
+        iconG.fillRect(18, 13, 6, 3); iconG.fillRect(28, 20, 6, 3);
+      }
+
+      const nameLabel = this.add.text(SLOT_W / 2, SLOT_H - 10, spell.label, {
+        fontFamily: "monospace", fontSize: "9px",
+        color: "#ffffff", stroke: "#000000", strokeThickness: 2
+      }).setOrigin(0.5, 0.5);
+
+      // overlay de cooldown (só para o slot do raio, índice 1)
+      const cdOverlay = this.add.graphics();
+      const cdText = this.add.text(SLOT_W / 2, SLOT_H / 2 - 2, "", {
+        fontFamily: "monospace", fontSize: "16px", fontStyle: "bold",
+        color: "#ffffff", stroke: "#000000", strokeThickness: 3
+      }).setOrigin(0.5, 0.5).setAlpha(0);
+
+      container.add([bg, keyLabel, iconG, nameLabel, cdOverlay, cdText]);
+      container._slotIndex = i;
+      return { container, bg, spell, cdOverlay, cdText };
+    });
+
+    this._lightningCooldownEnd = 0;
+    this._spellBarActive = 0;
+    this._spellSlotW = SLOT_W;
+    this._spellSlotGap = GAP;
+    this._spellBarTotalW = spells.length * SLOT_W + (spells.length - 1) * GAP;
+    this.layoutSpellBar(this.scale.width, this.scale.height);
+  }
+
+  layoutSpellBar(width, height) {
+    if (!this.spellSlots) return;
+    const SLOT_W = this._spellSlotW ?? 52;
+    const GAP = this._spellSlotGap ?? 6;
+    const totalW = this._spellBarTotalW ?? (2 * SLOT_W + GAP);
+    const startX = Math.floor((width - totalW) / 2);
+    const Y = height - 56;
+    this.spellSlots.forEach(({ container }, i) => {
+      container.setPosition(startX + i * (SLOT_W + GAP), Y);
+    });
   }
 
   createPlayerHpBar() {
@@ -688,6 +770,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.inventoryText.setPosition(width - 52, 18);
     this.clockText?.setPosition(width - 152, 18);
     this.coinText?.setPosition(width - 292, 18);
+    this.layoutSpellBar(width, this.scale.height);
   }
 
   updateClockHud() {
@@ -1716,6 +1799,245 @@ export default class BaseGameScene extends Phaser.Scene {
     return fireball;
   }
 
+  startLightningCooldown(ms = 8000) {
+    const slot = this.spellSlots?.[1];
+    if (!slot) return;
+    const SLOT_W = this._spellSlotW ?? 52;
+    const SLOT_H = 44;
+    const { cdOverlay, cdText } = slot;
+
+    this._lightningCooldownEnd = this.time.now + ms;
+
+    const tick = () => {
+      const remaining = this._lightningCooldownEnd - this.time.now;
+      if (remaining <= 0) {
+        cdOverlay.clear();
+        cdText.setAlpha(0);
+        return;
+      }
+      const pct = remaining / ms;
+      cdOverlay.clear();
+      cdOverlay.fillStyle(0x000000, 0.62);
+      cdOverlay.fillRoundedRect(1, 1, SLOT_W - 2, SLOT_H - 2, 5);
+      // borda que vai sumindo conforme o cooldown passa
+      cdOverlay.lineStyle(2, 0x29b6f6, pct);
+      cdOverlay.strokeRoundedRect(1, 1, SLOT_W - 2, SLOT_H - 2, 5);
+      cdText.setText(Math.ceil(remaining / 1000).toString()).setAlpha(1);
+      this.time.delayedCall(100, tick);
+    };
+    tick();
+  }
+
+  enterLightningTargetMode() {
+    if (this._lightningTargeting) return;
+    // verifica cooldown
+    if (this._lightningCooldownEnd && this.time.now < this._lightningCooldownEnd) {
+      const rem = Math.ceil((this._lightningCooldownEnd - this.time.now) / 1000);
+      // pisca o slot para indicar que ainda está em cooldown
+      const slot = this.spellSlots?.[1];
+      if (slot) {
+        this.tweens.add({ targets: slot.container, alpha: 0.4, duration: 80, yoyo: true, repeat: 2 });
+      }
+      return;
+    }
+    this._lightningTargeting = true;
+
+    // cursor de mira: círculo ciano pulsante seguindo o mouse
+    this._lightningCursor = this.add.graphics().setDepth(9999).setScrollFactor(0);
+    this._lightningCursorWorld = this.add.graphics().setDepth(9999);
+
+    const drawCursor = () => {
+      this._lightningCursor.clear();
+      this._lightningCursor.lineStyle(2, 0x29eeff, 1);
+      this._lightningCursor.strokeCircle(0, 0, 18);
+      this._lightningCursor.lineStyle(1, 0xffffff, 0.6);
+      this._lightningCursor.strokeCircle(0, 0, 10);
+      // cruz
+      this._lightningCursor.lineStyle(1, 0x29eeff, 0.9);
+      this._lightningCursor.lineBetween(-22, 0, -12, 0);
+      this._lightningCursor.lineBetween(12, 0, 22, 0);
+      this._lightningCursor.lineBetween(0, -22, 0, -12);
+      this._lightningCursor.lineBetween(0, 12, 0, 22);
+    };
+    drawCursor();
+
+    // pulsar
+    this._lightningCursorTween = this.tweens.add({
+      targets: this._lightningCursor,
+      alpha: { from: 1, to: 0.5 },
+      duration: 400,
+      yoyo: true,
+      repeat: -1
+    });
+
+    // hint text
+    this._lightningHint = this.add.text(
+      this.scale.width / 2, 80,
+      "Raio Arcano — Clique no alvo",
+      { fontFamily: "monospace", fontSize: "14px", color: "#a8f4ff", stroke: "#000", strokeThickness: 3 }
+    ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(9999);
+
+    this._lightningClickHandler = (pointer) => {
+      if (!this._lightningTargeting) return;
+      const wx = this.cameras.main.scrollX + pointer.x;
+      const wy = this.cameras.main.scrollY + pointer.y;
+      this.strikeLightning(wx, wy);
+      this.exitLightningTargetMode();
+    };
+
+    this.input.once("pointerdown", this._lightningClickHandler);
+
+    // cancelar com ESC ou re-pressionar 2
+    this._lightningCancelKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this._lightningCancelKey.once("down", () => this.exitLightningTargetMode());
+
+    // mover cursor com mouse (screen space)
+    this._lightningMoveHandler = (pointer) => {
+      if (this._lightningCursor?.active) {
+        this._lightningCursor.setPosition(pointer.x, pointer.y);
+      }
+    };
+    this.input.on("pointermove", this._lightningMoveHandler);
+
+    // posicionar no mouse atual
+    this._lightningCursor.setPosition(this.input.activePointer.x, this.input.activePointer.y);
+  }
+
+  exitLightningTargetMode() {
+    this._lightningTargeting = false;
+    this._lightningCursorTween?.stop();
+    this._lightningCursor?.destroy();
+    this._lightningCursorWorld?.destroy();
+    this._lightningHint?.destroy();
+    this._lightningCursor = null;
+    this._lightningCursorWorld = null;
+    this._lightningHint = null;
+    if (this._lightningMoveHandler) {
+      this.input.off("pointermove", this._lightningMoveHandler);
+      this._lightningMoveHandler = null;
+    }
+    if (this._lightningClickHandler) {
+      this.input.off("pointerdown", this._lightningClickHandler);
+      this._lightningClickHandler = null;
+    }
+  }
+
+  strikeLightning(wx, wy) {
+    if (this.isTransitioning) return;
+
+    const FRAME_SIZE = 192;
+    const DISPLAY = 200;
+    const RADIUS = 100;      // cobre toda a área do sprite (display 200 / 2)
+    const DURATION = 1500;
+    const DAMAGE_INTERVAL = 500;
+
+    // inicia cooldown imediatamente ao lançar
+    this.startLightningCooldown(8000);
+    const DEPTH = wy + 2000;
+
+    // cria animação do raio se ainda não existe
+    if (!this.anims.exists("lightning-strike-anim")) {
+      this.anims.create({
+        key: "lightning-strike-anim",
+        frames: Array.from({ length: 8 }, (_, i) => ({ key: "spell-lightning-sheet", frame: i })),
+        frameRate: 8,
+        repeat: -1
+      });
+    }
+
+    // zona de dano no chão
+    const zone = this.add.graphics().setDepth(DEPTH);
+    const drawZone = (alpha) => {
+      zone.clear();
+      zone.fillStyle(0x29eeff, alpha * 0.15);
+      zone.fillCircle(wx, wy, RADIUS);
+      zone.lineStyle(2, 0x29eeff, alpha * 0.85);
+      zone.strokeCircle(wx, wy, RADIUS);
+    };
+    drawZone(1);
+
+    // sprite animado — cai de cima
+    const strike = this.add.sprite(wx, wy - 100, "spell-lightning-sheet", 0)
+      .setDepth(DEPTH + 1)
+      .setDisplaySize(DISPLAY, DISPLAY)
+      .setAlpha(0);
+
+    // entrada: cai em 100ms
+    this.tweens.add({
+      targets: strike,
+      y: wy,
+      alpha: 1,
+      duration: 100,
+      ease: "Cubic.Out",
+      onComplete: () => {
+        // inicia animação em loop
+        strike.play("lightning-strike-anim");
+
+        // áudio de impacto + loop elétrico
+        if (this.cache.audio.exists("spell-lightning-cast")) {
+          this.sound.play("spell-lightning-cast", { volume: 0.08 });
+        }
+        let loopSound = null;
+        if (this.cache.audio.exists("spell-lightning-loop")) {
+          loopSound = this.sound.add("spell-lightning-loop", { volume: 0.04, loop: true });
+          loopSound.play();
+        }
+
+        // shake e flash de impacto
+        this.cameras.main.shake(200, 0.007);
+        const flashG = this.add.graphics().setDepth(DEPTH + 2);
+        let ft = 0;
+        this.time.addEvent({
+          delay: 28, repeat: 5,
+          callback: () => {
+            ft++;
+            const p = 1 - ft / 6;
+            flashG.clear();
+            flashG.fillStyle(0xffffff, p * 0.65);
+            flashG.fillCircle(wx, wy, 16 + ft * 9);
+            flashG.fillStyle(0x88ddff, p * 0.35);
+            flashG.fillCircle(wx, wy, 24 + ft * 14);
+            if (ft >= 6) flashG.destroy();
+          }
+        });
+
+        // ticks de dano a cada DAMAGE_INTERVAL
+        const maxTicks = Math.floor(DURATION / DAMAGE_INTERVAL);
+        let ticks = 0;
+        const damageTimer = this.time.addEvent({
+          delay: DAMAGE_INTERVAL,
+          repeat: maxTicks - 1,
+          callback: () => {
+            ticks++;
+            // pulso visual na zona
+            const pG = this.add.graphics().setDepth(DEPTH + 2);
+            pG.fillStyle(0x29eeff, 0.3);
+            pG.fillCircle(wx, wy, RADIUS);
+            this.tweens.add({ targets: pG, alpha: 0, duration: 220, onComplete: () => pG.destroy() });
+            drawZone(1);
+            this.applyLightningDamage(wx, wy, RADIUS);
+          }
+        });
+
+        // fim: para animação e some
+        this.time.delayedCall(DURATION, () => {
+          damageTimer.remove(false);
+          strike.stop();
+          loopSound?.stop();
+          this.tweens.add({
+            targets: [strike, zone],
+            alpha: 0,
+            duration: 280,
+            onComplete: () => { strike.destroy(); zone.destroy(); }
+          });
+        });
+      }
+    });
+  }
+
+  // Hook para cenas sobrescreverem com lógica de inimigos específica
+  applyLightningDamage(wx, wy, radius) {}
+
   updateBase() {
     if (this.isTransitioning) {
       return;
@@ -1758,9 +2080,18 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.dialog.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.attack)) {
-      this.player.attack?.();
+    if (!this.dialog.active && (Phaser.Input.Keyboard.JustDown(this.interactKeys.attack) || Phaser.Input.Keyboard.JustDown(this.interactKeys.spell1))) {
+      this.player.attack?.("fire");
       this.player.update(this.cursors, this.wasd, true);
+      return;
+    }
+
+    if (!this.dialog.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.spell2)) {
+      if (this._lightningTargeting) {
+        this.exitLightningTargetMode();
+      } else {
+        this.enterLightningTargetMode();
+      }
       return;
     }
 

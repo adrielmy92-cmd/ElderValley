@@ -1,7 +1,7 @@
 const PLAYER_CHARACTERS = {
   "mage-1": {
     id: "mage-1",
-    label: "Mage 1",
+    label: "Zara, a Arcanista",
     walkTexture: "mage-1-sheet",
     idleTexture: "mage-1-idle-sheet",
     attackTexture: "mage-1-attack-normalized",
@@ -170,7 +170,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  attack() {
+  attack(spellType = "fire") {
     const profile = this.profile;
     const useSideAttack = (this.facing === "left" || this.facing === "right")
       && profile.sideAttackTexture
@@ -183,6 +183,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.isAttacking = true;
+    this._currentSpellType = spellType;
     this.setVelocity(0, 0);
     this.setTexture(textureKey, 0);
     this.setFlipX(useSideAttack && this.facing === "left");
@@ -192,7 +193,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.time.delayedCall(170, () => {
       if (this.active && this.isAttacking) {
-        const spawnMethod = this.profile.projectileSpawn ?? "spawnFireball";
+        const spellMap = { fire: "spawnFireball", lightning: "spawnLightningBolt" };
+        const spawnMethod = spellMap[this._currentSpellType] ?? this.profile.projectileSpawn ?? "spawnFireball";
         this.scene[spawnMethod]?.(this.x, this.y, this.facing);
       }
     });

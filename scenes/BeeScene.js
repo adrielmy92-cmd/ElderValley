@@ -199,7 +199,7 @@ export default class BeeScene extends WorldScene {
     if (!this.player || !this._soldiers) return;
 
     const furiosos = this.beeBoss?.state === "vulnerable" || this.beeBoss?.phase === 3;
-    const speed    = furiosos ? 155 : 120;
+    const speed    = furiosos ? 90 : 65;
 
     for (const s of [...this._soldiers]) {
       if (!s.active || s.dead) continue;
@@ -1209,21 +1209,84 @@ export default class BeeScene extends WorldScene {
   }
 
   _fireHoneyPuddle(tx, ty) {
-    const radius = 110;
-    const g = this.add.graphics().setDepth(ty + 5);
-    g.fillStyle(0xffaa00, 0.5);
-    g.fillCircle(tx, ty, radius);
-    g.fillStyle(0xffdd44, 0.28);
-    g.fillCircle(tx, ty, radius * 0.55);
-    this.tweens.add({ targets: g, alpha: 0.6, duration: 500, yoyo: true, repeat: 5, onComplete: () => g.destroy() });
+    const RADIUS   = 90;   // cobre a área visível do sprite (192px / 2 ≈ 96)
+    const DURATION = 3000;
+    const TICKS    = 6;
+    const DEPTH    = ty + 5;
 
-    this.time.addEvent({
-      delay: 500, repeat: 5,
-      callback: () => {
-        if (!this.player) return;
-        const ddx = this.player.x - tx, ddy = this.player.y - ty;
-        if (Math.sqrt(ddx * ddx + ddy * ddy) < radius) this.takeDamage(BOSS_PUDDLE_DMG);
+    // cria animação uma vez
+    if (!this.anims.exists("honey-puddle-anim")) {
+      this.anims.create({
+        key: "honey-puddle-anim",
+        frames: Array.from({ length: 23 }, (_, i) => ({ key: "bee-honey-puddle-sheet", frame: i })),
+        frameRate: 20,
+        repeat: -1
+      });
+    }
+
+    // sprite animado no chão
+    const puddle = this.add.sprite(tx, ty, "bee-honey-puddle-sheet", 0)
+      .setDepth(DEPTH)
+      .setDisplaySize(192, 192)
+      .setAlpha(0);
+
+    // entrada: aparece caindo com pequeno scale
+    this.tweens.add({
+      targets: puddle,
+      alpha: 1,
+      scaleY: { from: 0.2, to: 1 },
+      duration: 150,
+      ease: "Back.Out",
+      onComplete: () => {
+        puddle.play("honey-puddle-anim");
+        if (this.cache.audio.exists("bee-honey-puddle-drop")) {
+          this.sound.play("bee-honey-puddle-drop", { volume: 0.07 });
+        }
       }
+    });
+
+    // loop de borbulha enquanto o pudim estiver ativo
+    let puddleLoop = null;
+    this.time.delayedCall(200, () => {
+      if (this.cache.audio.exists("bee-honey-puddle-loop")) {
+        puddleLoop = this.sound.add("bee-honey-puddle-loop", { volume: 0.03, loop: true });
+        puddleLoop.play();
+      }
+    });
+
+    // pulsar suavemente durante a duração
+    this.tweens.add({
+      targets: puddle,
+      alpha: { from: 1, to: 0.65 },
+      duration: 400,
+      yoyo: true,
+      repeat: Math.floor(DURATION / 800),
+      delay: 150
+    });
+
+    // ticks de dano
+    this.time.addEvent({
+      delay: DURATION / TICKS,
+      repeat: TICKS - 1,
+      callback: () => {
+        if (!this.player || !puddle.active) return;
+        const dx = this.player.x - tx, dy = this.player.y - ty;
+        if (Math.sqrt(dx * dx + dy * dy) < RADIUS) this.takeDamage(BOSS_PUDDLE_DMG);
+      }
+    });
+
+    // saída: encolhe e some
+    this.time.delayedCall(DURATION, () => {
+      puddle.stop();
+      puddleLoop?.stop();
+      this.tweens.add({
+        targets: puddle,
+        alpha: 0,
+        scaleY: 0.1,
+        duration: 200,
+        ease: "Cubic.In",
+        onComplete: () => puddle.destroy()
+      });
     });
   }
 
@@ -1333,6 +1396,8 @@ export default class BeeScene extends WorldScene {
     });
 
     this._sfx("bee-boss-death", 0.8);
+    this._queenSpeaking = false;
+    this._queenSpeak("bee-queen-death-line", "O Enxame... nunca vai... te perdoar...");
     this._stopBattleMusic();
     this.cameras.main.shake(500, 0.022);
     this.tweens.add({
@@ -1437,6 +1502,24 @@ export default class BeeScene extends WorldScene {
         projectile.destroy();
         this._hitSoldier(s, damage);
       });
+    }
+  }
+
+  applyLightningDamage(wx, wy, radius) {
+    // acerta boss
+    if (this.beeBoss && !this.beeBoss.dead && this.beeBoss.active) {
+      const dx = this.beeBoss.x - wx, dy = this.beeBoss.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) {
+        this._hitBeeBoss(BOSS_FIREBALL_DMG);
+      }
+    }
+    // acerta soldados
+    for (const s of (this._soldiers ?? [])) {
+      if (!s.active || s.dead) continue;
+      const dx = s.x - wx, dy = s.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        this._hitSoldier(s, BOSS_FIREBALL_DMG * 0.5);
+      }
     }
   }
 

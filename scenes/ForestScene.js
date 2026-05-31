@@ -352,6 +352,17 @@ export default class ForestScene extends WorldScene {
 
   // ─── FIREBALL — envia dano ao servidor ──────────────────────────────────────
 
+  applyLightningDamage(wx, wy, radius) {
+    if (!this.bossGolem || this.bossDead || !this.bossHitzone?.body?.enable) return;
+    const dx = this.bossGolem.x - wx;
+    const dy = this.bossGolem.y - wy;
+    if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) {
+      this.showHitSparks(this.bossGolem.x, this.bossGolem.y);
+      this.showDamageNumber(this.bossGolem.x, this.bossGolem.y - 40, 200);
+      this.multiplayer?.sendHitBoss(200);
+    }
+  }
+
   spawnFireball(x, y, facing) {
     const fireball = super.spawnFireball(x, y, facing);
     if (fireball && this.bossHitzone && !this.bossDead) {
