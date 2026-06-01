@@ -623,6 +623,22 @@ function handleWsPayload(client, payload) {
     return;
   }
 
+  if (payload.type === "hitBeeQueen") {
+    if (!client.ready || client.superseded) return;
+    if (beeState.dead) return;
+    const damage = Math.min(500, Math.max(0, Number(payload.damage) || 0));
+    if (damage > 0) applyBeeDamage(damage);
+    return;
+  }
+
+  if (payload.type === "hitBeeSoldier") {
+    if (!client.ready || client.superseded) return;
+    const idx = Number(payload.index ?? -1);
+    const damage = Math.min(500, Math.max(0, Number(payload.damage) || 0));
+    if (damage > 0) applyBeeSoldierDamage(idx, damage);
+    return;
+  }
+
   if (payload.type === "bossEvent") {
     if (!client.ready || client.superseded) {
       return;
@@ -2201,6 +2217,355 @@ function tickSwamp() {
 }
 
 setInterval(() => tickSwamp(), 50).unref();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BEE SCENE — server-authoritative (mesmo padrão do ForestScene)
+// ══════════════════════════════════════════════════════════════════════════════
+const BEE_SCENE        = "BeeScene";
+const BEE_W            = 2752;
+const BEE_H            = 1536;
+const BEE_MAX_HP       = 12000;
+const BEE_RESPAWN_MS   = 28_000;
+const BEE_SOLDIER_HP   = 350;
+
+const BEE_PHASE_CFG = [
+  { speed: 110, atkInterval: 1800, atkRange: 480, specialInterval: 18000 },
+  { speed: 145, atkInterval: 1300, atkRange: 540, specialInterval: 11000 },
+  { speed: 185, atkInterval:  900, atkRange: 600, specialInterval:  7000 },
+];
+
+const BEE_PATROL_PTS = [
+  { x: BEE_W * 0.28, y: BEE_H * 0.28 },
+  { x: BEE_W * 0.50, y: BEE_H * 0.22 },
+  { x: BEE_W * 0.72, y: BEE_H * 0.28 },
+  { x: BEE_W * 0.72, y: BEE_H * 0.52 },
+  { x: BEE_W * 0.50, y: BEE_H * 0.42 },
+  { x: BEE_W * 0.28, y: BEE_H * 0.52 },
+];
+
+function createBeeState() {
+  return {
+    hp: BEE_MAX_HP, maxHp: BEE_MAX_HP,
+    phase: 1,
+    x: BEE_W * 0.5, y: BEE_H * 0.32,
+    vx: 0, vy: 0,
+    flipX: false,
+    state: "patrol",        // patrol | chase | atk_cd | special_cd | dive | dash | burst | dead
+    dead: false,
+    patrolIdx: 0,
+    orbitAngle: 0,
+    atkCooldown: 2000,
+    specialCooldown: 5000,
+    stateUntil: 0,          // ms timestamp — quando o estado atual termina
+    diveTarget: null,       // { x, y } para royal dive
+    dashWaypoints: null,    // array de { x, y } para frantic dash
+    dashWpIdx: 0,
+    respawnAt: 0,
+  };
+}
+
+let beeState = createBeeState();
+
+// soldados: índice 0..5, máx 6 ao mesmo tempo
+let beeSoldiers = [];
+let beeNextSoldierIdx = 0;
+
+function isInBee(client) {
+  return client.ready && !client.superseded && (client.sceneChannel ?? "").startsWith(BEE_SCENE);
+}
+function getBeePlayers() { return [...clients.values()].filter(isInBee); }
+function sendToBee(payload) { for (const c of clients.values()) { if (isInBee(c)) sendWs(c.socket, payload); } }
+
+function nearestBeePlayer() {
+  const players = getBeePlayers();
+  if (!players.length) return null;
+  let best = null, bestDist = Infinity;
+  for (const p of players) {
+    const d = Math.hypot((p.x ?? BEE_W/2) - beeState.x, (p.y ?? BEE_H/2) - beeState.y);
+    if (d < bestDist) { bestDist = d; best = { ...p, dist: d }; }
+  }
+  return best;
+}
+
+function beeClamp(x, y, margin = 160) {
+  return { x: Math.max(margin, Math.min(BEE_W - margin, x)), y: Math.max(margin, Math.min(BEE_H - margin, y)) };
+}
+
+function applyBeeDamage(amount) {
+  const b = beeState;
+  if (b.dead) return;
+  b.hp = Math.max(0, b.hp - Math.max(0, Math.floor(amount)));
+  if (b.hp <= 0) {
+    b.dead = true;
+    b.state = "dead";
+    b.respawnAt = Date.now() + BEE_RESPAWN_MS;
+    // Mata todos os soldados
+    for (const s of beeSoldiers) { s.dead = true; }
+    sendToBee({ type: "beeSync", ...serializeBee(), dead: true });
+    sendToBee({ type: "beeAttack", event: "died" });
+    sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
+    console.log("[bee] Rainha derrotada! Renascendo em 28s.");
+    return;
+  }
+  // Verifica mudança de fase
+  const pct = b.hp / BEE_MAX_HP;
+  const newPhase = pct <= 0.33 ? 3 : pct <= 0.66 ? 2 : 1;
+  if (newPhase > b.phase) {
+    b.phase = newPhase;
+    sendToBee({ type: "beeAttack", event: "phase", phase: newPhase });
+    // Chama soldados na transição de fase
+    const count = newPhase === 2 ? 2 : 2;
+    beeSpawnSoldiers(count);
+  }
+}
+
+function applyBeeSoldierDamage(idx, amount) {
+  const s = beeSoldiers.find(x => x.i === idx);
+  if (!s || s.dead) return;
+  s.hp = Math.max(0, s.hp - Math.max(0, Math.floor(amount)));
+  if (s.hp <= 0) {
+    s.dead = true;
+    sendToBee({ type: "beeSoldierDied", i: idx });
+  }
+  sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
+}
+
+function beeSpawnSoldiers(count) {
+  const existing = beeSoldiers.filter(s => !s.dead).length;
+  const toSpawn = Math.min(count, 6 - existing);
+  for (let i = 0; i < toSpawn; i++) {
+    const side = Math.random() < 0.5;
+    const fromX = side ? 80 : BEE_W - 80;
+    const fromY = BEE_H * 0.2 + Math.random() * BEE_H * 0.6;
+    const idx = beeNextSoldierIdx++;
+    beeSoldiers.push({ i: idx, x: fromX, y: fromY, hp: BEE_SOLDIER_HP, maxHp: BEE_SOLDIER_HP, dead: false, flipX: false, lastAtk: 0, lastSting: 0 });
+    sendToBee({ type: "beeSoldierSpawn", i: idx, fromX: Math.round(fromX), fromY: Math.round(fromY) });
+  }
+}
+
+function serializeBee() {
+  const b = beeState;
+  return { x: Math.round(b.x), y: Math.round(b.y), hp: b.hp, maxHp: BEE_MAX_HP, phase: b.phase, state: b.state, flipX: b.flipX, dead: b.dead, respawnMs: b.dead ? Math.max(0, b.respawnAt - Date.now()) : null };
+}
+
+function serializeSoldier(s) {
+  return { i: s.i, x: Math.round(s.x), y: Math.round(s.y), hp: s.hp, maxHp: s.maxHp, dead: s.dead, flipX: s.flipX };
+}
+
+let lastBeeTick = Date.now();
+let lastBeeSoldierSting = 0;
+
+function tickBee() {
+  const now = Date.now();
+  const delta = Math.min(now - lastBeeTick, 200);
+  lastBeeTick = now;
+  const b = beeState;
+
+  // Respawn
+  if (b.dead) {
+    if (b.respawnAt && now >= b.respawnAt) {
+      beeState = createBeeState();
+      beeSoldiers = [];
+      beeNextSoldierIdx = 0;
+      sendToBee({ type: "beeAttack", event: "spawned" });
+      console.log("[bee] Rainha renasceu!");
+    }
+    return;
+  }
+
+  const players = getBeePlayers();
+  if (!players.length) return;
+
+  const target = nearestBeePlayer();
+  if (!target) return;
+  const dx = target.x - b.x, dy = target.y - b.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  b.flipX = dx < 0;
+  const cfg = BEE_PHASE_CFG[Math.min(b.phase - 1, 2)];
+
+  // ── Estados com duração fixa ──────────────────────────────────────────────
+  if (b.state === "atk_cd" || b.state === "burst") {
+    b.vx = 0; b.vy = 0;
+    if (now >= b.stateUntil) b.state = "chase";
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  if (b.state === "special_cd") {
+    b.vx = 0; b.vy = 0;
+    if (now >= b.stateUntil) b.state = "chase";
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  if (b.state === "dive") {
+    if (!b.diveTarget) { b.state = "chase"; return; }
+    const tdx = b.diveTarget.x - b.x, tdy = b.diveTarget.y - b.y;
+    const tdist = Math.hypot(tdx, tdy) || 1;
+    if (tdist < 30 || now >= b.stateUntil) {
+      b.x = b.diveTarget.x; b.y = b.diveTarget.y;
+      b.vx = 0; b.vy = 0; b.diveTarget = null;
+      b.state = "special_cd"; b.stateUntil = now + 1800;
+    } else {
+      b.vx = (tdx / tdist) * 900; b.vy = (tdy / tdist) * 900;
+    }
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  if (b.state === "dash") {
+    if (!b.dashWaypoints || b.dashWpIdx >= b.dashWaypoints.length) {
+      b.vx = 0; b.vy = 0; b.dashWaypoints = null;
+      b.state = "special_cd"; b.stateUntil = now + 1200;
+      tickBeeSoldiers(now, delta, players);
+      return;
+    }
+    const wp = b.dashWaypoints[b.dashWpIdx];
+    const wdx = wp.x - b.x, wdy = wp.y - b.y;
+    const wdist = Math.hypot(wdx, wdy) || 1;
+    if (wdist < 45) { b.dashWpIdx++; b.vx = 0; b.vy = 0; }
+    else { b.vx = (wdx / wdist) * 820; b.vy = (wdy / wdist) * 820; }
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  // ── Aggro ────────────────────────────────────────────────────────────────
+  if (dist < 560 && b.state === "patrol") {
+    b.state = "chase";
+    b.specialCooldown = now + 5000;
+    b.atkCooldown = now + 2000;
+    sendToBee({ type: "beeAttack", event: "aggro" });
+  }
+  if (dist > 900 && b.state === "chase") {
+    b.state = "patrol";
+  }
+
+  // ── Patrulha ─────────────────────────────────────────────────────────────
+  if (b.state === "patrol") {
+    const pt = BEE_PATROL_PTS[b.patrolIdx];
+    const pdx = pt.x - b.x, pdy = pt.y - b.y;
+    const pd = Math.hypot(pdx, pdy) || 1;
+    if (pd < 30) b.patrolIdx = (b.patrolIdx + 1) % BEE_PATROL_PTS.length;
+    else { b.vx = (pdx / pd) * 55; b.vy = (pdy / pd) * 55; }
+    b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
+    b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  // ── Chase ────────────────────────────────────────────────────────────────
+  // Especial
+  if (now >= b.specialCooldown) {
+    b.specialCooldown = now + cfg.specialInterval;
+    const r = Math.random();
+    if (b.phase === 1 || r < 0.33) {
+      // Radial burst
+      const waves = b.phase >= 3 ? 7 : 5;
+      sendToBee({ type: "beeAttack", event: "radialBurst", bossX: Math.round(b.x), bossY: Math.round(b.y), waves, phase: b.phase });
+      if (beeSoldiers.filter(s => !s.dead).length < 4) beeSpawnSoldiers(b.phase >= 3 ? 2 : 1);
+      b.state = "burst"; b.stateUntil = now + 600 + waves * 650 + 1600;
+    } else if (r < 0.66) {
+      // Royal dive
+      const { x: tx, y: ty } = beeClamp(target.x, target.y, 160);
+      sendToBee({ type: "beeAttack", event: "royalDive", bossX: Math.round(b.x), bossY: Math.round(b.y), tx: Math.round(tx), ty: Math.round(ty) });
+      b.state = "dive"; b.diveTarget = { x: tx, y: ty }; b.stateUntil = now + 2500;
+    } else {
+      // Frantic dash
+      const M = 200;
+      const waypoints = [];
+      for (let i = 0; i < 4; i++) {
+        const c = beeClamp(M + Math.random() * (BEE_W - M*2), M + Math.random() * (BEE_H - M*2), M);
+        waypoints.push(c);
+      }
+      waypoints.push(beeClamp(target.x + (Math.random()-0.5)*120, target.y + (Math.random()-0.5)*120, M));
+      sendToBee({ type: "beeAttack", event: "franticDash", bossX: Math.round(b.x), bossY: Math.round(b.y), waypoints: waypoints.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })) });
+      b.state = "dash"; b.dashWaypoints = waypoints; b.dashWpIdx = 0;
+    }
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  // Ataque normal
+  if (dist < cfg.atkRange && now >= b.atkCooldown) {
+    b.atkCooldown = now + cfg.atkInterval;
+    const count = b.phase === 1 ? 1 : b.phase === 2 ? 3 : 5;
+    sendToBee({ type: "beeAttack", event: "sting", fromX: Math.round(b.x), fromY: Math.round(b.y), toX: Math.round(target.x), toY: Math.round(target.y), count });
+    if (b.phase === 3) sendToBee({ type: "beeAttack", event: "honeyPuddle", tx: Math.round(target.x), ty: Math.round(target.y) });
+    b.state = "atk_cd"; b.stateUntil = now + 800;
+    tickBeeSoldiers(now, delta, players);
+    return;
+  }
+
+  // Movimento (fase 1: direto, fase 2+: órbita)
+  if (b.phase === 1) {
+    b.vx = (dx / dist) * cfg.speed; b.vy = (dy / dist) * cfg.speed;
+  } else {
+    b.orbitAngle += 0.0012 * delta;
+    const orbitDist = 300;
+    const rawTx = target.x + Math.cos(b.orbitAngle) * orbitDist;
+    const rawTy = target.y + Math.sin(b.orbitAngle) * orbitDist;
+    const { x: ox, y: oy } = beeClamp(rawTx, rawTy, 160);
+    const odx = ox - b.x, ody = oy - b.y;
+    const od = Math.hypot(odx, ody) || 1;
+    b.vx = (odx / od) * cfg.speed; b.vy = (ody / od) * cfg.speed;
+  }
+
+  b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
+  b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
+
+  tickBeeSoldiers(now, delta, players);
+}
+
+function tickBeeSoldiers(now, delta, players) {
+  const speed = (beeState.state === "burst" || beeState.phase === 3) ? 90 : 65;
+  for (const s of beeSoldiers) {
+    if (s.dead) continue;
+    // Persegue o player mais próximo
+    let nearX = BEE_W / 2, nearY = BEE_H / 2, nearDist = Infinity;
+    for (const p of players) {
+      const d = Math.hypot(p.x - s.x, p.y - s.y);
+      if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
+    }
+    const sdx = nearX - s.x, sdy = nearY - s.y;
+    const sdist = Math.hypot(sdx, sdy) || 1;
+    s.x += (sdx / sdist) * speed * (delta / 1000);
+    s.y += (sdy / sdist) * speed * (delta / 1000);
+    s.x = Math.max(30, Math.min(BEE_W - 30, s.x));
+    s.y = Math.max(30, Math.min(BEE_H - 30, s.y));
+    s.flipX = sdx < 0;
+
+    // Dano por contato
+    for (const p of players) {
+      const cd = Math.hypot(p.x - s.x, p.y - s.y);
+      if (cd < 55 && now - (s.lastAtk || 0) > 900) {
+        s.lastAtk = now;
+        sendWs(p.socket, { type: "beeMeleeHit", damage: 30 });
+      }
+    }
+
+    // Ferrão do soldado
+    if (nearDist < 380 && now - (s.lastSting || 0) > 2500) {
+      s.lastSting = now;
+      const angle = Math.atan2(sdy, sdx);
+      sendToBee({ type: "beeSoldierSting", i: s.i, fromX: Math.round(s.x), fromY: Math.round(s.y), angle });
+    }
+  }
+  // Remove soldados mortos antigos
+  beeSoldiers = beeSoldiers.filter(s => !s.dead || true); // mantém para sync de morte
+}
+
+// Broadcast a cada 100ms
+let lastBeeSync = 0;
+setInterval(() => {
+  const now = Date.now();
+  if (now - lastBeeSync < 100) return;
+  lastBeeSync = now;
+  if (!getBeePlayers().length) return;
+  sendToBee({ type: "beeSync", ...serializeBee() });
+  sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
+}, 50).unref();
+
+setInterval(() => tickBee(), 50).unref();
 
 server.listen(port, host, () => {
   console.log(`ElderValley server listening on ${host}:${port}`);

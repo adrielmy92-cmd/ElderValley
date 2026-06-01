@@ -495,9 +495,8 @@ export default class ForestScene extends WorldScene {
     const proj = this.physics.add.sprite(bx, by, "boss-rock-proj", 0)
       .setScale(1.4).setDepth(8000).setRotation(Math.atan2(ndy,ndx)-Math.PI/4);
     proj.body.setAllowGravity(false);
-    proj.body.setSize(40,40).setOffset(28,28);
+    proj.body.setCircle(22, 42, 42); // centralizado no sprite 128×128
     proj.body.setVelocity(ndx*430, ndy*430);
-    proj.play("boss-rock-fly");
     this.physics.add.overlap(proj, this.player, () => {
       if (proj.active) { this.takeDamage(65); this.showHitSparks(proj.x,proj.y); proj.destroy(); }
     });

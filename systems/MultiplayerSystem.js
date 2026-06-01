@@ -247,10 +247,47 @@ export default class MultiplayerSystem {
       this.scene.onTrollRespawn?.(payload);
       return;
     }
+    // ── Bee Scene ────────────────────────────────────────────────
+    if (payload.type === "beeSync") {
+      this.scene.onBeeSync?.(payload);
+      return;
+    }
+    if (payload.type === "beeSoldierSync") {
+      this.scene.onBeeSoldierSync?.(payload);
+      return;
+    }
+    if (payload.type === "beeAttack") {
+      this.scene.onBeeAttack?.(payload);
+      return;
+    }
+    if (payload.type === "beeSoldierDied") {
+      this.scene.onBeeSoldierDied?.(payload.i);
+      return;
+    }
+    if (payload.type === "beeSoldierSpawn") {
+      this.scene.onBeeSoldierSpawn?.(payload);
+      return;
+    }
+    if (payload.type === "beeMeleeHit") {
+      this.scene.takeDamage?.(payload.damage ?? 30);
+      return;
+    }
+    if (payload.type === "beeSoldierSting") {
+      this.scene.onBeeSoldierSting?.(payload);
+      return;
+    }
   }
 
   sendHitTroll(index, damage) {
     this.send({ type: "hitTroll", index, damage });
+  }
+
+  sendHitBeeQueen(damage) {
+    this.send({ type: "hitBeeQueen", damage });
+  }
+
+  sendHitBeeSoldier(index, damage) {
+    this.send({ type: "hitBeeSoldier", index, damage });
   }
 
   update(time) {
