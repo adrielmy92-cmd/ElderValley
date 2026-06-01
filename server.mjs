@@ -2313,9 +2313,8 @@ function applyBeeDamage(amount) {
   if (newPhase > b.phase) {
     b.phase = newPhase;
     sendToBee({ type: "beeAttack", event: "phase", phase: newPhase });
-    // Chama soldados na transição de fase
-    const count = newPhase === 2 ? 2 : 2;
-    beeSpawnSoldiers(count);
+    // Chama 1 soldado na transição de fase
+    beeSpawnSoldiers(1);
   }
 }
 
@@ -2333,7 +2332,7 @@ function applyBeeSoldierDamage(idx, amount) {
 
 function beeSpawnSoldiers(count) {
   const existing = beeSoldiers.filter(s => !s.dead).length;
-  const toSpawn = Math.min(count, 6 - existing);
+  const toSpawn = Math.min(count, 2 - existing); // máx 2 soldados simultâneos
   for (let i = 0; i < toSpawn; i++) {
     const side = Math.random() < 0.5;
     const fromX = side ? 80 : BEE_W - 80;
@@ -2483,7 +2482,7 @@ function tickBee() {
       // Radial burst
       const waves = b.phase >= 3 ? 7 : 5;
       sendToBee({ type: "beeAttack", event: "radialBurst", bossX: Math.round(b.x), bossY: Math.round(b.y), waves, phase: b.phase });
-      if (beeSoldiers.filter(s => !s.dead).length < 4) beeSpawnSoldiers(b.phase >= 3 ? 2 : 1);
+      if (beeSoldiers.filter(s => !s.dead).length < 2) beeSpawnSoldiers(1);
       b.state = "burst"; b.stateUntil = now + 600 + waves * 650 + 1600;
     } else if (r < 0.66) {
       // Royal dive
