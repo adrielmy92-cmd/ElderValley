@@ -2325,6 +2325,7 @@ function applyBeeSoldierDamage(idx, amount) {
   s.hp = Math.max(0, s.hp - Math.max(0, Math.floor(amount)));
   if (s.hp <= 0) {
     s.dead = true;
+    s.diedAt = Date.now();
     sendToBee({ type: "beeSoldierDied", i: idx });
   }
   sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
@@ -2556,20 +2557,16 @@ function tickBeeSoldiers(now, delta, players) {
       sendToBee({ type: "beeSoldierSting", i: s.i, fromX: Math.round(s.x), fromY: Math.round(s.y), angle });
     }
   }
-  // Remove soldados mortos antigos
-  beeSoldiers = beeSoldiers.filter(s => !s.dead || true); // mantém para sync de morte
+  // Remove soldados mortos há mais de 2s (clientes já receberam a morte)
+  beeSoldiers = beeSoldiers.filter(s => !s.dead || (Date.now() - (s.diedAt || 0) < 2000));
 }
 
 // Broadcast a cada 100ms
-let lastBeeSync = 0;
 setInterval(() => {
-  const now = Date.now();
-  if (now - lastBeeSync < 100) return;
-  lastBeeSync = now;
   if (!getBeePlayers().length) return;
   sendToBee({ type: "beeSync", ...serializeBee() });
   sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
-}, 50).unref();
+}, 100).unref();
 
 setInterval(() => tickBee(), 50).unref();
 
