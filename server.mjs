@@ -2375,7 +2375,21 @@ function tickBee() {
   }
 
   const players = getBeePlayers();
-  if (!players.length) return;
+  if (!players.length) {
+    // Sem jogadores na cena — reseta após 5s para o próximo player entrar com boss fresco
+    if (!beeState.dead) {
+      if (!beeState._emptyAt) {
+        beeState._emptyAt = now;
+      } else if (now - beeState._emptyAt > 5000) {
+        beeState = createBeeState();
+        beeSoldiers = [];
+        beeNextSoldierIdx = 0;
+        console.log("[bee] Arena vazia — boss resetado.");
+      }
+    }
+    return;
+  }
+  beeState._emptyAt = 0; // tem players, limpa o timer
 
   const target = nearestBeePlayer();
   if (!target) return;
