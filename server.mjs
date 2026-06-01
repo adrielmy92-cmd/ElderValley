@@ -2408,6 +2408,8 @@ function tickBee() {
       b.state = "special_cd"; b.stateUntil = now + 1800;
     } else {
       b.vx = (tdx / tdist) * 900; b.vy = (tdy / tdist) * 900;
+      b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
+      b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
     }
     tickBeeSoldiers(now, delta, players);
     return;
@@ -2424,7 +2426,11 @@ function tickBee() {
     const wdx = wp.x - b.x, wdy = wp.y - b.y;
     const wdist = Math.hypot(wdx, wdy) || 1;
     if (wdist < 45) { b.dashWpIdx++; b.vx = 0; b.vy = 0; }
-    else { b.vx = (wdx / wdist) * 820; b.vy = (wdy / wdist) * 820; }
+    else {
+      b.vx = (wdx / wdist) * 820; b.vy = (wdy / wdist) * 820;
+      b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
+      b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
+    }
     tickBeeSoldiers(now, delta, players);
     return;
   }
