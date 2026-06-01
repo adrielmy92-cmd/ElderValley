@@ -243,7 +243,8 @@ export default class ForestScene extends WorldScene {
     this.updateBossHpBar();
     this.bossNameText?.setText("GOLEM DE LAVA  ●  Fase 1");
     this.bossHpContainer?.setVisible(true);
-    this.bossGolem.setVisible(true).clearTint();
+    this.bossGolem.setVisible(true).setActive(true).clearTint();
+    this.bossGolem.play("golem-walk", true);
     this.bossShadow?.setVisible(true);
     if (this.bossHitzone) this.bossHitzone.body.enable = true;
 
