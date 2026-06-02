@@ -15,11 +15,8 @@ export default class TitleScene extends Phaser.Scene {
     this.scrollOffsets = { houses: 0, characters: 0 };
     this.activeScrollArea = null;
     this.walletSystem = new WalletSystem(this);
-    if (this.selectedCharacter === "archer") {
-      this.selectedCharacter = "adventurer";
-      localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
-    }
-    if (!["mage-1", "adventurer", "dark-wanderer"].includes(this.selectedCharacter)) {
+    // Only the Mage is available right now — coerce any other saved choice.
+    if (this.selectedCharacter !== "mage-1") {
       this.selectedCharacter = "mage-1";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
@@ -422,9 +419,8 @@ export default class TitleScene extends Phaser.Scene {
       }
       this.loginMode = "wallet";
       localStorage.setItem("eldervalley-login-mode", "wallet");
-      if (this.walletSystem.profile?.selectedCharacter) {
-        this.selectedCharacter = this.walletSystem.profile.selectedCharacter;
-      }
+      // Only the Mage is available; ignore any other saved character.
+      this.selectedCharacter = "mage-1";
     } catch (error) {
       this.walletSystem.status = error?.message ?? "Could not connect.";
     }
@@ -642,10 +638,9 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   getCharacterCatalog() {
+    // Only the Mage is available to play right now.
     return [
-      { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
-      { id: "adventurer", name: "Adventurer", key: "adventurer-sheet", frame: 0, scale: 0.82 },
-      { id: "dark-wanderer", name: "Dark Wanderer", key: "dark-wanderer-sheet", frame: 0, scale: 0.58 }
+      { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 }
     ];
   }
 
@@ -1404,9 +1399,8 @@ export default class TitleScene extends Phaser.Scene {
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
       this.registry.set("coinsProfileId", profileId);
-      if (profile.selectedCharacter && ["mage-1", "adventurer", "dark-wanderer"].includes(profile.selectedCharacter)) {
-        this.selectedCharacter = profile.selectedCharacter;
-      }
+      // Only the Mage is available right now.
+      this.selectedCharacter = "mage-1";
     } catch {
       // If the server does not respond, fall back to the local cache.
     }
