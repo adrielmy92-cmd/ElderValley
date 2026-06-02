@@ -90,6 +90,8 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=1");
+    this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=1");
+    this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=1");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
       this.loadImage(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=132`);
@@ -106,6 +108,8 @@ export default class GamePreloadScene extends Phaser.Scene {
 
   create() {
     this.applyChromaKey("volcano-gate-raw", "volcano-gate", 255, 0, 255);
+    this.applyChromaKey("swamp-gate-raw",   "swamp-gate",   255, 0, 255);
+    this.applyChromaKey("hive-gate-raw",    "hive-gate",    255, 0, 255);
     this.scene.start(this.targetScene, {
       ...this.entryData,
       spawnKey: this.spawnKey

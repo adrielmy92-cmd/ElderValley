@@ -3208,49 +3208,26 @@ export default class WorldScene extends BaseGameScene {
     const x = 420;
     const y = 1260;
 
-    const g = this.add.graphics().setDepth(y + 80);
-
-    // Pilares de madeira velha cobertos de musgo
-    g.fillStyle(0x2a3d1a, 1);
-    g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0x3a5222, 1);
-    g.fillRect(x - 56, y - 102, 30, 12);
-    g.fillStyle(0x2a3d1a, 1);
-    g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0x3a5222, 1);
-    g.fillRect(x + 26, y - 102, 30, 12);
-    g.fillStyle(0x1e2e12, 1);
-    g.fillRect(x - 56, y - 112, 112, 18);
-
-    // Runas verdes brilhantes
-    g.fillStyle(0x44ff88, 0.55);
-    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
-      g.fillRect(rx - 4, ry - 4, 8, 8);
-    });
-
-    // Glow verde do portal
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-    pg.fillStyle(0x22cc44, 0.28);
-    pg.fillEllipse(x, y - 54, 56, 86);
-    pg.fillStyle(0x88ffaa, 0.12);
-    pg.fillEllipse(x, y - 54, 88, 116);
-
-    // Placa
-    g.fillStyle(0x1a2a0a, 1);
-    g.fillRect(x - 4, y - 130, 8, 26);
-    g.fillStyle(0x2a4010, 1);
-    g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Swamp", {
-      fontFamily: "monospace", fontSize: "13px",
-      color: "#88ffaa", stroke: "#0a1a0a", strokeThickness: 3
-    }).setOrigin(0.5).setDepth(y + 100);
+    if (this.textures.exists("swamp-gate")) {
+      this.add.image(x, y, "swamp-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x2a3d1a, 1);
+      g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x1e2e12, 1);
+      g.fillRect(x - 56, y - 112, 112, 18);
+    }
 
     this.interactions.add({
       id: "door_swamp_gate",
       x, y,
-      promptY: y - 170,
+      promptY: y - 260,
       promptText: "E Enter Swamp",
-      radius: 72,
+      radius: 80,
       onInteract: () => this.fadeTo("SwampScene", { spawnKey: "fromVillage" })
     });
   }
@@ -3259,49 +3236,26 @@ export default class WorldScene extends BaseGameScene {
     const x = 2500;
     const y = 1260;
 
-    const g = this.add.graphics().setDepth(y + 80);
-
-    // Pilares de madeira âmbar com cera
-    g.fillStyle(0x8a6200, 1);
-    g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0xc49a20, 1);
-    g.fillRect(x - 56, y - 102, 30, 12);
-    g.fillStyle(0x8a6200, 1);
-    g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0xc49a20, 1);
-    g.fillRect(x + 26, y - 102, 30, 12);
-    g.fillStyle(0x6a4800, 1);
-    g.fillRect(x - 56, y - 112, 112, 18);
-
-    // Runas hexagonais douradas
-    g.fillStyle(0xffdd44, 0.6);
-    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
-      g.fillRect(rx - 4, ry - 4, 8, 8);
-    });
-
-    // Glow dourado/âmbar
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-    pg.fillStyle(0xffcc00, 0.3);
-    pg.fillEllipse(x, y - 54, 56, 86);
-    pg.fillStyle(0xffee88, 0.14);
-    pg.fillEllipse(x, y - 54, 90, 120);
-
-    // Placa
-    g.fillStyle(0x5a3800, 1);
-    g.fillRect(x - 4, y - 130, 8, 26);
-    g.fillStyle(0x7a5000, 1);
-    g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Hive", {
-      fontFamily: "monospace", fontSize: "13px",
-      color: "#ffdd88", stroke: "#3a2000", strokeThickness: 3
-    }).setOrigin(0.5).setDepth(y + 100);
+    if (this.textures.exists("hive-gate")) {
+      this.add.image(x, y, "hive-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x8a6200, 1);
+      g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x6a4800, 1);
+      g.fillRect(x - 56, y - 112, 112, 18);
+    }
 
     this.interactions.add({
       id: "door_bee_gate",
       x, y,
-      promptY: y - 170,
+      promptY: y - 260,
       promptText: "E Enter Hive",
-      radius: 72,
+      radius: 80,
       onInteract: () => this.fadeTo("BeeScene", { spawnKey: "fromVillage" })
     });
   }

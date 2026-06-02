@@ -112,43 +112,26 @@ export default class SwampScene extends WorldScene {
     const x = SWAMP_W / 2;
     const y = SWAMP_H - 80;
 
-    const g = this.add.graphics().setDepth(y + 80);
-    g.fillStyle(0x2a3d1a, 1);
-    g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0x3a5222, 1);
-    g.fillRect(x - 56, y - 102, 30, 12);
-    g.fillStyle(0x2a3d1a, 1);
-    g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0x3a5222, 1);
-    g.fillRect(x + 26, y - 102, 30, 12);
-    g.fillStyle(0x1e2e12, 1);
-    g.fillRect(x - 56, y - 112, 112, 18);
-    g.fillStyle(0x44ff88, 0.5);
-    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
-      g.fillRect(rx - 4, ry - 4, 8, 8);
-    });
-
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-    pg.fillStyle(0x22cc44, 0.28);
-    pg.fillEllipse(x, y - 54, 56, 86);
-    pg.fillStyle(0x88ffaa, 0.12);
-    pg.fillEllipse(x, y - 54, 88, 116);
-
-    g.fillStyle(0x1a2a0a, 1);
-    g.fillRect(x - 4, y - 130, 8, 26);
-    g.fillStyle(0x2a4010, 1);
-    g.fillRect(x - 44, y - 158, 88, 30);
-    this.add.text(x, y - 143, "Swamp", {
-      fontFamily: "monospace", fontSize: "13px",
-      color: "#88ffaa", stroke: "#0a1a0a", strokeThickness: 3
-    }).setOrigin(0.5).setDepth(y + 100);
+    if (this.textures.exists("swamp-gate")) {
+      this.add.image(x, y, "swamp-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x2a3d1a, 1);
+      g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x1e2e12, 1);
+      g.fillRect(x - 56, y - 112, 112, 18);
+    }
 
     this.interactions.add({
       id: "swamp_exit",
       x, y,
-      promptY: y - 170,
+      promptY: y - 260,
       promptText: "E Return to Village",
-      radius: 72,
+      radius: 80,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "swampGate" })
     });
   }

@@ -1065,35 +1065,23 @@ export default class BeeScene extends WorldScene {
     const x = BEE_W / 2;
     const y = BEE_H - 80;
 
-    const g = this.add.graphics().setDepth(y + 80);
-    g.fillStyle(0x8a6200, 1);
-    g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0xc49a20, 1);
-    g.fillRect(x - 56, y - 102, 30, 12);
-    g.fillStyle(0x8a6200, 1);
-    g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0xc49a20, 1);
-    g.fillRect(x + 26, y - 102, 30, 12);
-    g.fillStyle(0x6a4800, 1);
-    g.fillRect(x - 56, y - 112, 112, 18);
-    g.fillStyle(0xffdd44, 0.65);
-    [[x-41,y-72],[x-41,y-48],[x+41,y-72],[x+41,y-48]].forEach(([rx,ry]) => g.fillRect(rx-4,ry-4,8,8));
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-    pg.fillStyle(0xffcc00, 0.3);
-    pg.fillEllipse(x, y - 54, 56, 86);
-    pg.fillStyle(0xffee88, 0.14);
-    pg.fillEllipse(x, y - 54, 90, 120);
-    g.fillStyle(0x5a3800, 1);
-    g.fillRect(x - 4, y - 130, 8, 26);
-    g.fillStyle(0x7a5000, 1);
-    g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Hive", {
-      fontFamily: "monospace", fontSize: "13px",
-      color: "#ffdd88", stroke: "#3a2000", strokeThickness: 3
-    }).setOrigin(0.5).setDepth(y + 100);
+    if (this.textures.exists("hive-gate")) {
+      this.add.image(x, y, "hive-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x8a6200, 1);
+      g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x6a4800, 1);
+      g.fillRect(x - 56, y - 112, 112, 18);
+    }
+
     this.interactions.add({
-      id: "bee_exit", x, y, promptY: y - 170,
-      promptText: "E Return to Village", radius: 72,
+      id: "bee_exit", x, y, promptY: y - 260,
+      promptText: "E Return to Village", radius: 80,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "beeGate" })
     });
   }
