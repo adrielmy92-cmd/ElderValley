@@ -115,7 +115,7 @@ export default class SwampScene extends WorldScene {
     if (this.textures.exists("swamp-gate")) {
       this.add.image(x, y, "swamp-gate")
         .setOrigin(0.5, 0.88)
-        .setScale(0.24)
+        .setScale(0.20)
         .setDepth(y + 120);
     } else {
       const g = this.add.graphics().setDepth(y + 80);

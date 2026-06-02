@@ -1068,7 +1068,7 @@ export default class BeeScene extends WorldScene {
     if (this.textures.exists("hive-gate")) {
       this.add.image(x, y, "hive-gate")
         .setOrigin(0.5, 0.88)
-        .setScale(0.24)
+        .setScale(0.20)
         .setDepth(y + 120);
     } else {
       const g = this.add.graphics().setDepth(y + 80);

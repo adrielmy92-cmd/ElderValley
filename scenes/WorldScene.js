@@ -23,6 +23,13 @@ const SPAWNS = {
 };
 
 const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
+const GATE_STORAGE_KEY  = "eldervalley-village-gate-positions-v1";
+const GATE_SCALE        = 0.20;
+const GATE_DEFS = [
+  { id: "forest", textureKey: "volcano-gate", defaultX: 1460, defaultY: -60,  sceneKey: "ForestScene", returnSpawnKey: "forestGate", promptText: "E Enter Volcano" },
+  { id: "swamp",  textureKey: "swamp-gate",   defaultX: 420,  defaultY: 1260, sceneKey: "SwampScene",  returnSpawnKey: "swampGate",  promptText: "E Enter Swamp"   },
+  { id: "bee",    textureKey: "hive-gate",    defaultX: 2500, defaultY: 1260, sceneKey: "BeeScene",    returnSpawnKey: "beeGate",    promptText: "E Enter Hive"    }
+];
 
 const PUBLIC_HOUSE_KEYS = new Set(["creative-house-alchemist"]);
 const WALLET_LOCKED_HOUSE_KEYS = new Set([
@@ -544,9 +551,7 @@ export default class WorldScene extends BaseGameScene {
     this.addKnightCharacter();
     this.addNpc();
     this.addCityTransition();
-    this.addForestTransition();
-    this.addSwampTransition();
-    this.addBeeTransition();
+    this.buildGates();
     this.addWorldBounds();
   }
 
@@ -670,6 +675,12 @@ export default class WorldScene extends BaseGameScene {
         x: layout.x + houseDef.spawnOffset.x,
         y: layout.y + houseDef.spawnOffset.y
       };
+    }
+    const gateDef = GATE_DEFS.find((g) => g.returnSpawnKey === spawnKey);
+    if (gateDef) {
+      const positions = this.loadGatePositions();
+      const pos = positions[gateDef.id] ?? { x: gateDef.defaultX, y: gateDef.defaultY };
+      return { x: pos.x, y: pos.y + 80 };
     }
     return SPAWNS[spawnKey] ?? SPAWNS.start;
   }
@@ -1726,6 +1737,7 @@ export default class WorldScene extends BaseGameScene {
       modeFloor: Phaser.Input.Keyboard.KeyCodes.P,
       modeStructure: Phaser.Input.Keyboard.KeyCodes.B,
       modeWindowLight: Phaser.Input.Keyboard.KeyCodes.L,
+      modeGate: Phaser.Input.Keyboard.KeyCodes.G,
       horizontal: Phaser.Input.Keyboard.KeyCodes.ONE,
       vertical: Phaser.Input.Keyboard.KeyCodes.TWO,
       post: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -1874,6 +1886,12 @@ export default class WorldScene extends BaseGameScene {
       this.updateCreativeHud();
     }
 
+    if (this.creativeModeEnabled && Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.modeGate)) {
+      this.activeCreativeMode = "gate";
+      this.syncCreativeModeState();
+      this.updateCreativeHud();
+    }
+
     const fenceSelectionKeys = [
       ["horizontal", "h"],
       ["vertical", "v"],
@@ -1991,6 +2009,7 @@ export default class WorldScene extends BaseGameScene {
     this.houseEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "house";
     this.structureEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "structure";
     this.windowLightEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "windowLight";
+    this.gateEditorEnabled = this.creativeModeEnabled && this.activeCreativeMode === "gate";
     if (!this.houseEditorEnabled) {
       this.draggedEditableHouse = null;
       this.updateHouseSelectionMarker();
@@ -2053,10 +2072,11 @@ export default class WorldScene extends BaseGameScene {
       floor: "Floors",
       house: "Houses",
       structure: "Structures",
-      windowLight: "Lights"
+      windowLight: "Lights",
+      gate: "Gates"
     }[this.activeCreativeMode] ?? "None";
     this.creativeTitleText?.setText("");
-    this.creativeModesText?.setText(`Mode: ${activeLabel}  |  P Floors  |  F Fences  |  T Trees  |  H Houses  |  B Structures  |  L Lights`);
+    this.creativeModesText?.setText(`Mode: ${activeLabel}  |  P Floors  |  F Fences  |  T Trees  |  H Houses  |  B Structures  |  L Lights  |  G Gates`);
     this.updateCreativeSaveButton();
 
     if (this.isFenceEditorActive()) {
@@ -2079,6 +2099,9 @@ export default class WorldScene extends BaseGameScene {
     } else if (this.isWindowLightEditorActive()) {
       const label = this.windowLightPieces[this.selectedWindowLightType]?.label ?? "Medium Window";
       this.fenceEditorText.setText(`Light: ${label} | glows at night | click to place | right-click/Delete removes`);
+    } else if (this.gateEditorEnabled) {
+      const sel = this.selectedGate ? `Selected: ${this.selectedGate.def.id}` : "No gate selected";
+      this.fenceEditorText.setText(`Gates | click to select | drag to move | right-click resets | ${sel}`);
     } else {
       this.fenceEditorText.setText("Choose a creative mode");
     }
@@ -2390,6 +2413,42 @@ export default class WorldScene extends BaseGameScene {
     if (this.isHouseEditorActive()) {
       this.handleHouseEditorPointerDown(pointer);
     }
+
+    if (this.gateEditorEnabled) {
+      this.handleGateEditorPointerDown(pointer);
+    }
+  }
+
+  handleGateEditorPointerDown(pointer) {
+    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    if (pointer.rightButtonDown()) {
+      const gate = this.getGateAtWorldPoint(world.x, world.y);
+      if (gate) {
+        this.moveGate(gate, gate.def.defaultX, gate.def.defaultY);
+        this.saveGatePositions();
+        this.updateCreativeHud();
+      }
+      return;
+    }
+    const gate = this.getGateAtWorldPoint(world.x, world.y);
+    if (gate) {
+      this.selectedGate = gate;
+      this.draggedGate = gate;
+      this.updateCreativeHud();
+    } else if (this.selectedGate) {
+      const snapped = { x: Math.round(world.x / 16) * 16, y: Math.round(world.y / 16) * 16 };
+      this.moveGate(this.selectedGate, snapped.x, snapped.y);
+      this.saveGatePositions();
+      this.updateCreativeHud();
+    }
+  }
+
+  getGateAtWorldPoint(x, y) {
+    return (this.gateObjects ?? []).find((gObj) => {
+      if (!gObj.image) return Math.abs(x - gObj.x) < 80 && Math.abs(y - gObj.y) < 80;
+      const b = gObj.image.getBounds();
+      return b.contains(x, y);
+    }) ?? null;
   }
 
   handleCreativePointerMove(pointer) {
@@ -2399,6 +2458,14 @@ export default class WorldScene extends BaseGameScene {
 
     if (this.draggingCreativePanel) {
       this.moveCreativePanel(pointer);
+      return;
+    }
+
+    if (this.gateEditorEnabled && this.draggedGate && pointer.isDown) {
+      const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const snapped = { x: Math.round(world.x / 16) * 16, y: Math.round(world.y / 16) * 16 };
+      this.moveGate(this.draggedGate, snapped.x, snapped.y);
+      this.updateCreativeHud();
       return;
     }
 
@@ -2418,6 +2485,12 @@ export default class WorldScene extends BaseGameScene {
 
     if (this.draggingCreativePanel) {
       this.stopCreativePanelDrag();
+      return;
+    }
+
+    if (this.draggedGate) {
+      this.saveGatePositions();
+      this.draggedGate = null;
       return;
     }
 
@@ -3172,92 +3245,71 @@ export default class WorldScene extends BaseGameScene {
     return { post, board, label };
   }
 
-  addForestTransition() {
-    const x = 1460;
-    const y = -60;
-
-    if (this.textures.exists("volcano-gate")) {
-      this.add.image(x, y, "volcano-gate")
-        .setOrigin(0.5, 0.88)
-        .setScale(0.24)
-        .setDepth(y + 120);
-    } else {
-      const g = this.add.graphics().setDepth(y + 80);
-      g.fillStyle(0x2e1a0e, 1);
-      g.fillRect(x - 52, y - 96, 22, 96);
-      g.fillRect(x + 30, y - 96, 22, 96);
-      g.fillStyle(0x261408, 1);
-      g.fillRect(x - 56, y - 112, 112, 18);
-      const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-      pg.fillStyle(0xff3300, 0.28);
-      pg.fillEllipse(x, y - 54, 56, 86);
+  loadGatePositions() {
+    try {
+      return JSON.parse(localStorage.getItem(GATE_STORAGE_KEY) ?? "{}");
+    } catch {
+      return {};
     }
+  }
 
-    this.interactions.add({
-      id: "door_forest_gate",
+  saveGatePositions() {
+    const data = {};
+    (this.gateObjects ?? []).forEach(({ def, x, y }) => { data[def.id] = { x, y }; });
+    try { localStorage.setItem(GATE_STORAGE_KEY, JSON.stringify(data)); } catch {}
+    this.setCreativeDirty?.(true);
+    this.saveSharedStorage(GATE_STORAGE_KEY, data).catch(() => {});
+  }
+
+  buildGates() {
+    this.gateObjects = [];
+    this.selectedGate = null;
+    this.draggedGate = null;
+    const positions = this.loadGatePositions();
+    GATE_DEFS.forEach((def) => {
+      const pos = positions[def.id] ?? { x: def.defaultX, y: def.defaultY };
+      this.createGate(def, pos.x, pos.y);
+    });
+    this.loadSharedStorage(GATE_STORAGE_KEY).then((remote) => {
+      if (!remote?.data || typeof remote.data !== "object") return;
+      this.gateObjects.forEach((gObj) => {
+        const pos = remote.data[gObj.def.id];
+        if (pos?.x != null) this.moveGate(gObj, pos.x, pos.y);
+      });
+      try { localStorage.setItem(GATE_STORAGE_KEY, JSON.stringify(remote.data)); } catch {}
+    }).catch(() => {});
+  }
+
+  createGate(def, x, y) {
+    let image = null;
+    if (this.textures.exists(def.textureKey)) {
+      image = this.add.image(x, y, def.textureKey)
+        .setOrigin(0.5, 0.88)
+        .setScale(GATE_SCALE)
+        .setDepth(y + 120);
+    }
+    const interaction = {
+      id: `door_${def.id}_gate`,
       x,
       y,
-      promptY: y - 260,
-      promptText: "E Enter Volcano",
+      promptY: y - Math.round((this.textures.exists(def.textureKey) ? 1092 * GATE_SCALE * 0.88 : 200)),
+      promptText: def.promptText,
       radius: 80,
-      onInteract: () => this.fadeTo("ForestScene", { spawnKey: "fromVillage" })
-    });
+      onInteract: () => this.fadeTo(def.sceneKey, { spawnKey: "fromVillage" })
+    };
+    this.interactions.add(interaction);
+    const gObj = { def, x, y, image, interaction };
+    this.gateObjects.push(gObj);
+    return gObj;
   }
 
-  addSwampTransition() {
-    const x = 420;
-    const y = 1260;
-
-    if (this.textures.exists("swamp-gate")) {
-      this.add.image(x, y, "swamp-gate")
-        .setOrigin(0.5, 0.88)
-        .setScale(0.24)
-        .setDepth(y + 120);
-    } else {
-      const g = this.add.graphics().setDepth(y + 80);
-      g.fillStyle(0x2a3d1a, 1);
-      g.fillRect(x - 52, y - 96, 22, 96);
-      g.fillRect(x + 30, y - 96, 22, 96);
-      g.fillStyle(0x1e2e12, 1);
-      g.fillRect(x - 56, y - 112, 112, 18);
-    }
-
-    this.interactions.add({
-      id: "door_swamp_gate",
-      x, y,
-      promptY: y - 260,
-      promptText: "E Enter Swamp",
-      radius: 80,
-      onInteract: () => this.fadeTo("SwampScene", { spawnKey: "fromVillage" })
-    });
-  }
-
-  addBeeTransition() {
-    const x = 2500;
-    const y = 1260;
-
-    if (this.textures.exists("hive-gate")) {
-      this.add.image(x, y, "hive-gate")
-        .setOrigin(0.5, 0.88)
-        .setScale(0.24)
-        .setDepth(y + 120);
-    } else {
-      const g = this.add.graphics().setDepth(y + 80);
-      g.fillStyle(0x8a6200, 1);
-      g.fillRect(x - 52, y - 96, 22, 96);
-      g.fillRect(x + 30, y - 96, 22, 96);
-      g.fillStyle(0x6a4800, 1);
-      g.fillRect(x - 56, y - 112, 112, 18);
-    }
-
-    this.interactions.add({
-      id: "door_bee_gate",
-      x, y,
-      promptY: y - 260,
-      promptText: "E Enter Hive",
-      radius: 80,
-      onInteract: () => this.fadeTo("BeeScene", { spawnKey: "fromVillage" })
-    });
+  moveGate(gObj, x, y) {
+    gObj.x = x;
+    gObj.y = y;
+    gObj.image?.setPosition(x, y).setDepth(y + 120);
+    gObj.interaction.x = x;
+    gObj.interaction.y = y;
+    gObj.interaction.promptY = y - Math.round(1092 * GATE_SCALE * 0.88);
   }
 
   addStreetLamp(x, y, index = 0) {

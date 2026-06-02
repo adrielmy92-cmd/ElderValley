@@ -2,7 +2,7 @@ import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=209";
 import GamePreloadScene from "./scenes/GamePreloadScene.js?v=216";
 import TitleScene from "./scenes/TitleScene.js?v=219";
-import WorldScene from "./scenes/WorldScene.js?v=224";
+import WorldScene from "./scenes/WorldScene.js?v=225";
 import CityScene from "./scenes/CityScene.js?v=211";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=209";
 import ShopInteriorScene from "./scenes/ShopInteriorScene.js?v=209";
@@ -13,9 +13,9 @@ import ReferenceHouseInteriorScene from "./scenes/ReferenceHouseInteriorScene.js
 import WindmillLoadScene from "./scenes/WindmillLoadScene.js?v=209";
 import WindmillInteriorScene from "./scenes/WindmillInteriorScene.js?v=210";
 import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=210";
-import ForestScene from "./scenes/ForestScene.js?v=26";
-import SwampScene from "./scenes/SwampScene.js?v=19";
-import BeeScene from "./scenes/BeeScene.js?v=4";
+import ForestScene from "./scenes/ForestScene.js?v=27";
+import SwampScene from "./scenes/SwampScene.js?v=20";
+import BeeScene from "./scenes/BeeScene.js?v=5";
 
 const config = {
   type: Phaser.AUTO,
