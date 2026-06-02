@@ -1009,10 +1009,13 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   showLoginOverlay(forceRedraw = false) {
-    if (this.loginOverlay && !forceRedraw) {
+    if (this.loginOverlay && !forceRedraw) return;
+    this.loginOverlay?.destroy(true);
+
+    if (this.isPhone()) {
+      this._showLoginOverlayPhone();
       return;
     }
-    this.loginOverlay?.destroy(true);
 
     const { width, height } = this.scale;
     const panelW = Math.min(760, width - 48);
@@ -1022,8 +1025,7 @@ export default class TitleScene extends Phaser.Scene {
     this.loginOverlay = this.add.container(0, 0).setDepth(9000);
     this.loginOverlay.visible = true;
 
-    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.68)
-      .setInteractive();
+    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.68).setInteractive();
     const g = this.add.graphics();
     g.fillStyle(0x07101a, 0.99);
     g.fillRoundedRect(x, y, panelW, panelH, 10);
@@ -1037,62 +1039,105 @@ export default class TitleScene extends Phaser.Scene {
 
     const titleText = this.walletSystem.connected ? "Your ElderValley Profile" : "Enter ElderValley";
     const title = this.add.text(width / 2, y + 46, titleText, {
-      fontFamily: "Georgia, 'Times New Roman', serif",
-      fontSize: "30px",
-      color: "#ffe0a0",
-      stroke: "#1d0d05",
-      strokeThickness: 5
+      fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "30px",
+      color: "#ffe0a0", stroke: "#1d0d05", strokeThickness: 5
     }).setOrigin(0.5);
     const subtitleText = this.walletSystem.connected
       ? "Review what this wallet owns before entering the world."
       : "Connect a wallet to load your profile, houses, and characters.";
-    const subtitle = this.add.text(width / 2, y + 92, subtitleText, this.textStyle(14, "#d8c6a1"))
-      .setOrigin(0.5);
+    const subtitle = this.add.text(width / 2, y + 92, subtitleText, this.textStyle(14, "#d8c6a1")).setOrigin(0.5);
     this.loginOverlay.add([title, subtitle]);
 
     if (this.walletSystem.connected) {
       this.drawWalletProfilePanel(x + 24, y + 118, panelW - 48, panelH - 198);
-      this.addModalButton(width / 2 - 248, y + panelH - 58, 150, "Enter", () => this.beginGame());
-      this.addModalButton(width / 2 - 76, y + panelH - 58, 150, "Disconnect", () => {
-        this.walletSystem.disconnect();
-        this.loginMode = "wallet";
-        localStorage.setItem("eldervalley-login-mode", "wallet");
-        this.showLoginOverlay(true);
-      });
-      this.addModalButton(width / 2 + 96, y + panelH - 58, 150, "Back", () => {
-        this.loginOverlay?.destroy(true);
-        this.loginOverlay = null;
-      });
+      this.addModalButton(width / 2 - 248, y + panelH - 58, 150, "Enter",      () => this.beginGame());
+      this.addModalButton(width / 2 - 76,  y + panelH - 58, 150, "Disconnect", () => { this.walletSystem.disconnect(); this.loginMode = "wallet"; localStorage.setItem("eldervalley-login-mode", "wallet"); this.showLoginOverlay(true); });
+      this.addModalButton(width / 2 + 96,  y + panelH - 58, 150, "Back",       () => { this.loginOverlay?.destroy(true); this.loginOverlay = null; });
       return;
     }
 
-    const cardY = y + 126;
     const cardW = (panelW - 84) / 3;
-    this.addLoginChoiceCard(x + 24, cardY, cardW, 172, "Guest", "Explore without a wallet. Purchases stay locked.", null, () => {
-      this.loginMode = "guest";
-      localStorage.setItem("eldervalley-login-mode", "guest");
-      this.walletSystem.status = "Guest mode active. Purchases and profile stay locked without a wallet.";
-      this.beginGame();
-    });
-    this.addLoginChoiceCard(x + 42 + cardW, cardY, cardW, 172, "MetaMask", "Enter with an EVM wallet.", "metamask", () => this.handleWalletConnect("metamask"));
-    this.addLoginChoiceCard(x + 60 + cardW * 2, cardY, cardW, 172, "Phantom", "Enter with Phantom.", "phantom", () => this.handleWalletConnect("phantom"));
+    const cardY = y + 126;
+    this.addLoginChoiceCard(x + 24,              cardY, cardW, 172, "Guest",    "Explore without a wallet. Purchases stay locked.", null,       () => { this.loginMode = "guest"; localStorage.setItem("eldervalley-login-mode", "guest"); this.walletSystem.status = "Guest mode active."; this.beginGame(); });
+    this.addLoginChoiceCard(x + 42 + cardW,      cardY, cardW, 172, "MetaMask", "Enter with an EVM wallet.",                        "metamask", () => this.handleWalletConnect("metamask"));
+    this.addLoginChoiceCard(x + 60 + cardW * 2,  cardY, cardW, 172, "Phantom",  "Enter with Phantom.",                             "phantom",  () => this.handleWalletConnect("phantom"));
 
-    const summaryY = cardY + 204;
-    const summary = this.add.text(x + 42, summaryY, `Guest: enter to test without saving purchases.\nWallet: loads account houses, characters, and items.\n${this.walletSystem.status}`, {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#e9d5a0",
-      stroke: "#080402",
-      strokeThickness: 3,
-      lineSpacing: 8,
-      wordWrap: { width: panelW - 84 }
+    const summary = this.add.text(x + 42, cardY + 204, `Guest: enter to test without saving purchases.\nWallet: loads account houses, characters, and items.\n${this.walletSystem.status}`, {
+      fontFamily: "monospace", fontSize: "14px", color: "#e9d5a0",
+      stroke: "#080402", strokeThickness: 3, lineSpacing: 8, wordWrap: { width: panelW - 84 }
     }).setOrigin(0);
     this.loginOverlay.add(summary);
+    this.addModalButton(width / 2 - 78, y + panelH - 58, 156, "Back", () => { this.loginOverlay?.destroy(true); this.loginOverlay = null; });
+  }
 
-    this.addModalButton(width / 2 - 78, y + panelH - 58, 156, "Back", () => {
-      this.loginOverlay?.destroy(true);
-      this.loginOverlay = null;
+  _showLoginOverlayPhone() {
+    const { width, height } = this.scale;
+    const cx = width / 2;
+    const panelW = width - 28;
+    const panelH = Math.min(380, height - 60);
+    const px = 14;
+    const py = height / 2 - panelH / 2;
+
+    this.loginOverlay = this.add.container(0, 0).setDepth(9000);
+    const shade = this.add.rectangle(cx, height / 2, width, height, 0x000000, 0.78).setInteractive();
+    const g = this.add.graphics();
+    g.fillStyle(0x07101a, 0.99);
+    g.fillRoundedRect(px, py, panelW, panelH, 10);
+    g.lineStyle(3, 0x030201, 1);
+    g.strokeRoundedRect(px, py, panelW, panelH, 10);
+    g.lineStyle(2, 0xd29643, 1);
+    g.strokeRoundedRect(px + 8, py + 8, panelW - 16, panelH - 16, 7);
+    g.fillStyle(0x2b190d, 1);
+    g.fillRect(px + 16, py + 16, panelW - 32, 36);
+    this.loginOverlay.add([shade, g]);
+
+    const titleText = this.walletSystem.connected ? "Your Profile" : "Enter ElderValley";
+    this.loginOverlay.add(this.add.text(cx, py + 34, titleText, {
+      fontFamily: "Georgia, serif", fontSize: "20px",
+      color: "#ffe0a0", stroke: "#1d0d05", strokeThickness: 4
+    }).setOrigin(0.5));
+
+    if (this.walletSystem.connected) {
+      const addrText = this.walletSystem.getShortAddress();
+      this.loginOverlay.add(this.add.text(cx, py + 70, addrText, this.textStyle(11, "#d8c6a1")).setOrigin(0.5));
+      this._addPhoneBtn(cx, py + 110, panelW - 48, 48, "▶  Enter Game",  "#7ed98a", "#1d4928", () => this.beginGame());
+      this._addPhoneBtn(cx, py + 168, panelW - 48, 40, "Disconnect",     "#e07070", "#3a1010", () => { this.walletSystem.disconnect(); this.loginMode = "wallet"; localStorage.setItem("eldervalley-login-mode", "wallet"); this.showLoginOverlay(true); });
+      this._addPhoneBtn(cx, py + 218, panelW - 48, 40, "Back",           "#d8c6a1", "#1a1a1a", () => { this.loginOverlay?.destroy(true); this.loginOverlay = null; });
+      return;
+    }
+
+    this.loginOverlay.add(this.add.text(cx, py + 66, "Choose how to enter:", this.textStyle(12, "#a0b8cc")).setOrigin(0.5));
+
+    const statusTxt = this.add.text(cx, py + panelH - 44, this.walletSystem.status, {
+      ...this.textStyle(10, "#9fb8d9"), align: "center", wordWrap: { width: panelW - 32 }
+    }).setOrigin(0.5);
+    this.loginOverlay.add(statusTxt);
+
+    this._addPhoneBtn(cx, py + 112, panelW - 48, 52, "🧑  Play as Guest",  "#ffd574", "#2b1a00", () => {
+      this.loginMode = "guest";
+      localStorage.setItem("eldervalley-login-mode", "guest");
+      this.walletSystem.status = "Guest mode — purchases locked.";
+      statusTxt.setText(this.walletSystem.status);
+      this.beginGame();
     });
+    this._addPhoneBtn(cx, py + 174, panelW - 48, 52, "🦊  MetaMask",       "#ff9944", "#2b1500", () => this.handleWalletConnect("metamask").then(() => { statusTxt.setText(this.walletSystem.status); }).catch(() => { statusTxt.setText(this.walletSystem.status); }));
+    this._addPhoneBtn(cx, py + 236, panelW - 48, 52, "👻  Phantom",        "#a080ff", "#1a0f30", () => this.handleWalletConnect("phantom").then(() => { statusTxt.setText(this.walletSystem.status); }).catch(() => { statusTxt.setText(this.walletSystem.status); }));
+    this._addPhoneBtn(cx, py + 300, panelW - 48, 40, "✕  Back",            "#d8c6a1", "#1a1a1a", () => { this.loginOverlay?.destroy(true); this.loginOverlay = null; });
+  }
+
+  _addPhoneBtn(cx, cy, w, h, label, textColor, bgHex, onClick) {
+    const bg = parseInt(bgHex.replace("#",""), 16);
+    const btn = this.add.rectangle(cx, cy, w, h, bg, 0.96)
+      .setStrokeStyle(1.5, parseInt(textColor.replace("#",""), 16), 0.8)
+      .setInteractive({ useHandCursor: true });
+    const txt = this.add.text(cx, cy, label, {
+      fontFamily: "monospace", fontSize: "15px",
+      color: textColor, stroke: "#080402", strokeThickness: 3
+    }).setOrigin(0.5);
+    btn.on("pointerdown", () => { this.playUiTone("click"); onClick(); });
+    btn.on("pointerover",  () => btn.setAlpha(0.8));
+    btn.on("pointerout",   () => btn.setAlpha(1));
+    this.loginOverlay.add([btn, txt]);
   }
 
   drawWalletProfilePanel(x, y, w, h) {

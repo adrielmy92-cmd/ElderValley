@@ -1,7 +1,7 @@
 import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=209";
 import GamePreloadScene from "./scenes/GamePreloadScene.js?v=218";
-import TitleScene from "./scenes/TitleScene.js?v=225";
+import TitleScene from "./scenes/TitleScene.js?v=226";
 import WorldScene from "./scenes/WorldScene.js?v=228";
 import CityScene from "./scenes/CityScene.js?v=212";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=209";
@@ -17,6 +17,7 @@ import ForestScene from "./scenes/ForestScene.js?v=27";
 import SwampScene from "./scenes/SwampScene.js?v=20";
 import BeeScene from "./scenes/BeeScene.js?v=5";
 
+const isMobileDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 const config = {
   type: Phaser.AUTO,
   parent: "game",
@@ -26,13 +27,15 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
+    resolution: isMobileDevice ? 1 : window.devicePixelRatio
   },
   physics: {
     default: "arcade",
     arcade: {
       gravity: { y: 0 },
-      debug: false
+      debug: false,
+      fps: isMobileDevice ? 30 : 60
     }
   },
   scene: [
