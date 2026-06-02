@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElderValley — Documentation</title>
+  <style>
+    :root {
+      --gold:    #ffd574;
+      --gold2:   #e0aa52;
+      --dark:    #07101a;
+      --dark2:   #0a131e;
+      --dark3:   #0d1a28;
+      --border:  #2a3d52;
+      --text:    #d8e8f0;
+      --muted:   #8aa4b8;
+      --accent:  #61b7ff;
+      --green:   #7ed98a;
+      --red:     #e07070;
+      --orange:  #ff9966;
+      --sidebar: 260px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+
+    /* ── SIDEBAR ──────────────────────────────────────────────────── */
+    nav {
+      width: var(--sidebar);
+      min-width: var(--sidebar);
+      background: var(--dark2);
+      border-right: 1px solid var(--border);
+      padding: 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo h1 {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+    .nav-logo p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    nav ul { list-style: none; padding: 12px 0; }
+    nav ul li a {
+      display: block;
+      padding: 8px 24px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    nav ul li a:hover,
+    nav ul li a.active {
+      color: var(--gold);
+      border-left-color: var(--gold2);
+      background: rgba(255,213,116,0.05);
+    }
+    .nav-section {
+      padding: 16px 24px 6px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #3a5268;
+      font-weight: 600;
+    }
+    .nav-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      margin: 16px 16px 0;
+      background: rgba(224,170,82,0.08);
+      border: 1px solid var(--gold2);
+      border-radius: 6px;
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .nav-back:hover { background: rgba(224,170,82,0.16); }
+
+    /* ── MAIN ─────────────────────────────────────────────────────── */
+    main {
+      margin-left: var(--sidebar);
+      flex: 1;
+      padding: 0;
+    }
+
+    .hero {
+      background: linear-gradient(160deg, #071526 0%, #0a1e30 60%, #071014 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 72px 64px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,213,116,0.06), transparent);
+    }
+    .hero-tag {
+      display: inline-block;
+      padding: 4px 14px;
+      background: rgba(224,170,82,0.12);
+      border: 1px solid var(--gold2);
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold2);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-family: Georgia, serif;
+      font-size: 52px;
+      color: var(--gold);
+      line-height: 1.1;
+      margin-bottom: 16px;
+      text-shadow: 0 2px 24px rgba(255,213,116,0.2);
+    }
+    .hero p {
+      font-size: 17px;
+      color: var(--text);
+      max-width: 620px;
+      opacity: 0.88;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      padding: 6px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .badge-gold  { background: rgba(255,213,116,0.12); border: 1px solid var(--gold2); color: var(--gold); }
+    .badge-blue  { background: rgba(97,183,255,0.10); border: 1px solid #3a7cb8; color: var(--accent); }
+    .badge-green { background: rgba(126,217,138,0.10); border: 1px solid #3a8a48; color: var(--green); }
+
+    .content {
+      padding: 56px 64px;
+      max-width: 900px;
+    }
+
+    section { margin-bottom: 72px; }
+    section:target { scroll-margin-top: 24px; }
+
+    h2 {
+      font-family: Georgia, serif;
+      font-size: 30px;
+      color: var(--gold);
+      margin-bottom: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-lead {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      margin-top: 4px;
+    }
+    h3 {
+      font-size: 17px;
+      color: #c8dcea;
+      margin: 28px 0 10px;
+      font-weight: 600;
+    }
+    p { margin-bottom: 14px; font-size: 15px; }
+
+    /* ── CARDS ────────────────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: var(--dark3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      transition: border-color 0.15s;
+    }
+    .card:hover { border-color: var(--gold2); }
+    .card-icon { font-size: 28px; margin-bottom: 10px; }
+    .card h4 { font-size: 14px; color: var(--gold); margin-bottom: 6px; }
+    .card p  { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* ── TABLE ────────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    thead tr { background: rgba(255,213,116,0.07); }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold2);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(42,61,82,0.6);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .tier-common    { color: #d8e8f0; }
+    .tier-uncommon  { color: #7ed98a; }
+    .tier-rare      { color: var(--accent); }
+    .tier-legendary { color: var(--gold); }
+
+    /* ── CODE BLOCK ───────────────────────────────────────────────── */
+    .code-block {
+      background: #050d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #a8d8a8;
+      overflow-x: auto;
+      margin: 16px 0;
+      line-height: 1.6;
+    }
+    .code-block .comment { color: #4a6a7a; }
+    .code-block .key     { color: var(--accent); }
+    .code-block .val     { color: var(--gold2); }
+
+    /* ── CALLOUT ──────────────────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .callout-info    { background: rgba(97,183,255,0.07); border-left: 3px solid var(--accent); }
+    .callout-warn    { background: rgba(255,153,102,0.07); border-left: 3px solid var(--orange); }
+    .callout-success { background: rgba(126,217,138,0.07); border-left: 3px solid var(--green); }
+    .callout-icon    { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout p { margin: 0; }
+
+    /* ── ROADMAP ──────────────────────────────────────────────────── */
+    .roadmap { display: flex; flex-direction: column; gap: 0; margin-top: 20px; }
+    .roadmap-item {
+      display: flex;
+      gap: 20px;
+      position: relative;
+      padding-bottom: 32px;
+    }
+    .roadmap-item:last-child { padding-bottom: 0; }
+    .roadmap-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .roadmap-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .roadmap-dot.done    { background: var(--green); box-shadow: 0 0 8px rgba(126,217,138,0.4); }
+    .roadmap-dot.active  { background: var(--gold);  box-shadow: 0 0 8px rgba(255,213,116,0.4); }
+    .roadmap-dot.pending { background: var(--border); }
+    .roadmap-connector {
+      width: 2px;
+      flex: 1;
+      background: var(--border);
+      margin-top: 4px;
+    }
+    .roadmap-body h4 { font-size: 15px; color: #c8dcea; margin-bottom: 6px; }
+    .roadmap-body p  { font-size: 13px; color: var(--muted); margin: 0; }
+    .roadmap-tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .tag-done    { background: rgba(126,217,138,0.12); color: var(--green); }
+    .tag-active  { background: rgba(255,213,116,0.12); color: var(--gold); }
+    .tag-pending { background: rgba(42,61,82,0.6);     color: var(--muted); }
+
+    /* ── KEY BINDS ────────────────────────────────────────────────── */
+    .keys { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+    .key-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    kbd {
+      background: #0d1a28;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    /* ── FOOTER ───────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 64px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer a { color: var(--gold2); text-decoration: none; }
+    footer a:hover { color: var(--gold); }
+
+    /* ── RESPONSIVE ───────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { display: none; }
+      main { margin-left: 0; }
+      .hero { padding: 48px 28px 40px; }
+      .hero h1 { font-size: 36px; }
+      .content { padding: 36px 28px; }
+      footer { padding: 24px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ───────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">
+    <h1>ElderValley</h1>
+    <p>Documentation v1.0</p>
+  </div>
+
+  <a href="/" class="nav-back">← Back to Game</a>
+
+  <p class="nav-section">Overview</p>
+  <ul>
+    <li><a href="#intro">Introduction</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#controls">Controls</a></li>
+  </ul>
+
+  <p class="nav-section">World</p>
+  <ul>
+    <li><a href="#world">Game World</a></li>
+    <li><a href="#bosses">Boss Fights</a></li>
+    <li><a href="#city">City</a></li>
+  </ul>
+
+  <p class="nav-section">Web3</p>
+  <ul>
+    <li><a href="#genesis">Genesis Collection</a></li>
+    <li><a href="#ownership">House Ownership</a></li>
+    <li><a href="#economy">Economy</a></li>
+  </ul>
+
+  <p class="nav-section">Technical</p>
+  <ul>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#multiplayer">Multiplayer</a></li>
+    <li><a href="#contracts">Smart Contracts</a></li>
+  </ul>
+
+  <p class="nav-section">Project</p>
+  <ul>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#links">Links</a></li>
+  </ul>
+</nav>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">Official Documentation</div>
+    <h1>ElderValley</h1>
+    <p>A multiplayer social RPG on the Base blockchain. Explore a living pixel-art world, fight bosses together, and own a piece of the valley forever.</p>
+    <div class="hero-badges">
+      <span class="badge badge-gold">Phaser 3 · Pixel Art</span>
+      <span class="badge badge-blue">Base Chain · ERC-721</span>
+      <span class="badge badge-green">Live Demo · v1.0</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- INTRO -->
+    <section id="intro">
+      <h2>Introduction</h2>
+      <p class="section-lead">What is ElderValley and why does it exist.</p>
+
+      <p>ElderValley is a browser-based multiplayer RPG where players share a persistent open world rendered in pixel art. The game runs entirely in the browser with no downloads — just open the URL and you are in the valley alongside other players in real time.</p>
+
+      <p>The project combines classic RPG exploration with Web3 ownership. Houses in the valley are real NFTs on the Base blockchain. Owning a house means owning a piece of the world: you can customize the interior, set the decorations, and your property persists across all sessions for every visitor.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <p>ElderValley is currently in <strong>Demo Version</strong>. All core gameplay, multiplayer, and boss fights are live. On-chain purchases will be enabled at launch via Flaunch.</p>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <h2>Features</h2>
+      <p class="section-lead">Everything available in the current build.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">🗺️</div>
+          <h4>Open World</h4>
+          <p>Village, City, Fire Map, Swamp, and Hive — 5 distinct zones connected by portals.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">👥</div>
+          <h4>Real-Time Multiplayer</h4>
+          <p>See other players move, chat, and fight bosses together via WebSocket sync.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚔️</div>
+          <h4>Boss Fights</h4>
+          <p>Three server-authoritative bosses: Lava Golem, Swamp Troll, and Bee Queen.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏠</div>
+          <h4>House System</h4>
+          <p>50 Genesis houses — each an ERC-721 NFT with interior, capacity tiers, and alchemy work.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔮</div>
+          <h4>Spell Combat</h4>
+          <p>Fireball and Arcane Lightning spells with cooldowns, AoE zones, and visual effects.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌙</div>
+          <h4>Day/Night Cycle</h4>
+          <p>World clock synced across all players. Lamps glow at night, sky shifts at dusk and dawn.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">💬</div>
+          <h4>Chat System</h4>
+          <p>Press T or Enter to open chat. Messages appear as speech bubbles above characters.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🪙</div>
+          <h4>Coins Economy</h4>
+          <p>Earn coins via alchemy work inside the Arcane House. Coins persist per wallet profile.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTROLS -->
+    <section id="controls">
+      <h2>Controls</h2>
+      <p class="section-lead">Keyboard layout for all actions in the game.</p>
+
+      <h3>Movement & Interaction</h3>
+      <div class="keys">
+        <span class="key-item"><kbd>W A S D</kbd> Move</span>
+        <span class="key-item"><kbd>↑ ↓ ← →</kbd> Move</span>
+        <span class="key-item"><kbd>E</kbd> Interact / Advance dialog</span>
+        <span class="key-item"><kbd>Space</kbd> Interact</span>
+        <span class="key-item"><kbd>T</kbd> Open chat</span>
+        <span class="key-item"><kbd>Enter</kbd> Send chat / Interact</span>
+      </div>
+
+      <h3>Combat</h3>
+      <div class="keys">
+        <span class="key-item"><kbd>1</kbd> Cast Fireball</span>
+        <span class="key-item"><kbd>2</kbd> Cast Arcane Lightning</span>
+        <span class="key-item"><kbd>Q</kbd> Attack</span>
+        <span class="key-item"><kbd>ESC</kbd> Leave work early</span>
+      </div>
+
+      <h3>Developer / Creative Mode</h3>
+      <div class="keys">
+        <span class="key-item"><kbd>Tab</kbd> Toggle creative mode</span>
+        <span class="key-item"><kbd>F</kbd> Fences</span>
+        <span class="key-item"><kbd>T</kbd> Trees</span>
+        <span class="key-item"><kbd>P</kbd> Floor tiles</span>
+        <span class="key-item"><kbd>H</kbd> Houses</span>
+        <span class="key-item"><kbd>B</kbd> Structures</span>
+        <span class="key-item"><kbd>L</kbd> Window lights</span>
+        <span class="key-item"><kbd>G</kbd> Gate portals</span>
+        <span class="key-item"><kbd>F3</kbd> Collision debug</span>
+        <span class="key-item"><kbd>F4</kbd> Collision editor</span>
+      </div>
+    </section>
+
+    <!-- WORLD -->
+    <section id="world">
+      <h2>Game World</h2>
+      <p class="section-lead">The five zones of ElderValley and what each offers.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Zone</th>
+            <th>Theme</th>
+            <th>Size</th>
+            <th>Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Village</strong></td>
+            <td>Social hub, houses, NPCs</td>
+            <td>2920 × 1320</td>
+            <td>Spawn point</td>
+          </tr>
+          <tr>
+            <td><strong>City</strong></td>
+            <td>Plaza, guards, commerce</td>
+            <td>Dynamic</td>
+            <td>East portal</td>
+          </tr>
+          <tr>
+            <td><strong>Fire Map</strong></td>
+            <td>Volcano boss arena</td>
+            <td>1920 × 1920</td>
+            <td>North portal (Volcano gate)</td>
+          </tr>
+          <tr>
+            <td><strong>Swamp</strong></td>
+            <td>Troll marshlands</td>
+            <td>1920 × 1920</td>
+            <td>South-west portal (Swamp gate)</td>
+          </tr>
+          <tr>
+            <td><strong>Hive</strong></td>
+            <td>Bee Queen throne room</td>
+            <td>2752 × 1536</td>
+            <td>South-east portal (Hive gate)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Each portal in the Village is a full pixel-art gate with chroma-key transparency. Gate positions are configurable by the developer via the creative editor (<kbd>Tab</kbd> → <kbd>G</kbd>).</p>
+    </section>
+
+    <!-- BOSSES -->
+    <section id="bosses">
+      <h2>Boss Fights</h2>
+      <p class="section-lead">All three bosses are server-authoritative — the server controls AI and HP.</p>
+
+      <h3>🌋 Lava Golem — Fire Map</h3>
+      <p>A three-phase colossus. Attacks include meteor showers, ground eruptions, and boulder throws. All players in the zone fight it simultaneously. HP is shared — damage dealt by any player counts.</p>
+      <table>
+        <thead><tr><th>Phase</th><th>HP Threshold</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td>Phase 1</td><td>&gt; 66%</td><td>Normal speed, slow attacks</td></tr>
+          <tr><td>Phase 2</td><td>33–66%</td><td>Orange tint, faster interval</td></tr>
+          <tr><td>Phase 3</td><td>&lt; 33%</td><td>Red tint, rapid attacks, boulder barrage</td></tr>
+        </tbody>
+      </table>
+
+      <h3>🌿 Swamp Troll — Swamp</h3>
+      <p>Up to 4 trolls patrol the marshlands. Attacks: Toxic Bubble (AoE), Mud Spike (linear), and Sludge Wave (sweeping). Trolls respawn over time. Ambient sounds and bubble warnings signal incoming attacks.</p>
+
+      <h3>🐝 Bee Queen — Hive</h3>
+      <p>Client-side boss with server-sync for HP. Features voiced dialogue (ElevenLabs TTS, English). Spawns Hive Soldiers mid-fight. Special attacks: Royal Dive, Frantic Dash, Swarm Fury (radial bullet storm).</p>
+      <table>
+        <thead><tr><th>Phase</th><th>HP</th><th>Soldiers</th><th>Specials</th></tr></thead>
+        <tbody>
+          <tr><td>Phase 1</td><td>12 000 (full)</td><td>0</td><td>Swarm Fury</td></tr>
+          <tr><td>Phase 2</td><td>66% → 33%</td><td>2 spawn</td><td>+ Royal Dive, Frantic Dash</td></tr>
+          <tr><td>Phase 3</td><td>&lt; 33%</td><td>+2 more</td><td>All + honey puddles</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CITY -->
+    <section id="city">
+      <h2>City</h2>
+      <p class="section-lead">The expanding urban center east of the village.</p>
+
+      <p>The City is a secondary social zone with a paved plaza and two knight guards patrolling the streets. Guards speak periodically and can be talked to. Houses placed in the creative editor appear in both zones independently.</p>
+
+      <p>Guard patrol routes are algorithmically constrained to the paved road area — they never wander into grass or house zones.</p>
+    </section>
+
+    <!-- GENESIS COLLECTION -->
+    <section id="genesis">
+      <h2>Genesis Collection</h2>
+      <p class="section-lead">50 unique houses — the founding NFTs of ElderValley.</p>
+
+      <div class="callout callout-success">
+        <span class="callout-icon">🏠</span>
+        <p>The Genesis Collection is a limited set of 50 houses minted on the Base blockchain. Each house is an ERC-721 token. Supply is hard-capped in the smart contract constructor — no admin can add more.</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>House</th>
+            <th>Price</th>
+            <th>Supply</th>
+            <th>Visitors</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tier-common">Common</span></td>
+            <td>Tall House</td>
+            <td>0.025 ETH</td>
+            <td>7</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <td><span class="tier-common">Common</span></td>
+            <td>Thatch Cottage</td>
+            <td>0.025 ETH</td>
+            <td>6</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <td><span class="tier-common">Common</span></td>
+            <td>Red Lodge</td>
+            <td>0.025 ETH</td>
+            <td>6</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <td><span class="tier-common">Common</span></td>
+            <td>Green House</td>
+            <td>0.025 ETH</td>
+            <td>6</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <td><span class="tier-uncommon">Uncommon</span></td>
+            <td>Blue House</td>
+            <td>0.050 ETH</td>
+            <td>4</td>
+            <td>8</td>
+          </tr>
+          <tr>
+            <td><span class="tier-uncommon">Uncommon</span></td>
+            <td>Emerald Manor</td>
+            <td>0.050 ETH</td>
+            <td>4</td>
+            <td>8</td>
+          </tr>
+          <tr>
+            <td><span class="tier-uncommon">Uncommon</span></td>
+            <td>Elvish Manor</td>
+            <td>0.050 ETH</td>
+            <td>4</td>
+            <td>8</td>
+          </tr>
+          <tr>
+            <td><span class="tier-rare">Rare</span></td>
+            <td>Arcane Manor</td>
+            <td>0.100 ETH</td>
+            <td>3</td>
+            <td>16</td>
+          </tr>
+          <tr>
+            <td><span class="tier-rare">Rare</span></td>
+            <td>Golden Tower</td>
+            <td>0.100 ETH</td>
+            <td>3</td>
+            <td>16</td>
+          </tr>
+          <tr>
+            <td><span class="tier-rare">Rare</span></td>
+            <td>Teal Manor</td>
+            <td>0.100 ETH</td>
+            <td>2</td>
+            <td>16</td>
+          </tr>
+          <tr>
+            <td><span class="tier-legendary">Legendary</span></td>
+            <td>Grand Manor</td>
+            <td>0.200 ETH</td>
+            <td>3</td>
+            <td>Unlimited</td>
+          </tr>
+          <tr>
+            <td><span class="tier-legendary">Legendary</span></td>
+            <td>Red Tower</td>
+            <td>0.200 ETH</td>
+            <td>2</td>
+            <td>Unlimited</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Total: 50 houses.</strong> Common = 25 · Uncommon = 12 · Rare = 8 · Legendary = 5.</p>
+    </section>
+
+    <!-- OWNERSHIP -->
+    <section id="ownership">
+      <h2>House Ownership</h2>
+      <p class="section-lead">What it means to own a house in ElderValley.</p>
+
+      <h3>On-Chain Verification</h3>
+      <p>Every house in the game world corresponds to an NFT token on the Base blockchain. The server runs an indexer that watches the smart contract for <code>HousePurchased</code> and <code>Transfer</code> events, keeping ownership records always in sync with the chain.</p>
+
+      <h3>In-Game Benefits</h3>
+      <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
+        <li>Enter your house in the game world from any session</li>
+        <li>Set your house as your character's home base</li>
+        <li>Visitor capacity based on tier (4 / 8 / 16 / unlimited)</li>
+        <li>Work alchemy inside the Arcane House to earn coins</li>
+        <li>Creative interior customization (floors, decorations)</li>
+      </ul>
+
+      <h3>Wallet Authentication</h3>
+      <p>Players sign a SIWE-style challenge with MetaMask or Phantom. The server verifies the signature with <code>ethers.verifyMessage</code> and issues a JWT session token valid for 7 days. Private houses reject entry from wallets that don't own them — verified server-side on every door interaction.</p>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <p>Guest mode allows exploring the world without a wallet, but house ownership features, profile persistence, and alchemy earnings require a connected wallet.</p>
+      </div>
+    </section>
+
+    <!-- ECONOMY -->
+    <section id="economy">
+      <h2>Economy</h2>
+      <p class="section-lead">How value flows through ElderValley.</p>
+
+      <h3>Alchemy Work</h3>
+      <p>Players can work alchemy shifts inside the Arcane House. The job runs server-side: the server tracks elapsed game-time and awards coins on completion. A mini-game (ingredient sequence puzzle) adds bonus progress minutes when solved correctly.</p>
+
+      <table>
+        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Work duration</td><td>360 game minutes (~72 real seconds)</td></tr>
+          <tr><td>Base rate</td><td>10 coins / game hour</td></tr>
+          <tr><td>Bonus per correct puzzle</td><td>+30 game minutes</td></tr>
+          <tr><td>Anti-duplicate farming</td><td>One active session per wallet</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Marketplace Fee</h3>
+      <p>The <code>ElderValleyHouseMarketplace</code> contract charges a <strong>2.5% fee</strong> on secondary sales. All primary sale revenue and fees route directly to the treasury wallet — the contract never holds funds.</p>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p class="section-lead">How the game is built technically.</p>
+
+      <h3>Stack</h3>
+      <div class="code-block">
+<span class="comment">// Frontend</span>
+<span class="key">Engine</span>    <span class="val">Phaser 3.80 (CDN, no build step)</span>
+<span class="key">Language</span>  <span class="val">Vanilla ES Modules + ?v= cache-busting</span>
+<span class="key">Style</span>     <span class="val">Pixel art, 32×32 tiles, WebGL renderer</span>
+
+<span class="comment">// Backend</span>
+<span class="key">Runtime</span>   <span class="val">Node.js 20+ (ESM, server.mjs)</span>
+<span class="key">Protocol</span>  <span class="val">HTTP (static files + REST API) + WebSocket</span>
+<span class="key">Database</span>  <span class="val">PostgreSQL (Railway) with JSON file fallback</span>
+
+<span class="comment">// Blockchain</span>
+<span class="key">Chain</span>     <span class="val">Base (Ethereum L2, chainId 8453)</span>
+<span class="key">Contracts</span> <span class="val">ElderValleyHouses (ERC-721) + Marketplace</span>
+<span class="key">Tooling</span>   <span class="val">Hardhat + ethers.js v6 + OpenZeppelin 5</span>
+
+<span class="comment">// Deploy</span>
+<span class="key">Hosting</span>   <span class="val">Railway (auto-deploy from GitHub main)</span>
+      </div>
+
+      <h3>File Structure</h3>
+      <div class="code-block">
+eldervalley/
+├── <span class="key">server.mjs</span>         <span class="comment"># HTTP + WebSocket server, boss AI, indexer</span>
+├── <span class="key">main.js</span>            <span class="comment"># Phaser game config, scene list</span>
+├── scenes/
+│   ├── <span class="key">WorldScene.js</span>    <span class="comment"># Village — main world</span>
+│   ├── <span class="key">CityScene.js</span>     <span class="comment"># City (extends WorldScene)</span>
+│   ├── <span class="key">ForestScene.js</span>   <span class="comment"># Fire Map boss arena</span>
+│   ├── <span class="key">SwampScene.js</span>    <span class="comment"># Swamp troll zone</span>
+│   ├── <span class="key">BeeScene.js</span>      <span class="comment"># Bee Queen arena</span>
+│   ├── <span class="key">BaseGameScene.js</span> <span class="comment"># Shared HUD, spells, work UI</span>
+│   └── ...                <span class="comment"># Interior scenes (13 houses)</span>
+├── systems/
+│   ├── <span class="key">DialogSystem.js</span>
+│   ├── <span class="key">InteractionSystem.js</span>
+│   └── <span class="key">MultiplayerSystem.js</span>
+├── contracts/
+│   ├── <span class="key">ElderValleyHouses.sol</span>
+│   └── <span class="key">ElderValleyHouseMarketplace.sol</span>
+└── assets/
+    ├── audio/             <span class="comment"># MP3/OGG — boss voices, ambience</span>
+    └── sprites/           <span class="comment"># PNG spritesheets and gate art</span>
+      </div>
+    </section>
+
+    <!-- MULTIPLAYER -->
+    <section id="multiplayer">
+      <h2>Multiplayer</h2>
+      <p class="section-lead">Real-time player sync via WebSocket.</p>
+
+      <p>Every connected player streams their position, facing direction, character, and scene to the server every frame via a lightweight WebSocket protocol. The server broadcasts position updates to all players in the same <code>sceneChannel</code>.</p>
+
+      <h3>Message Types</h3>
+      <table>
+        <thead><tr><th>Type</th><th>Direction</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>hello</code></td><td>Client → Server</td><td>Join with wallet auth + initial position</td></tr>
+          <tr><td><code>state</code></td><td>Client → Server</td><td>Position update every frame</td></tr>
+          <tr><td><code>chat</code></td><td>Client → Server</td><td>Broadcast a chat message</td></tr>
+          <tr><td><code>hitBoss</code></td><td>Client → Server</td><td>Player dealt damage to a boss</td></tr>
+          <tr><td><code>welcome</code></td><td>Server → Client</td><td>Session confirmed + current peers</td></tr>
+          <tr><td><code>bossSync</code></td><td>Server → Client</td><td>Boss HP, phase, position (100ms)</td></tr>
+          <tr><td><code>storageUpdated</code></td><td>Server → Client</td><td>Creative world save broadcast</td></tr>
+          <tr><td><code>roomFull</code></td><td>Server → Client</td><td>House at visitor capacity</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Anti-Cheat</h3>
+      <p>All boss HP and damage resolution runs server-side. Client sends <code>hitBoss(damage)</code> — the server clamps damage to a maximum of 500 per hit and applies it to the authoritative HP value. Clients only render what the server broadcasts.</p>
+    </section>
+
+    <!-- CONTRACTS -->
+    <section id="contracts">
+      <h2>Smart Contracts</h2>
+      <p class="section-lead">Deployed on Base mainnet (chainId 8453).</p>
+
+      <h3>ElderValleyHouses (ERC-721)</h3>
+      <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
+        <li>ERC-721 Enumerable — full ownership enumeration</li>
+        <li>12 house types defined in constructor (genesis supply hard-capped)</li>
+        <li>ETH forwards instantly to treasury — contract never holds funds</li>
+        <li>Tier system: Common (0), Uncommon (1), Rare (2), Legendary (3)</li>
+        <li>Pausable by owner (emergency only)</li>
+        <li>Emits <code>HousePurchased</code> event indexed by the game server</li>
+      </ul>
+
+      <h3>ElderValleyHouseMarketplace</h3>
+      <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
+        <li>Secondary market for house NFTs</li>
+        <li>2.5% platform fee (configurable 0–10% by owner)</li>
+        <li>Fee distributed proportionally to house tier weights</li>
+        <li>ReentrancyGuard on all payment flows</li>
+      </ul>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">📋</span>
+        <p>Contracts verified on BaseScan. Source code is open and auditable. Deployment scripts available at <code>npm run contracts:deploy:base:full</code>.</p>
+      </div>
+    </section>
+
+    <!-- ROADMAP -->
+    <section id="roadmap">
+      <h2>Roadmap</h2>
+      <p class="section-lead">Where ElderValley has been and where it is going.</p>
+
+      <div class="roadmap">
+
+        <div class="roadmap-item">
+          <div class="roadmap-line">
+            <div class="roadmap-dot done"></div>
+            <div class="roadmap-connector"></div>
+          </div>
+          <div class="roadmap-body">
+            <span class="roadmap-tag tag-done">✓ Complete</span>
+            <h4>Phase 1 — Core Game</h4>
+            <p>Open world, real-time multiplayer, day/night cycle, interior scenes, creative editor, chat system, character selection.</p>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-line">
+            <div class="roadmap-dot done"></div>
+            <div class="roadmap-connector"></div>
+          </div>
+          <div class="roadmap-body">
+            <span class="roadmap-tag tag-done">✓ Complete</span>
+            <h4>Phase 2 — Boss Fights</h4>
+            <p>Lava Golem (Fire Map), Swamp Trolls, Bee Queen with voiced English dialogue via ElevenLabs. Server-authoritative HP and AI.</p>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-line">
+            <div class="roadmap-dot active"></div>
+            <div class="roadmap-connector"></div>
+          </div>
+          <div class="roadmap-body">
+            <span class="roadmap-tag tag-active">→ Now</span>
+            <h4>Phase 3 — Web3 Launch</h4>
+            <p>Deploy contracts to Base, enable real ETH purchases via Flaunch, on-chain ownership indexer live, verified on BaseScan.</p>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-line">
+            <div class="roadmap-dot pending"></div>
+            <div class="roadmap-connector"></div>
+          </div>
+          <div class="roadmap-body">
+            <span class="roadmap-tag tag-pending">Upcoming</span>
+            <h4>Phase 4 — Economy</h4>
+            <p>Marketplace secondary sales, alchemy expanded with more jobs, coin rewards for boss kills, house rental system.</p>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-line">
+            <div class="roadmap-dot pending"></div>
+          </div>
+          <div class="roadmap-body">
+            <span class="roadmap-tag tag-pending">Future</span>
+            <h4>Phase 5 — Expansion</h4>
+            <p>New regions, additional boss types, guild system, seasonal events, mobile-responsive layout.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LINKS -->
+    <section id="links">
+      <h2>Links</h2>
+      <p class="section-lead">Official channels and resources.</p>
+
+      <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+        <a href="https://x.com/Eldervalley" target="_blank" rel="noopener" style="text-decoration:none">
+          <div class="card" style="cursor:pointer">
+            <div class="card-icon">𝕏</div>
+            <h4>Twitter / X</h4>
+            <p>@Eldervalley — updates, news, and community.</p>
+          </div>
+        </a>
+        <a href="https://flaunch.gg" target="_blank" rel="noopener" style="text-decoration:none">
+          <div class="card" style="cursor:pointer">
+            <div class="card-icon">🚀</div>
+            <h4>Flaunch</h4>
+            <p>Genesis Collection launch and NFT purchase.</p>
+          </div>
+        </a>
+        <a href="/" style="text-decoration:none">
+          <div class="card" style="cursor:pointer">
+            <div class="card-icon">🎮</div>
+            <h4>Play Now</h4>
+            <p>Open the game — no download required.</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+
+  <footer>
+    <span>ElderValley · Demo Version · 2026</span>
+    <span>
+      <a href="https://x.com/Eldervalley" target="_blank" rel="noopener">Twitter</a> ·
+      <a href="https://flaunch.gg" target="_blank" rel="noopener">Flaunch</a> ·
+      <a href="/">Play</a>
+    </span>
+  </footer>
+
+</main>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a[href^="#"]');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>

@@ -166,8 +166,8 @@ export default class TitleScene extends Phaser.Scene {
 
     if (width >= 1180) {
       this.drawTopLink(38, 44, 94, "X", "Twitter", "https://x.com/Eldervalley");
-      this.drawTopLink(146, 44, 118, "Dex", "DexScreener");
-      this.drawTopLink(278, 44, 108, "Launch", "Flaunch.gg", "https://flaunch.gg");
+      this.drawTopLink(146, 44, 108, "Launch", "Flaunch.gg", "https://flaunch.gg");
+      this.drawTopLink(268, 44, 86, "Docs", "Whitepaper", "/docs.html");
     }
   }
 
