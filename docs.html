@@ -390,7 +390,6 @@
   <ul>
     <li><a href="#genesis">Genesis Collection</a></li>
     <li><a href="#ownership">House Ownership</a></li>
-    <li><a href="#economy">Economy</a></li>
   </ul>
 
   <p class="nav-section">Technical</p>
@@ -753,28 +752,6 @@
         <span class="callout-icon">⚠️</span>
         <p>Guest mode allows exploring the world without a wallet, but house ownership features, profile persistence, and alchemy earnings require a connected wallet.</p>
       </div>
-    </section>
-
-    <!-- ECONOMY -->
-    <section id="economy">
-      <h2>Economy</h2>
-      <p class="section-lead">How value flows through ElderValley.</p>
-
-      <h3>Alchemy Work</h3>
-      <p>Players can work alchemy shifts inside the Arcane House. The job runs server-side: the server tracks elapsed game-time and awards coins on completion. A mini-game (ingredient sequence puzzle) adds bonus progress minutes when solved correctly.</p>
-
-      <table>
-        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-        <tbody>
-          <tr><td>Work duration</td><td>360 game minutes (~72 real seconds)</td></tr>
-          <tr><td>Base rate</td><td>10 coins / game hour</td></tr>
-          <tr><td>Bonus per correct puzzle</td><td>+30 game minutes</td></tr>
-          <tr><td>Anti-duplicate farming</td><td>One active session per wallet</td></tr>
-        </tbody>
-      </table>
-
-      <h3>Marketplace Fee</h3>
-      <p>The <code>ElderValleyHouseMarketplace</code> contract charges a <strong>2.5% fee</strong> on secondary sales. All primary sale revenue and fees route directly to the treasury wallet — the contract never holds funds.</p>
     </section>
 
     <!-- ARCHITECTURE -->
