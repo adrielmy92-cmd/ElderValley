@@ -418,7 +418,7 @@
     <div class="hero-badges">
       <span class="badge badge-gold">Phaser 3 · Pixel Art</span>
       <span class="badge badge-blue">Base Chain · ERC-721</span>
-      <span class="badge badge-green">Live Demo · v1.0</span>
+      <span class="badge badge-green">Live on Base · Genesis Mint</span>
     </div>
   </div>
 
@@ -433,9 +433,9 @@
 
       <p>The project combines classic RPG exploration with Web3 ownership. Houses in the valley are real NFTs on the Base blockchain. Owning a house means owning a piece of the world: you can customize the interior, set the decorations, and your property persists across all sessions for every visitor.</p>
 
-      <div class="callout callout-info">
-        <span class="callout-icon">ℹ️</span>
-        <p>ElderValley is currently in <strong>Demo Version</strong>. All core gameplay, multiplayer, and boss fights are live. On-chain purchases will be enabled at launch via Flaunch.</p>
+      <div class="callout callout-success">
+        <span class="callout-icon">✅</span>
+        <p>ElderValley is <strong>live on Base mainnet</strong>. Core gameplay, multiplayer, and boss fights are playable now, and Genesis houses can be minted on-chain straight from the in-game shop — connect a wallet, pick a house, and confirm the transaction on Base.</p>
       </div>
     </section>
 
@@ -683,7 +683,7 @@
           </tr>
           <tr>
             <td><span class="tier-uncommon">Uncommon</span></td>
-            <td>Elvish Manor</td>
+            <td>Elven Manor</td>
             <td>0.050 ETH</td>
             <td>4</td>
             <td>8</td>
@@ -858,7 +858,14 @@ eldervalley/
     <!-- CONTRACTS -->
     <section id="contracts">
       <h2>Smart Contracts</h2>
-      <p class="section-lead">Deployed on Base mainnet (chainId 8453).</p>
+      <p class="section-lead">Deployed and verified on Base mainnet (chainId 8453).</p>
+
+      <div class="code-block">
+<span class="comment">// Base mainnet · chainId 8453 · verified on BaseScan</span>
+<span class="key">ElderValleyHouses</span>   <span class="val">0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97</span>
+<span class="key">Marketplace</span>         <span class="val">0x87d217313CAE423EBFB1a462cb11403862A9bcd7</span>
+<span class="key">Treasury</span>            <span class="val">0x9d6B9918422F76207f5d1239c24bC79cC9dD0B51</span>
+      </div>
 
       <h3>ElderValleyHouses (ERC-721)</h3>
       <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
@@ -880,7 +887,10 @@ eldervalley/
 
       <div class="callout callout-info">
         <span class="callout-icon">📋</span>
-        <p>Contracts verified on BaseScan. Source code is open and auditable. Deployment scripts available at <code>npm run contracts:deploy:base:full</code>.</p>
+        <p>Source verified and open on BaseScan:
+          <a href="https://basescan.org/address/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97#code" target="_blank" rel="noopener" style="color:var(--accent)">Houses</a> ·
+          <a href="https://basescan.org/address/0x87d217313CAE423EBFB1a462cb11403862A9bcd7#code" target="_blank" rel="noopener" style="color:var(--accent)">Marketplace</a>.
+          Houses are bought directly on-chain via <code>buyHouseByKey</code> from the in-game shop — no intermediary.</p>
       </div>
     </section>
 
@@ -917,23 +927,23 @@ eldervalley/
 
         <div class="roadmap-item">
           <div class="roadmap-line">
-            <div class="roadmap-dot active"></div>
+            <div class="roadmap-dot done"></div>
             <div class="roadmap-connector"></div>
           </div>
           <div class="roadmap-body">
-            <span class="roadmap-tag tag-active">→ Now</span>
+            <span class="roadmap-tag tag-done">✓ Complete</span>
             <h4>Phase 3 — Web3 Launch</h4>
-            <p>Deploy contracts to Base, enable real ETH purchases via Flaunch, on-chain ownership indexer live, verified on BaseScan.</p>
+            <p>Contracts deployed and verified on Base, on-chain house minting live in the in-game shop, ownership indexer running, OpenSea collection live.</p>
           </div>
         </div>
 
         <div class="roadmap-item">
           <div class="roadmap-line">
-            <div class="roadmap-dot pending"></div>
+            <div class="roadmap-dot active"></div>
             <div class="roadmap-connector"></div>
           </div>
           <div class="roadmap-body">
-            <span class="roadmap-tag tag-pending">Upcoming</span>
+            <span class="roadmap-tag tag-active">→ Now</span>
             <h4>Phase 4 — Economy</h4>
             <p>Marketplace secondary sales, alchemy expanded with more jobs, coin rewards for boss kills, house rental system.</p>
           </div>
@@ -966,11 +976,18 @@ eldervalley/
             <p>@Eldervalley — updates, news, and community.</p>
           </div>
         </a>
+        <a href="https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97" target="_blank" rel="noopener" style="text-decoration:none">
+          <div class="card" style="cursor:pointer">
+            <div class="card-icon">⛵</div>
+            <h4>OpenSea</h4>
+            <p>Genesis Collection — browse and trade houses on Base.</p>
+          </div>
+        </a>
         <a href="https://flaunch.gg" target="_blank" rel="noopener" style="text-decoration:none">
           <div class="card" style="cursor:pointer">
             <div class="card-icon">🚀</div>
             <h4>Flaunch</h4>
-            <p>Genesis Collection launch and NFT purchase.</p>
+            <p>ElderValley token launch on Base.</p>
           </div>
         </a>
         <a href="/" style="text-decoration:none">
@@ -986,9 +1003,10 @@ eldervalley/
   </div><!-- /content -->
 
   <footer>
-    <span>ElderValley · Demo Version · 2026</span>
+    <span>ElderValley · Live on Base · 2026</span>
     <span>
       <a href="https://x.com/Eldervalley" target="_blank" rel="noopener">Twitter</a> ·
+      <a href="https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97" target="_blank" rel="noopener">OpenSea</a> ·
       <a href="https://flaunch.gg" target="_blank" rel="noopener">Flaunch</a> ·
       <a href="/">Play</a>
     </span>
