@@ -3,6 +3,7 @@ import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
+import MobileControls from "../systems/MobileControls.js?v=1";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -619,6 +620,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.multiplayer = new MultiplayerSystem(this);
     }
     this.createProfilePersistence();
+    this.mobileControls = new MobileControls(this);
   }
 
   createSpellBar() {

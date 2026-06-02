@@ -6,6 +6,9 @@ body {
   overflow: hidden;
   background: #18202a;
   image-rendering: pixelated;
+  touch-action: none;
+  -webkit-overflow-scrolling: none;
+  overscroll-behavior: none;
 }
 
 #game {
@@ -17,4 +20,17 @@ canvas {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  touch-action: none;
+}
+
+/* ── Mobile controls ───────────────────────────────────── */
+#ev-mobile-controls button {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+#ev-mobile-controls button:active {
+  transform: scale(0.88) !important;
+  background: rgba(255,255,255,0.16) !important;
 }
