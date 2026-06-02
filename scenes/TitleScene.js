@@ -718,6 +718,37 @@ export default class TitleScene extends Phaser.Scene {
       this.addContentText(cx + 8, cy + cardH - (phone ? 13 : 16), owned ? "Owned" : house.price, phone ? 9 : 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - (phone ? 70 : 104), scroller.content);
       this.addBuyButton(cx + cardW - (phone ? 66 : 88), cy + cardH - (phone ? 20 : 24), house, scroller.content);
     });
+
+    // Scene-level Buy click handling (nested interactive objects inside the masked
+    // scrolling container don't get pointer events in Phaser 3). Width excludes the
+    // scrollbar column so dragging the scrollbar still works.
+    const buyOffX = phone ? 66 : 88;
+    const buyOffY = phone ? 20 : 24;
+    const clickZone = this.add.zone(listX, listY, listW - 14, listH)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(37);
+    this.contentRoot.add(clickZone);
+    clickZone.on("pointerdown", (pointer) => {
+      const scrollOffset = this.scrollOffsets["houses"] ?? 0;
+      const localX = pointer.x;                  // no horizontal scroll
+      const localY = pointer.y + scrollOffset;   // content.y === -scrollOffset
+      const col = Math.floor((localX - (listX + 6)) / (cardW + gap));
+      const row = Math.floor((localY - listY) / (cardH + gap));
+      if (col < 0 || col >= columns || row < 0) return;
+      const index = row * columns + col;
+      if (index < 0 || index >= houses.length) return;
+      const cardX = listX + 6 + col * (cardW + gap);
+      const cardY = listY + row * (cardH + gap);
+      if (localX > cardX + cardW || localY > cardY + cardH) return; // gap between cards
+      const bx = cardX + cardW - buyOffX;
+      const by = cardY + cardH - buyOffY;
+      const inButton = localX >= bx - 6 && localX <= bx + 80 && localY >= by - 16 && localY <= by + 16;
+      if (!inButton) return;
+      const house = houses[index];
+      if (this.walletSystem.isHouseOwned(house.key)) return;
+      this.handleHousePurchase(house);
+    });
   }
 
   drawAccountSummary(x, y, w, h = 82) {
@@ -739,23 +770,19 @@ export default class TitleScene extends Phaser.Scene {
     this.addContentText(x + 14, y + 66, this.walletSystem.status, 10, "#9fb8d9", w - 28);
   }
 
+  // Visual only — clicks are handled by the scene-level zone in renderHouses,
+  // because interactive objects nested in the masked, scrolling content container
+  // do not receive pointer events in Phaser 3.
   addBuyButton(x, y, house, parent = this.contentRoot) {
     const owned = this.walletSystem.isHouseOwned(house.key);
     const button = this.add.rectangle(x, y, 74, 24, owned ? 0x1d4d28 : (this.walletSystem.connected ? 0x17395c : 0x2b190d), 0.98)
       .setOrigin(0, 0.5)
       .setStrokeStyle(1, owned ? 0x8ded9d : (this.walletSystem.connected ? 0xe0aa52 : 0x8f5b2c))
-      .setInteractive({ useHandCursor: true })
-      .setDepth(60)
-      .on("pointerdown", () => this.handleHousePurchase(house));
-    const hitZone = this.add.zone(x - 5, y - 17, 84, 34)
-      .setOrigin(0)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(62)
-      .on("pointerdown", () => this.handleHousePurchase(house));
+      .setDepth(60);
     const label = this.add.text(x + 37, y, owned ? "Owned" : "Buy", this.textStyle(10, "#ffe0a0"))
       .setOrigin(0.5)
       .setDepth(63);
-    parent.add([button, label, hitZone]);
+    parent.add([button, label]);
   }
 
   async handleHousePurchase(house) {
