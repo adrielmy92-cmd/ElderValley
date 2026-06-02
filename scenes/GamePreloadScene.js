@@ -89,9 +89,9 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=1", 160, 160);
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
-    this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=1");
-    this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=1");
-    this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=1");
+    this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=2");
+    this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=2");
+    this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=2");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
       this.loadImage(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=132`);
@@ -129,8 +129,13 @@ export default class GamePreloadScene extends Phaser.Scene {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i] > 180 && data[i + 1] < 60 && data[i + 2] > 180) {
-        data[i + 3] = 0;
+      const pr = data[i], pg = data[i + 1], pb = data[i + 2];
+      // How "magenta" is this pixel: high R+B, low G
+      const magentaScore = Math.min(pr, pb) - pg;
+      if (magentaScore > 40 && pr > 100 && pb > 100) {
+        // Fully transparent for strong magenta, soft fade for edge anti-alias
+        const strength = Math.min(1, (magentaScore - 40) / 100);
+        data[i + 3] = Math.round(data[i + 3] * (1 - strength));
       }
     }
     ctx.putImageData(imageData, 0, 0);

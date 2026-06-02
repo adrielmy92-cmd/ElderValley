@@ -1,6 +1,6 @@
 import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=209";
-import GamePreloadScene from "./scenes/GamePreloadScene.js?v=216";
+import GamePreloadScene from "./scenes/GamePreloadScene.js?v=217";
 import TitleScene from "./scenes/TitleScene.js?v=219";
 import WorldScene from "./scenes/WorldScene.js?v=226";
 import CityScene from "./scenes/CityScene.js?v=211";
