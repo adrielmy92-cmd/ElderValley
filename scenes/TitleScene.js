@@ -84,6 +84,10 @@ export default class TitleScene extends Phaser.Scene {
     });
   }
 
+  isPhone() {
+    return this.scale.width < 640;
+  }
+
   buildTitleScreen() {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor("#07101a");
@@ -92,39 +96,73 @@ export default class TitleScene extends Phaser.Scene {
       .setDepth(0);
 
     this.drawBackdrop(width, height);
-    this.drawHeader(width);
+    if (this.isPhone()) {
+      this.drawHeaderMobile(width, height);
+    } else {
+      this.drawHeader(width);
+    }
     this.layout = this.getLayout(width, height);
-    this.drawVideoPanel(this.layout.video);
+    if (!this.isPhone()) {
+      this.drawVideoPanel(this.layout.video);
+    }
     this.drawTabs(this.layout.side.x, this.layout.side.y - 46, this.layout.side.w);
     this.contentRoot = this.add.container(0, 0).setDepth(30);
     this.input.on("wheel", (pointer, _gameObjects, _deltaX, deltaY) => {
-      if (!this.activeScrollArea) {
-        return;
-      }
+      if (!this.activeScrollArea) return;
       const { x, y, w, h } = this.activeScrollArea;
-      if (pointer.x < x || pointer.x > x + w || pointer.y < y || pointer.y > y + h) {
-        return;
-      }
+      if (pointer.x < x || pointer.x > x + w || pointer.y < y || pointer.y > y + h) return;
       this.scrollActivePanel(deltaY);
     });
+    // Mobile: swipe to scroll
+    if (this.isPhone()) {
+      let touchY = 0;
+      this.input.on("pointerdown", (p) => { touchY = p.y; });
+      this.input.on("pointermove", (p) => {
+        if (!p.isDown || !this.activeScrollArea) return;
+        this.scrollActivePanel((touchY - p.y) * 1.4);
+        touchY = p.y;
+      });
+    }
     this.renderPanel();
   }
 
   drawBackdrop(width, height) {
+    const headerH = this.isPhone() ? 96 : 150;
     const g = this.add.graphics().setDepth(1);
     g.fillStyle(0x050b13, 0.95);
     g.fillRect(0, 0, width, height);
     g.fillStyle(0x071a2c, 0.98);
-    g.fillRect(0, 0, width, 150);
+    g.fillRect(0, 0, width, headerH);
     g.fillStyle(0x2e1a0d, 0.95);
-    g.fillRect(0, 132, width, 18);
+    g.fillRect(0, headerH - 18, width, 18);
     g.fillStyle(0xd19a4c, 0.86);
-    g.fillRect(0, 134, width, 2);
-    g.fillRect(0, 146, width, 2);
+    g.fillRect(0, headerH - 16, width, 2);
+    g.fillRect(0, headerH - 4, width, 2);
     g.lineStyle(3, 0x140904, 1);
-    g.strokeRect(6, 6, width - 12, height - 12);
+    g.strokeRect(4, 4, width - 8, height - 8);
     g.lineStyle(2, 0xc58c41, 0.9);
-    g.strokeRect(12, 12, width - 24, height - 24);
+    g.strokeRect(9, 9, width - 18, height - 18);
+  }
+
+  drawHeaderMobile(width, height) {
+    const logoSize = Math.max(36, Math.min(52, width * 0.12));
+    const glow = this.add.text(width / 2, 40, "ELDERVALLEY", {
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      fontSize: `${logoSize}px`,
+      color: "#fff0b0", stroke: "#8a541e", strokeThickness: 12,
+      shadow: { offsetX: 0, offsetY: 0, color: "#ffcc63", blur: 8, fill: true }
+    }).setOrigin(0.5).setDepth(19).setAlpha(0.22);
+    this.tweens.add({ targets: glow, alpha: { from: 0.16, to: 0.38 }, scale: { from: 1, to: 1.02 }, duration: 1650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.add.text(width / 2, 40, "ELDERVALLEY", {
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      fontSize: `${logoSize}px`,
+      color: "#ffd574", stroke: "#251006", strokeThickness: 7,
+      shadow: { offsetX: 3, offsetY: 4, color: "#030201", blur: 0, fill: true }
+    }).setOrigin(0.5).setDepth(20);
+    this.add.text(width / 2, 75, "Demo Version", {
+      fontFamily: "monospace", fontSize: "13px",
+      color: "#e7ba61", stroke: "#120905", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(21);
   }
 
   drawHeader(width) {
@@ -334,15 +372,26 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   getLayout(width, height) {
-    const margin = 28;
+    const margin = this.isPhone() ? 14 : 28;
+    const bottom = this.isPhone() ? 20 : 56;
+
+    // Phone: no video, full height for panel
+    if (this.isPhone()) {
+      const top = 104;
+      return {
+        phone: true, compact: true,
+        video: { x: 0, y: 0, w: 0, h: 0 },
+        side:  { x: margin, y: top, w: width - margin * 2, h: height - top - bottom }
+      };
+    }
+
     const top = 198;
-    const bottom = 56;
     if (width < 1120) {
-      const videoH = Math.max(260, Math.floor(height * 0.42));
+      const videoH = Math.max(200, Math.floor(height * 0.36));
       return {
         compact: true,
         video: { x: margin, y: top, w: width - margin * 2, h: videoH },
-        side: { x: margin, y: top + videoH + 68, w: width - margin * 2, h: height - top - videoH - bottom - 68 }
+        side: { x: margin, y: top + videoH + 56, w: width - margin * 2, h: height - top - videoH - bottom - 56 }
       };
     }
     const sideW = Math.min(540, Math.max(430, Math.floor(width * 0.32)));
@@ -445,36 +494,34 @@ export default class TitleScene extends Phaser.Scene {
 
   drawTabs(x, y, width) {
     const tabs = [
-      { id: "houses", label: "Houses" },
-      { id: "characters", label: "Characters" },
-      { id: "market", label: "Market" },
-      { id: "notices", label: "Notices" }
+      { id: "houses",     label: this.isPhone() ? "Houses" : "Houses"     },
+      { id: "characters", label: this.isPhone() ? "Chars"  : "Characters" },
+      { id: "market",     label: "Market"  },
+      { id: "notices",    label: "Notices" }
     ];
+    const tabH = this.isPhone() ? 44 : 38;
+    const fontSize = this.isPhone() ? 11 : 12;
     const tabW = width / tabs.length;
     this.tabButtons = tabs.map((tab, index) => {
       const tx = x + index * tabW;
-      const button = this.add.rectangle(tx, y, tabW - 4, 38, 0x21150d, 0.98)
+      const button = this.add.rectangle(tx, y, tabW - 2, tabH, 0x21150d, 0.98)
         .setOrigin(0, 0)
         .setStrokeStyle(2, 0x8f5b2c)
         .setInteractive({ useHandCursor: true })
         .setDepth(28)
         .on("pointerover", () => {
-          if (this.activePanel !== tab.id) {
-            button.setFillStyle(0x2e2115, 0.98);
-          }
+          if (this.activePanel !== tab.id) button.setFillStyle(0x2e2115, 0.98);
           this.playUiTone("hover");
         })
         .on("pointerout", () => {
-          if (this.activePanel !== tab.id) {
-            button.setFillStyle(0x21150d, 0.98);
-          }
+          if (this.activePanel !== tab.id) button.setFillStyle(0x21150d, 0.98);
         })
         .on("pointerdown", () => {
           this.playUiTone("click");
           this.activePanel = tab.id;
           this.renderPanel();
         });
-      const label = this.add.text(tx + tabW / 2, y + 19, tab.label, this.textStyle(12, "#f3d08a"))
+      const label = this.add.text(tx + tabW / 2, y + tabH / 2, tab.label, this.textStyle(fontSize, "#f3d08a"))
         .setOrigin(0.5)
         .setDepth(29);
       return { tab, button, label };
@@ -541,19 +588,22 @@ export default class TitleScene extends Phaser.Scene {
 
   renderHouses() {
     const { x, y, w, h } = this.layout.side;
+    const phone = this.isPhone();
+    const summaryH = phone ? 64 : 82;
+    const listTop  = phone ? 110 : 150;
     this.drawPanelFrame(x, y, w, h, "Valley Houses", 32, true);
-    this.drawAccountSummary(x + 24, y + 56, w - 48);
+    this.drawAccountSummary(x + (phone ? 12 : 24), y + (phone ? 44 : 56), w - (phone ? 24 : 48), summaryH);
 
     const houses = this.getHouseCatalog();
     const columns = w >= 500 ? 2 : 1;
-    const gap = 14;
+    const gap = phone ? 8 : 14;
     const rows = Math.ceil(houses.length / columns);
-    const listX = x + 18;
-    const listY = y + 150;
-    const listW = w - 36;
-    const listH = h - 174;
+    const listX = x + (phone ? 8 : 18);
+    const listY = y + listTop;
+    const listW = w - (phone ? 16 : 36);
+    const listH = h - listTop - (phone ? 14 : 24);
     const cardW = (listW - 12 - gap * (columns - 1)) / columns;
-    const cardH = columns > 1 ? 190 : 214;
+    const cardH = phone ? (columns > 1 ? 150 : 168) : (columns > 1 ? 190 : 214);
     const contentH = rows * cardH + Math.max(0, rows - 1) * gap;
     const scroller = this.createScrollArea("houses", listX, listY, listW, listH, contentH);
 
@@ -563,24 +613,24 @@ export default class TitleScene extends Phaser.Scene {
       const cx = listX + 6 + col * (cardW + gap);
       const cy = listY + row * (cardH + gap);
       this.addCard(cx, cy, cardW, cardH, false, scroller.content);
-      const image = this.add.image(cx + cardW / 2, cy + cardH - 54, house.key)
-        .setOrigin(0.5, 1)
-        .setDepth(36);
-      this.fitImageInside(image, cardW * house.maxW, Math.max(90, cardH - 68));
+      const imgArea = Math.max(phone ? 60 : 90, cardH - (phone ? 54 : 68));
+      const image = this.add.image(cx + cardW / 2, cy + cardH - (phone ? 42 : 54), house.key)
+        .setOrigin(0.5, 1).setDepth(36);
+      this.fitImageInside(image, cardW * house.maxW, imgArea);
       scroller.content.add(image);
-      this.addContentText(cx + 12, cy + cardH - 35, house.name, 14, "#ffd889", cardW - 24, scroller.content);
+      this.addContentText(cx + 8, cy + cardH - (phone ? 28 : 35), house.name, phone ? 11 : 14, "#ffd889", cardW - 16, scroller.content);
       const owned = this.walletSystem.isHouseOwned(house.key);
-      this.addContentText(cx + 12, cy + cardH - 16, owned ? "Owned by this wallet" : house.price, 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - 104, scroller.content);
-      this.addBuyButton(cx + cardW - 88, cy + cardH - 24, house, scroller.content);
+      this.addContentText(cx + 8, cy + cardH - (phone ? 13 : 16), owned ? "Owned" : house.price, phone ? 9 : 11, owned ? "#a7ffb3" : "#d8c6a1", cardW - (phone ? 70 : 104), scroller.content);
+      this.addBuyButton(cx + cardW - (phone ? 66 : 88), cy + cardH - (phone ? 20 : 24), house, scroller.content);
     });
   }
 
-  drawAccountSummary(x, y, w) {
+  drawAccountSummary(x, y, w, h = 82) {
     const g = this.add.graphics().setDepth(34);
     g.fillStyle(0x0b1420, 0.96);
-    g.fillRoundedRect(x, y, w, 82, 6);
+    g.fillRoundedRect(x, y, w, h, 6);
     g.lineStyle(1, 0xd29643, 0.8);
-    g.strokeRoundedRect(x, y, w, 82, 6);
+    g.strokeRoundedRect(x, y, w, h, 6);
     this.contentRoot.add(g);
 
     const profile = this.walletSystem.profile;

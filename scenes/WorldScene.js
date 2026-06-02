@@ -397,21 +397,25 @@ export default class WorldScene extends BaseGameScene {
   }
 
   initPerformanceOptimizations() {
+    this._isMobile = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
     this.dayNightUpdateAccumulator = 0;
     this.visibilityCullAccumulator = 0;
-    this.visibilityCullPadding = 260;
+    this.visibilityCullPadding = this._isMobile ? 180 : 260;
     this.updateVisibilityCulling(true);
   }
 
   updatePerformanceOptimizations(delta) {
+    const dayInterval  = this._isMobile ? 250 : 120;
+    const cullInterval = this._isMobile ? 320 : 180;
+
     this.dayNightUpdateAccumulator = (this.dayNightUpdateAccumulator ?? 0) + delta;
-    if (this.dayNightUpdateAccumulator >= 120) {
+    if (this.dayNightUpdateAccumulator >= dayInterval) {
       this.updateDayNightCycle(this.dayNightUpdateAccumulator);
       this.dayNightUpdateAccumulator = 0;
     }
 
     this.visibilityCullAccumulator = (this.visibilityCullAccumulator ?? 0) + delta;
-    if (this.visibilityCullAccumulator >= 180) {
+    if (this.visibilityCullAccumulator >= cullInterval) {
       this.updateVisibilityCulling();
       this.visibilityCullAccumulator = 0;
     }
@@ -3711,8 +3715,14 @@ export default class WorldScene extends BaseGameScene {
 
   update(time, delta) {
     this.updatePerformanceOptimizations(delta);
-    this.updateSilverCharacters();
-    this.updateFenceEditor();
+    this._npcAccum = (this._npcAccum ?? 0) + delta;
+    if (this._npcAccum >= (this._isMobile ? 48 : 16)) {
+      this.updateSilverCharacters();
+      this._npcAccum = 0;
+    }
+    if (!this._isMobile) {
+      this.updateFenceEditor();
+    }
     this.updateBase();
   }
 }
