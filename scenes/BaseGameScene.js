@@ -1,6 +1,6 @@
 import Player from "../player/Player.js?v=186";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
-import InteractionSystem from "../systems/InteractionSystem.js?v=132";
+import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 

@@ -15,10 +15,8 @@ export default class InteractionSystem {
   }
 
   add(item) {
-    this.items.push({
-      radius: 42,
-      ...item
-    });
+    if (item.radius == null) item.radius = 42;
+    this.items.push(item);
   }
 
   remove(itemOrId) {
