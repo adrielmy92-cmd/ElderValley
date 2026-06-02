@@ -27,8 +27,12 @@ export default class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once("keydown-SPACE", () => this.startGame());
     this.input.keyboard?.once("keydown-E", () => this.startGame());
 
-    this.addOpenSeaLink();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeOpenSeaLink());
+    // Desktop shows the OpenSea button in the top-left link row; phones (no link
+    // row) keep the floating corner icon so the collection stays reachable.
+    if (this.isPhone()) {
+      this.addOpenSeaLink();
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeOpenSeaLink());
+    }
   }
 
   addOpenSeaLink() {
@@ -300,7 +304,36 @@ export default class TitleScene extends Phaser.Scene {
       this.drawTopLink(38, 44, 94, "X", "Twitter", "https://x.com/Eldervalley");
       this.drawTopLink(146, 44, 108, "Launch", "Flaunch.gg", "https://flaunch.gg");
       this.drawTopLink(268, 44, 86, "Docs", "Whitepaper", "/docs.html");
+      this.drawOpenSeaLink(366, 44, 158, "https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97");
     }
+  }
+
+  drawOpenSeaLink(x, y, w, url) {
+    const h = 58;
+    const g = this.add.graphics().setDepth(12);
+    const paint = (fill, stroke) => {
+      g.clear();
+      g.fillStyle(fill, 0.98);
+      g.fillRoundedRect(x, y, w, h, 6);
+      g.lineStyle(2, stroke, 1);
+      g.strokeRoundedRect(x, y, w, h, 6);
+    };
+    paint(0x080c12, 0xb47b38);
+    this.add.image(x + 30, y + h / 2, "opensea-logo").setDisplaySize(34, 34).setDepth(13);
+    this.add.text(x + 54, y + 22, "OpenSea", {
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      fontSize: "20px",
+      color: "#61b7ff",
+      stroke: "#020407",
+      strokeThickness: 4
+    }).setOrigin(0, 0.5).setDepth(13);
+    this.add.text(x + 54, y + 45, "Collection", this.textStyle(10, "#f1d596")).setOrigin(0, 0.5).setDepth(13);
+    const zone = this.add.zone(x, y, w, h)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(14);
+    zone.on("pointerdown", () => window.open(url, "_blank", "noopener"));
+    this.attachHoverFx(zone, g, () => paint(0x101723, 0xffd166), () => paint(0x080c12, 0xb47b38));
   }
 
   drawTopLink(x, y, w, top, bottom, url = null) {
