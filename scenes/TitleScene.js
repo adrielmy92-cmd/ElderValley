@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=209";
+import WalletSystem from "../systems/WalletSystem.js?v=210";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -624,19 +624,20 @@ export default class TitleScene extends Phaser.Scene {
 
   getHouseCatalog() {
     return [
-      { name: "Noble House", key: "creative-house-manor", price: "0.16 ETH", maxW: 0.96, maxH: 0.76 },
-      { name: "Tall House", key: "creative-house-cottage", price: "0.10 ETH", maxW: 0.96, maxH: 0.78 },
-      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.30 ETH", maxW: 0.96, maxH: 0.76 },
-      { name: "Green House", key: "creative-house-green-cottage", price: "0.15 ETH", maxW: 0.96, maxH: 0.78 },
-      { name: "Arcane House", key: "creative-house-alchemist", price: "0.22 ETH", maxW: 0.96, maxH: 0.82 },
-      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.20 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.20 ETH", maxW: 0.88, maxH: 0.84 },
-      { name: "Tower House", key: "creative-house-red-tower-cottage", price: "0.20 ETH", maxW: 0.82, maxH: 0.88 },
-      { name: "Blue Manor", key: "creative-house-blue-arcane-manor", price: "0.28 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Blue Tower Manor", key: "creative-house-blue-gold-tower", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Turquoise Manor", key: "creative-house-teal-roof-manor", price: "0.30 ETH", maxW: 0.96, maxH: 0.86 }
+      // Prices match the on-chain Genesis tiers (ElderValleyHouses): Common 0.025,
+      // Uncommon 0.05, Rare 0.1, Legendary 0.2 ETH. Keys must equal the contract keys.
+      { name: "Tall House", key: "creative-house-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.78 },
+      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.025 ETH", maxW: 0.96, maxH: 0.76 },
+      { name: "Green House", key: "creative-house-green-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.78 },
+      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.05 ETH", maxW: 0.88, maxH: 0.84 },
+      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.05 ETH", maxW: 0.96, maxH: 0.8 },
+      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "0.05 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Arcane Manor", key: "creative-house-blue-arcane-manor", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Golden Tower", key: "creative-house-blue-gold-tower", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Teal Manor", key: "creative-house-teal-roof-manor", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
+      { name: "Grand Manor", key: "creative-house-manor", price: "0.2 ETH", maxW: 0.96, maxH: 0.76 },
+      { name: "Red Tower", key: "creative-house-red-tower-cottage", price: "0.2 ETH", maxW: 0.82, maxH: 0.88 }
     ];
   }
 
@@ -726,13 +727,31 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   async handleHousePurchase(house) {
+    if (this._purchasing) {
+      return;
+    }
+    this._purchasing = true;
     try {
       const result = await this.walletSystem.prepareHousePurchase(house);
       this.walletSystem.status = result.message;
     } catch (error) {
-      this.walletSystem.status = error?.message ?? "Could not start purchase.";
+      this.walletSystem.status = this.describePurchaseError(error);
+    } finally {
+      this._purchasing = false;
     }
     this.refreshWalletDock();
+  }
+
+  describePurchaseError(error) {
+    // Common wallet rejections / chain errors → friendly text.
+    const code = error?.code ?? error?.info?.error?.code;
+    if (code === 4001 || code === "ACTION_REJECTED") {
+      return "Purchase cancelled in the wallet.";
+    }
+    if (error?.shortMessage?.includes("insufficient funds") || String(error?.message).includes("insufficient funds")) {
+      return "Not enough ETH on Base to cover the price + gas.";
+    }
+    return error?.shortMessage ?? error?.message ?? "Could not complete the purchase.";
   }
 
   renderCharacters() {

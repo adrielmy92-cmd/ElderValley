@@ -1,6 +1,16 @@
 const WALLET_STORAGE_KEY = "eldervalley-wallet";
 const PROFILE_CACHE_PREFIX = "eldervalley-wallet-profile";
 
+const BASE_CHAIN_HEX = "0x2105"; // 8453
+
+// Minimal ABI for the on-chain house purchase flow.
+const HOUSES_ABI = [
+  "function houseTypeIdByKeyHash(bytes32) view returns (uint256)",
+  "function houseTypes(uint256) view returns (string key, string name, uint256 price, uint256 maxSupply, uint256 minted, bool active, uint8 tier)",
+  "function buyHouseByKey(string key) payable returns (uint256)",
+  "event HousePurchased(address indexed buyer, uint256 indexed tokenId, uint256 indexed houseTypeId, string key, string name, uint256 price)"
+];
+
 export default class WalletSystem {
   constructor(scene) {
     this.scene = scene;
@@ -162,24 +172,154 @@ export default class WalletSystem {
 
   async prepareHousePurchase(house) {
     this.requireWallet();
+
     const profile = await this.ensureProfile();
-    if (!profile.ownedHouses.some((ownedHouse) => ownedHouse.id === house.key)) {
-      profile.ownedHouses.push({
-        id: house.key,
-        name: house.name,
-        price: house.price,
-        purchasedAt: new Date().toISOString(),
-        source: "demo-wallet"
-      });
-      await this.saveProfile();
-      return {
-        ok: true,
-        message: `${house.name} saved to this wallet. On-chain purchase comes when the contract is ready.`
-      };
+    if (profile.ownedHouses.some((ownedHouse) => ownedHouse.id === house.key)) {
+      return { ok: true, message: `${house.name} already belongs to this wallet.` };
     }
+
+    // Real on-chain purchase when the contract is configured and the connected
+    // wallet is an EVM one (MetaMask / Phantom-EVM) with ethers available.
+    const config = await this.getWeb3Config();
+    const evmProvider = this.getEvmProvider();
+    if (config?.housesContract && evmProvider && globalThis.ethers) {
+      return this.buyHouseOnChain(house, config, evmProvider, profile);
+    }
+
+    // Fallback (Solana wallet, contract not configured, or ethers unavailable):
+    // record the choice locally so the UI still reflects it.
+    profile.ownedHouses.push({
+      id: house.key,
+      name: house.name,
+      price: house.price,
+      purchasedAt: new Date().toISOString(),
+      source: "demo-wallet"
+    });
+    await this.saveProfile();
     return {
       ok: true,
-      message: `${house.name} already belongs to this wallet.`
+      message: `${house.name} saved to this wallet (demo). Connect an EVM wallet on Base for the on-chain mint.`
+    };
+  }
+
+  async getWeb3Config() {
+    if (this._web3Config !== undefined) {
+      return this._web3Config;
+    }
+    try {
+      const response = await fetch("/api/web3/config", { cache: "no-store" });
+      this._web3Config = response.ok ? await response.json() : null;
+    } catch {
+      this._web3Config = null;
+    }
+    return this._web3Config;
+  }
+
+  getEvmProvider() {
+    if (this.wallet?.provider === "metamask") {
+      return window.ethereum ?? null;
+    }
+    if (this.wallet?.provider === "phantom-evm") {
+      return window.phantom?.ethereum ?? null;
+    }
+    return null;
+  }
+
+  async ensureBaseNetwork(provider) {
+    const current = await provider.request({ method: "eth_chainId" }).catch(() => null);
+    if (current === BASE_CHAIN_HEX) {
+      return;
+    }
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: BASE_CHAIN_HEX }]
+      });
+    } catch (error) {
+      // 4902 = chain not added to the wallet yet.
+      if (error?.code === 4902) {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: BASE_CHAIN_HEX,
+            chainName: "Base",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://mainnet.base.org"],
+            blockExplorerUrls: ["https://basescan.org"]
+          }]
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async buyHouseOnChain(house, config, evmProvider, profile) {
+    const { ethers } = globalThis;
+
+    this.status = "Switching to Base network…";
+    this.scene.refreshWalletDock?.();
+    await this.ensureBaseNetwork(evmProvider);
+
+    const browserProvider = new ethers.BrowserProvider(evmProvider);
+    const signer = await browserProvider.getSigner();
+    const contract = new ethers.Contract(config.housesContract, HOUSES_ABI, signer);
+
+    // Resolve the house type and its exact on-chain price (the contract requires
+    // msg.value == price, and the displayed catalog price is not authoritative).
+    const keyHash = ethers.keccak256(ethers.toUtf8Bytes(house.key));
+    const houseTypeId = await contract.houseTypeIdByKeyHash(keyHash);
+    if (houseTypeId === 0n) {
+      throw new Error(`${house.name} is not available on-chain yet.`);
+    }
+    const houseType = await contract.houseTypes(houseTypeId);
+    if (!houseType.active) {
+      throw new Error(`${house.name} is not for sale right now.`);
+    }
+    if (houseType.maxSupply !== 0n && houseType.minted >= houseType.maxSupply) {
+      throw new Error(`${house.name} is sold out.`);
+    }
+    const price = houseType.price;
+    const priceEth = ethers.formatEther(price);
+
+    this.status = `Confirm the purchase of ${house.name} (${priceEth} ETH) in your wallet…`;
+    this.scene.refreshWalletDock?.();
+
+    const tx = await contract.buyHouseByKey(house.key, { value: price });
+
+    this.status = `Minting ${house.name}… waiting for confirmation.`;
+    this.scene.refreshWalletDock?.();
+
+    const receipt = await tx.wait();
+
+    // Pull the minted tokenId from the HousePurchased event.
+    let tokenId = null;
+    for (const log of receipt?.logs ?? []) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed?.name === "HousePurchased") {
+          tokenId = parsed.args.tokenId.toString();
+          break;
+        }
+      } catch {
+        // Log from another contract — ignore.
+      }
+    }
+
+    profile.ownedHouses.push({
+      id: house.key,
+      name: house.name,
+      price: `${priceEth} ETH`,
+      purchasedAt: new Date().toISOString(),
+      source: "on-chain",
+      txHash: tx.hash,
+      tokenId
+    });
+    await this.saveProfile();
+
+    return {
+      ok: true,
+      message: `${house.name} minted on Base!${tokenId ? ` Token #${tokenId}.` : ""} The server will confirm ownership shortly.`
     };
   }
 
