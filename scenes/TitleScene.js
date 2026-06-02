@@ -92,42 +92,102 @@ export default class TitleScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor("#07101a");
     this.add.tileSprite(width / 2, height / 2, width, height, "tile-grass")
-      .setAlpha(0.16)
-      .setDepth(0);
+      .setAlpha(0.16).setDepth(0);
 
     this.drawBackdrop(width, height);
+
     if (this.isPhone()) {
       this.drawHeaderMobile(width, height);
     } else {
       this.drawHeader(width);
     }
+
     this.layout = this.getLayout(width, height);
+
+    if (this.isPhone()) {
+      this.drawPhoneHero(width, height);
+    }
+
     if (!this.isPhone()) {
       this.drawVideoPanel(this.layout.video);
     }
+
     this.drawTabs(this.layout.side.x, this.layout.side.y - 46, this.layout.side.w);
     this.contentRoot = this.add.container(0, 0).setDepth(30);
+
     this.input.on("wheel", (pointer, _gameObjects, _deltaX, deltaY) => {
       if (!this.activeScrollArea) return;
       const { x, y, w, h } = this.activeScrollArea;
       if (pointer.x < x || pointer.x > x + w || pointer.y < y || pointer.y > y + h) return;
       this.scrollActivePanel(deltaY);
     });
-    // Mobile: swipe to scroll
+
     if (this.isPhone()) {
       let touchY = 0;
-      this.input.on("pointerdown", (p) => { touchY = p.y; });
+      this.input.on("pointerdown", (p) => { if (p.y > this.layout.side.y) touchY = p.y; });
       this.input.on("pointermove", (p) => {
-        if (!p.isDown || !this.activeScrollArea) return;
+        if (!p.isDown || !this.activeScrollArea || p.y < this.layout.side.y) return;
         this.scrollActivePanel((touchY - p.y) * 1.4);
         touchY = p.y;
       });
     }
+
     this.renderPanel();
   }
 
+  drawPhoneHero(width, height) {
+    const panelTop = this.layout?.side?.y ?? Math.floor(height * 0.52);
+    const heroH = panelTop - 96;
+    const cx = width / 2;
+    const cy = 96 + heroH / 2;
+
+    // Glow radial behind logo
+    const gfx = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
+    gfx.fillStyle(0xffd574, 0.06);
+    gfx.fillEllipse(cx, cy - 20, width * 0.9, heroH * 0.7);
+
+    // Tagline
+    this.add.text(cx, cy + 18, "A social RPG on Base", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#a0b8cc",
+      stroke: "#07101a",
+      strokeThickness: 3,
+      align: "center"
+    }).setOrigin(0.5).setDepth(22);
+
+    // Play button
+    const btnW = Math.min(220, width - 48);
+    const btnY = cy + 58;
+    const btnBg = this.add.rectangle(cx, btnY, btnW, 52, 0x17395c, 0.98)
+      .setStrokeStyle(2, 0xe0aa52)
+      .setDepth(22)
+      .setInteractive({ useHandCursor: true });
+    const btnTxt = this.add.text(cx, btnY, "▶  PLAY", {
+      fontFamily: "Georgia, serif",
+      fontSize: "20px",
+      color: "#ffd574",
+      stroke: "#0d1e30",
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(23);
+
+    btnBg.on("pointerover", () => btnBg.setFillStyle(0x1d4974));
+    btnBg.on("pointerout",  () => btnBg.setFillStyle(0x17395c, 0.98));
+    btnBg.on("pointerdown", () => {
+      this.playUiTone("click");
+      this.startGame();
+    });
+
+    // Divider line above panel
+    const g2 = this.add.graphics().setDepth(5);
+    g2.fillStyle(0x2e1a0d, 1);
+    g2.fillRect(0, panelTop - 4, width, 4);
+    g2.fillStyle(0xd19a4c, 0.7);
+    g2.fillRect(0, panelTop - 2, width, 1);
+  }
+
   drawBackdrop(width, height) {
-    const headerH = this.isPhone() ? 96 : 150;
+    const headerH = this.isPhone() ? 80 : 150;
     const g = this.add.graphics().setDepth(1);
     g.fillStyle(0x050b13, 0.95);
     g.fillRect(0, 0, width, height);
@@ -375,13 +435,13 @@ export default class TitleScene extends Phaser.Scene {
     const margin = this.isPhone() ? 14 : 28;
     const bottom = this.isPhone() ? 20 : 56;
 
-    // Phone: no video, full height for panel
+    // Phone: hero at top half, panel at bottom half
     if (this.isPhone()) {
-      const top = 104;
+      const panelTop = Math.floor(height * 0.52);
       return {
         phone: true, compact: true,
         video: { x: 0, y: 0, w: 0, h: 0 },
-        side:  { x: margin, y: top, w: width - margin * 2, h: height - top - bottom }
+        side:  { x: margin, y: panelTop, w: width - margin * 2, h: height - panelTop - bottom }
       };
     }
 
@@ -591,8 +651,8 @@ export default class TitleScene extends Phaser.Scene {
   renderHouses() {
     const { x, y, w, h } = this.layout.side;
     const phone = this.isPhone();
-    const summaryH = phone ? 64 : 82;
-    const listTop  = phone ? 110 : 150;
+    const summaryH = phone ? 52 : 82;
+    const listTop  = phone ? 96 : 150;
     this.drawPanelFrame(x, y, w, h, "Valley Houses", 32, true);
     this.drawAccountSummary(x + (phone ? 12 : 24), y + (phone ? 44 : 56), w - (phone ? 24 : 48), summaryH);
 
