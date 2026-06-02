@@ -18,8 +18,8 @@ export default class CityScene extends WorldScene {
     };
     this.manualCollisionStorageKey = "eldervalley-city-manual-collisions-v1";
     this.houseStorageKey = "eldervalley-city-editable-houses-v1";
-    this.worldWidth = Math.max(800, Math.ceil(this.scale.width / TILE) * TILE);
-    this.worldHeight = Math.max(1248, Math.ceil((this.scale.height + 320) / TILE) * TILE);
+    this.worldWidth  = Math.max(1280, Math.ceil(this.scale.width  / TILE) * TILE);
+    this.worldHeight = Math.max(1024, Math.ceil((this.scale.height + 320) / TILE) * TILE);
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.drawCityGround();

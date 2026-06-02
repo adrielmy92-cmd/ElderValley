@@ -401,6 +401,7 @@ export default class WorldScene extends BaseGameScene {
     this.dayNightUpdateAccumulator = 0;
     this.visibilityCullAccumulator = 0;
     this.visibilityCullPadding = this._isMobile ? 180 : 260;
+    this._cullBounds = new Phaser.Geom.Rectangle();
     this.updateVisibilityCulling(true);
   }
 
@@ -447,7 +448,7 @@ export default class WorldScene extends BaseGameScene {
 
       let visible = true;
       if (child.getBounds) {
-        const bounds = child.getBounds();
+        const bounds = child.getBounds(this._cullBounds);
         visible = bounds.right >= left && bounds.left <= right && bounds.bottom >= top && bounds.top <= bottom;
       } else if (typeof child.x === "number" && typeof child.y === "number") {
         visible = child.x >= left && child.x <= right && child.y >= top && child.y <= bottom;
@@ -535,10 +536,24 @@ export default class WorldScene extends BaseGameScene {
       loop: true,
       callback: () => {
         this.waterFrame = !this.waterFrame;
-        this.animatedGroundLayer.clear();
+        const key = this.waterFrame ? "tile-water-0" : "tile-water-1";
+        // Water tiles are fully opaque, so drawing the new frame overwrites the
+        // previous one — no full-texture clear() needed. Only redraw tiles inside
+        // the camera view (+padding) instead of reblitting every river tile in the
+        // map each tick. Off-screen tiles keep their last frame (imperceptible for
+        // water) and resync on the next tick once they scroll in. Avoids the
+        // periodic GPU spike that stutters the village on mobile.
+        const view = this.cameras.main?.worldView;
+        const top = this.worldTop ?? 0;
+        const pad = 64;
         this.animatedGroundTiles.forEach((tile) => {
-          const key = this.waterFrame ? "tile-water-0" : "tile-water-1";
-          this.animatedGroundLayer.draw(key, tile.x, tile.y - (this.worldTop ?? 0));
+          if (view && (
+            tile.x + TILE < view.x - pad || tile.x > view.right + pad ||
+            tile.y + TILE < view.y - pad || tile.y > view.bottom + pad
+          )) {
+            return;
+          }
+          this.animatedGroundLayer.draw(key, tile.x, tile.y - top);
         });
       }
     });
