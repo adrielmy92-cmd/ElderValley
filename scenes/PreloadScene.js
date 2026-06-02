@@ -11,6 +11,9 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.svg("wallet-metamask", "./assets/ui/metamask-icon.svg?v=161", { width: 128, height: 128 });
     this.load.svg("wallet-phantom", "./assets/ui/phantom-icon.svg?v=161", { width: 128, height: 128 });
     this.load.svg("opensea-logo", "./assets/ui/opensea-icon.svg?v=1", { width: 128, height: 128 });
+    this.load.svg("x-logo", "./assets/ui/x-icon.svg?v=1", { width: 128, height: 128 });
+    this.load.svg("flaunch-logo", "./assets/ui/flaunch-icon.svg?v=1", { width: 128, height: 128 });
+    this.load.svg("docs-logo", "./assets/ui/docs-icon.svg?v=1", { width: 128, height: 128 });
     this.load.image("creative-house-tavern", "./assets/sprites/creative-house-tavern.png?v=132");
     this.load.image("creative-house-manor", "./assets/sprites/creative-house-manor.png?v=132");
     this.load.image("creative-house-cottage", "./assets/sprites/creative-house-cottage.png?v=132");

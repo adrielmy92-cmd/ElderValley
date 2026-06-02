@@ -301,14 +301,14 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(21);
 
     if (width >= 1180) {
-      this.drawTopLink(38, 44, 94, "X", "Twitter", "https://x.com/Eldervalley");
-      this.drawTopLink(146, 44, 108, "Launch", "Flaunch.gg", "https://flaunch.gg");
-      this.drawTopLink(268, 44, 86, "Docs", "Whitepaper", "/docs.html");
-      this.drawOpenSeaLink(366, 44, 158, "https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97");
+      this.drawTopLink(38, 44, 116, "X", "Twitter", "https://x.com/Eldervalley", "x-logo");
+      this.drawTopLink(164, 44, 146, "Launch", "Flaunch.gg", "https://flaunch.gg", "flaunch-logo");
+      this.drawTopLink(320, 44, 132, "Docs", "Whitepaper", "/docs.html", "docs-logo");
+      this.drawTopLink(462, 44, 150, "OpenSea", "Collection", "https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97", "opensea-logo");
     }
   }
 
-  drawOpenSeaLink(x, y, w, url) {
+  drawTopLink(x, y, w, top, bottom, url = null, iconKey = null) {
     const h = 58;
     const g = this.add.graphics().setDepth(12);
     const paint = (fill, stroke) => {
@@ -319,57 +319,31 @@ export default class TitleScene extends Phaser.Scene {
       g.strokeRoundedRect(x, y, w, h, 6);
     };
     paint(0x080c12, 0xb47b38);
-    this.add.image(x + 30, y + h / 2, "opensea-logo").setDisplaySize(34, 34).setDepth(13);
-    this.add.text(x + 54, y + 22, "OpenSea", {
-      fontFamily: "Georgia, 'Times New Roman', serif",
-      fontSize: "20px",
-      color: "#61b7ff",
-      stroke: "#020407",
-      strokeThickness: 4
-    }).setOrigin(0, 0.5).setDepth(13);
-    this.add.text(x + 54, y + 45, "Collection", this.textStyle(10, "#f1d596")).setOrigin(0, 0.5).setDepth(13);
-    const zone = this.add.zone(x, y, w, h)
-      .setOrigin(0)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(14);
-    zone.on("pointerdown", () => window.open(url, "_blank", "noopener"));
-    this.attachHoverFx(zone, g, () => paint(0x101723, 0xffd166), () => paint(0x080c12, 0xb47b38));
-  }
 
-  drawTopLink(x, y, w, top, bottom, url = null) {
-    const g = this.add.graphics().setDepth(12);
-    g.fillStyle(0x080c12, 0.98);
-    g.fillRoundedRect(x, y, w, 58, 6);
-    g.lineStyle(2, 0xb47b38, 1);
-    g.strokeRoundedRect(x, y, w, 58, 6);
-    this.add.text(x + w / 2, y + 22, top, {
+    let textX = x + w / 2;
+    let textOrigin = 0.5;
+    if (iconKey) {
+      this.add.image(x + 27, y + h / 2, iconKey).setDisplaySize(30, 30).setDepth(13);
+      textX = x + 48;
+      textOrigin = 0;
+    }
+    this.add.text(textX, y + 22, top, {
       fontFamily: "Georgia, 'Times New Roman', serif",
       fontSize: "20px",
       color: "#61b7ff",
       stroke: "#020407",
       strokeThickness: 4
-    }).setOrigin(0.5).setDepth(13);
-    this.add.text(x + w / 2, y + 45, bottom, this.textStyle(10, "#f1d596")).setOrigin(0.5).setDepth(13);
-    const zone = this.add.zone(x, y, w, 58)
+    }).setOrigin(textOrigin, 0.5).setDepth(13);
+    this.add.text(textX, y + 45, bottom, this.textStyle(10, "#f1d596")).setOrigin(textOrigin, 0.5).setDepth(13);
+
+    const zone = this.add.zone(x, y, w, h)
       .setOrigin(0)
       .setInteractive({ useHandCursor: true })
       .setDepth(14);
     if (url) {
       zone.on("pointerdown", () => window.open(url, "_blank", "noopener"));
     }
-    this.attachHoverFx(zone, g, () => {
-      g.clear();
-      g.fillStyle(0x101723, 0.98);
-      g.fillRoundedRect(x, y, w, 58, 6);
-      g.lineStyle(2, 0xffd166, 1);
-      g.strokeRoundedRect(x, y, w, 58, 6);
-    }, () => {
-      g.clear();
-      g.fillStyle(0x080c12, 0.98);
-      g.fillRoundedRect(x, y, w, 58, 6);
-      g.lineStyle(2, 0xb47b38, 1);
-      g.strokeRoundedRect(x, y, w, 58, 6);
-    });
+    this.attachHoverFx(zone, g, () => paint(0x101723, 0xffd166), () => paint(0x080c12, 0xb47b38));
   }
 
   drawWalletDock(width) {
