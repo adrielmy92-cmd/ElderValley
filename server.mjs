@@ -10,6 +10,33 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 5188);
 const host = process.env.HOST ?? "0.0.0.0";
 const storageRoot = path.join(root, ".eldervalley-storage");
+
+let houseTypesCache = null;
+async function loadHouseTypes() {
+  if (houseTypesCache) return houseTypesCache;
+  try {
+    const raw = await readFile(path.join(root, "data/house-types.json"), "utf8");
+    houseTypesCache = JSON.parse(raw);
+  } catch {
+    houseTypesCache = [];
+  }
+  return houseTypesCache;
+}
+
+const metadataContractAbi = [
+  "function tokenHouseTypeId(uint256 tokenId) view returns (uint256)",
+  "function totalSupply() view returns (uint256)"
+];
+let metadataProvider = null;
+let metadataContract = null;
+function getMetadataContract() {
+  if (!housesContractAddress || !/^0x[a-fA-F0-9]{40}$/.test(housesContractAddress)) return null;
+  if (!metadataContract) {
+    metadataProvider = metadataProvider ?? new JsonRpcProvider(web3RpcUrl || "https://mainnet.base.org", 8453);
+    metadataContract = new Contract(housesContractAddress, metadataContractAbi, metadataProvider);
+  }
+  return metadataContract;
+}
 const profileRoot = path.join(storageRoot, "profiles");
 const allowRemoteCreativeWrites = process.env.ELDERVALLEY_ALLOW_CREATIVE_WRITES === "true";
 const adminStorageToken = process.env.ELDERVALLEY_ADMIN_TOKEN ?? "";
@@ -1188,6 +1215,79 @@ const server = createServer(async (req, res) => {
         playersOnline: [...clients.values()].filter((client) => client.ready).length,
         uptime: Math.round(process.uptime())
       });
+      return;
+    }
+
+    // ── NFT Metadata ───────────────────────────────────────────────────────────
+    if (url.pathname === "/metadata/collection") {
+      const baseUrl = `${req.headers["x-forwarded-proto"] ?? "https"}://${req.headers.host}`;
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600" });
+      res.end(JSON.stringify({
+        name: "ElderValley Houses",
+        description: "50 Genesis houses in the ElderValley world on Base. Holders earn daily yield from 50% of ElderValley token trading fees, distributed proportionally by tier weight (Common 1× · Uncommon 2× · Rare 4× · Legendary 8×).",
+        image: `${baseUrl}/assets/sprites/creative-house-manor.png`,
+        external_link: baseUrl,
+        seller_fee_basis_points: 500,
+        fee_recipient: process.env.TREASURY_ADDRESS ?? ""
+      }));
+      return;
+    }
+
+    if (url.pathname.startsWith("/metadata/")) {
+      const tokenIdStr = url.pathname.slice("/metadata/".length);
+      const tokenId = Number(tokenIdStr);
+      if (!Number.isInteger(tokenId) || tokenId < 1) {
+        sendJson(res, 400, { error: "Invalid token id" });
+        return;
+      }
+
+      const houseTypes = await loadHouseTypes();
+      const baseUrl = `${req.headers["x-forwarded-proto"] ?? "https"}://${req.headers.host}`;
+      let houseTypeId = null;
+
+      // Try to read from contract if deployed
+      try {
+        const contract = getMetadataContract();
+        if (contract) {
+          houseTypeId = Number(await contract.tokenHouseTypeId(tokenId));
+        }
+      } catch {
+        houseTypeId = null;
+      }
+
+      // Fallback: try to find in DB
+      if (!houseTypeId && dbPool) {
+        try {
+          const result = await dbPool.query(
+            "SELECT data FROM web3_house_ownership WHERE token_id = $1 LIMIT 1",
+            [String(tokenId)]
+          );
+          const row = result.rows[0];
+          if (row) {
+            const typeEntry = houseTypes.find(h => h.key === (row.data?.house_key ?? row.house_key));
+            if (typeEntry) houseTypeId = typeEntry.houseTypeId;
+          }
+        } catch { houseTypeId = null; }
+      }
+
+      const houseType = houseTypeId ? houseTypes.find(h => h.houseTypeId === houseTypeId) : null;
+
+      if (!houseType) {
+        sendJson(res, 404, { error: "Token not found or contract not deployed" });
+        return;
+      }
+
+      const imageUrl = `${baseUrl}/assets/sprites/${houseType.spriteKey}.png`;
+      const metadata = {
+        name: `${houseType.name} #${tokenId}`,
+        description: houseType.description,
+        image: imageUrl,
+        external_url: baseUrl,
+        attributes: houseType.attributes
+      };
+
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=300" });
+      res.end(JSON.stringify(metadata));
       return;
     }
 

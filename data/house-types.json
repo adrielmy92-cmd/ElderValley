@@ -1,0 +1,219 @@
+[
+  {
+    "houseTypeId": 1,
+    "key": "creative-house-cottage",
+    "name": "Tall House",
+    "tier": 0,
+    "tierName": "Common",
+    "feeWeight": 1,
+    "visitorCapacity": 4,
+    "price": "0.025",
+    "spriteKey": "creative-house-cottage",
+    "description": "A charming tall house standing proudly in the ElderValley village. Common tier — holders share in daily token fee yields distributed proportionally by tier weight.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Common"   },
+      { "trait_type": "Fee Weight",       "value": 1,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 4,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.025,     "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 2,
+    "key": "creative-house-thatch-cottage",
+    "name": "Thatch Cottage",
+    "tier": 0,
+    "tierName": "Common",
+    "feeWeight": 1,
+    "visitorCapacity": 4,
+    "price": "0.025",
+    "spriteKey": "creative-house-thatch-cottage",
+    "description": "A cozy thatched cottage with a warm glow. Common tier — holders share in daily token fee yields distributed proportionally by tier weight.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Common"   },
+      { "trait_type": "Fee Weight",       "value": 1,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 4,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.025,     "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 3,
+    "key": "creative-house-red-lodge",
+    "name": "Red Lodge",
+    "tier": 0,
+    "tierName": "Common",
+    "feeWeight": 1,
+    "visitorCapacity": 4,
+    "price": "0.025",
+    "spriteKey": "creative-house-red-lodge",
+    "description": "A rustic red lodge built for adventurers. Common tier — holders share in daily token fee yields distributed proportionally by tier weight.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Common"   },
+      { "trait_type": "Fee Weight",       "value": 1,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 4,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.025,     "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 4,
+    "key": "creative-house-green-cottage",
+    "name": "Green House",
+    "tier": 0,
+    "tierName": "Common",
+    "feeWeight": 1,
+    "visitorCapacity": 4,
+    "price": "0.025",
+    "spriteKey": "creative-house-green-cottage",
+    "description": "A lush green cottage surrounded by nature. Common tier — holders share in daily token fee yields distributed proportionally by tier weight.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Common"   },
+      { "trait_type": "Fee Weight",       "value": 1,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 4,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.025,     "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 5,
+    "key": "creative-house-blue-cottage",
+    "name": "Blue House",
+    "tier": 1,
+    "tierName": "Uncommon",
+    "feeWeight": 2,
+    "visitorCapacity": 8,
+    "price": "0.050",
+    "spriteKey": "creative-house-blue-cottage",
+    "description": "An elegant blue house with refined architecture. Uncommon tier — 2× fee weight in daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Uncommon" },
+      { "trait_type": "Fee Weight",       "value": 2,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 8,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.05,      "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 6,
+    "key": "creative-house-ivy-manor",
+    "name": "Emerald Manor",
+    "tier": 1,
+    "tierName": "Uncommon",
+    "feeWeight": 2,
+    "visitorCapacity": 8,
+    "price": "0.050",
+    "spriteKey": "creative-house-ivy-manor",
+    "description": "A sprawling manor covered in vibrant ivy. Uncommon tier — 2× fee weight in daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Uncommon" },
+      { "trait_type": "Fee Weight",       "value": 2,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 8,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.05,      "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 7,
+    "key": "creative-house-elf-green-manor",
+    "name": "Elven Manor",
+    "tier": 1,
+    "tierName": "Uncommon",
+    "feeWeight": 2,
+    "visitorCapacity": 8,
+    "price": "0.050",
+    "spriteKey": "creative-house-elf-green-manor",
+    "description": "An ancient elven manor woven from living wood and stone. Uncommon tier — 2× fee weight in daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Uncommon" },
+      { "trait_type": "Fee Weight",       "value": 2,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 8,         "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.05,      "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 8,
+    "key": "creative-house-blue-arcane-manor",
+    "name": "Arcane Manor",
+    "tier": 2,
+    "tierName": "Rare",
+    "feeWeight": 4,
+    "visitorCapacity": 16,
+    "price": "0.100",
+    "spriteKey": "creative-house-blue-arcane-manor",
+    "description": "A mystical manor pulsing with arcane energy. Rare tier — 4× fee weight in daily token yield distribution. Hosts alchemy work sessions.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Rare"     },
+      { "trait_type": "Fee Weight",       "value": 4,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 16,        "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.1,       "display_type": "number" },
+      { "trait_type": "Special",          "value": "Alchemy Workshop" }
+    ]
+  },
+  {
+    "houseTypeId": 9,
+    "key": "creative-house-blue-gold-tower",
+    "name": "Golden Tower",
+    "tier": 2,
+    "tierName": "Rare",
+    "feeWeight": 4,
+    "visitorCapacity": 16,
+    "price": "0.100",
+    "spriteKey": "creative-house-blue-gold-tower",
+    "description": "A soaring tower adorned with gold that dominates the valley skyline. Rare tier — 4× fee weight in daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Rare"     },
+      { "trait_type": "Fee Weight",       "value": 4,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 16,        "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.1,       "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 10,
+    "key": "creative-house-teal-roof-manor",
+    "name": "Teal Manor",
+    "tier": 2,
+    "tierName": "Rare",
+    "feeWeight": 4,
+    "visitorCapacity": 16,
+    "price": "0.100",
+    "spriteKey": "creative-house-teal-roof-manor",
+    "description": "A distinguished manor with a striking teal rooftop. Rare tier — 4× fee weight in daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Rare"     },
+      { "trait_type": "Fee Weight",       "value": 4,         "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": 16,        "display_type": "number" },
+      { "trait_type": "Mint Price (ETH)", "value": 0.1,       "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 11,
+    "key": "creative-house-manor",
+    "name": "Grand Manor",
+    "tier": 3,
+    "tierName": "Legendary",
+    "feeWeight": 8,
+    "visitorCapacity": null,
+    "price": "0.200",
+    "spriteKey": "creative-house-manor",
+    "description": "The Grand Manor — the pinnacle of ElderValley architecture. Legendary tier — 8× fee weight, unlimited visitors, and the greatest share of daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Legendary"  },
+      { "trait_type": "Fee Weight",       "value": 8,           "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": "Unlimited"  },
+      { "trait_type": "Mint Price (ETH)", "value": 0.2,         "display_type": "number" }
+    ]
+  },
+  {
+    "houseTypeId": 12,
+    "key": "creative-house-red-tower-cottage",
+    "name": "Red Tower",
+    "tier": 3,
+    "tierName": "Legendary",
+    "feeWeight": 8,
+    "visitorCapacity": null,
+    "price": "0.200",
+    "spriteKey": "creative-house-red-tower-cottage",
+    "description": "A formidable red tower that has stood for centuries. Legendary tier — 8× fee weight, unlimited visitors, and the greatest share of daily token yield distribution.",
+    "attributes": [
+      { "trait_type": "Tier",             "value": "Legendary"  },
+      { "trait_type": "Fee Weight",       "value": 8,           "display_type": "number" },
+      { "trait_type": "Visitor Capacity", "value": "Unlimited"  },
+      { "trait_type": "Mint Price (ETH)", "value": 0.2,         "display_type": "number" }
+    ]
+  }
+]
