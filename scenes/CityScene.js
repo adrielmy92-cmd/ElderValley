@@ -18,8 +18,13 @@ export default class CityScene extends WorldScene {
     };
     this.manualCollisionStorageKey = "eldervalley-city-manual-collisions-v1";
     this.houseStorageKey = "eldervalley-city-editable-houses-v1";
-    this.worldWidth  = Math.max(1280, Math.ceil(this.scale.width  / TILE) * TILE);
-    this.worldHeight = Math.max(1024, Math.ceil((this.scale.height + 320) / TILE) * TILE);
+    // City content (houses, structures, fences, floors) is placed at fixed
+    // absolute coordinates by the editor and extends to ~1888×1120. The world
+    // must be large enough to contain it on every device — deriving the size
+    // from the viewport clipped the right/bottom of the city on narrow mobile
+    // screens (the camera bounds shrank below where the buildings actually are).
+    this.worldWidth  = 1920;
+    this.worldHeight = 1248;
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.drawCityGround();
