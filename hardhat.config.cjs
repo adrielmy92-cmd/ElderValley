@@ -33,20 +33,12 @@ module.exports = {
     cache: "./cache",
     artifacts: "./artifacts"
   },
+  // Etherscan API V2: a single multichain key (string), not a per-network map.
+  // hardhat-verify has Base mainnet (8453) built in and routes to the V2 endpoint
+  // (api.etherscan.io/v2). The old per-network apiKey + customChains apiURL forced
+  // the deprecated V1 endpoint, which now rejects requests.
   etherscan: {
-    apiKey: {
-      base: baseScanApiKey
-    },
-    customChains: [
-      {
-        network: "base",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org"
-        }
-      }
-    ]
+    apiKey: baseScanApiKey
   },
   sourcify: {
     enabled: false
