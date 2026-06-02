@@ -10,6 +10,7 @@
     "start": "node server.mjs",
     "sync": "node scripts/sync-storage-from-prod.mjs",
     "distribute": "node scripts/distribute-fees.mjs",
+    "generate-nft-images": "node scripts/generate-nft-images.mjs",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test",
     "contracts:slither": "node scripts/run-slither.cjs --exclude-informational",
