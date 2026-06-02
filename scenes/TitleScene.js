@@ -165,13 +165,13 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(21);
 
     if (width >= 1180) {
-      this.drawTopLink(38, 44, 94, "X", "Twitter");
+      this.drawTopLink(38, 44, 94, "X", "Twitter", "https://x.com/Eldervalley");
       this.drawTopLink(146, 44, 118, "Dex", "DexScreener");
       this.drawTopLink(278, 44, 94, "Base", "Chain");
     }
   }
 
-  drawTopLink(x, y, w, top, bottom) {
+  drawTopLink(x, y, w, top, bottom, url = null) {
     const g = this.add.graphics().setDepth(12);
     g.fillStyle(0x080c12, 0.98);
     g.fillRoundedRect(x, y, w, 58, 6);
@@ -189,6 +189,9 @@ export default class TitleScene extends Phaser.Scene {
       .setOrigin(0)
       .setInteractive({ useHandCursor: true })
       .setDepth(14);
+    if (url) {
+      zone.on("pointerdown", () => window.open(url, "_blank", "noopener"));
+    }
     this.attachHoverFx(zone, g, () => {
       g.clear();
       g.fillStyle(0x101723, 0.98);
