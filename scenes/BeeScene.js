@@ -406,7 +406,16 @@ export default class BeeScene extends WorldScene {
   _queenSpeak(audioKey, line) {
     if (this._queenSpeaking) return;
     this._queenSpeaking = true;
-    this._queenTTS(line, () => { this._queenSpeaking = false; });
+
+    if (this.cache.audio.exists(audioKey)) {
+      const snd = this.sound.add(audioKey, { volume: 1.0 });
+      snd.once("complete", () => { this._queenSpeaking = false; });
+      snd.once("stop",     () => { this._queenSpeaking = false; });
+      snd.play();
+    } else {
+      this._queenTTS(line, () => { this._queenSpeaking = false; });
+    }
+
     this._showQueenScreamEffect();
     this._showQueenSubtitle(`" ${line} "`);
   }

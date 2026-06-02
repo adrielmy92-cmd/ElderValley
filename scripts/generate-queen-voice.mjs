@@ -1,6 +1,6 @@
 /**
- * Gera todas as falas da Rainha das Abelhas usando ElevenLabs TTS.
- * Uso: ELEVENLABS_API_KEY=sk_... node scripts/generate-queen-voice.mjs
+ * Generates all Bee Queen voice lines using ElevenLabs TTS.
+ * Usage: ELEVENLABS_API_KEY=sk_... node scripts/generate-queen-voice.mjs
  */
 import fs   from "fs";
 import path from "path";
@@ -11,40 +11,43 @@ const OUT_DIR   = path.join(__dirname, "../assets/audio");
 
 const apiKey = process.env.ELEVENLABS_API_KEY;
 if (!apiKey) {
-  console.error("ELEVENLABS_API_KEY não encontrada.");
-  console.error("Uso: ELEVENLABS_API_KEY=sk_... node scripts/generate-queen-voice.mjs");
+  console.error("ELEVENLABS_API_KEY not found.");
+  console.error("Usage: ELEVENLABS_API_KEY=sk_... node scripts/generate-queen-voice.mjs");
   process.exit(1);
 }
 
 const LINES = [
-  { key: "bee-queen-aggro",  text: "Sua presença aqui é uma AFRONTA à Colmeia!" },
-  { key: "bee-queen-phase2", text: "Você ousa me ferir?! O Enxame vai te DEVORAR vivo!" },
-  { key: "bee-queen-phase3", text: "CHEGA!! Vou te RASGAR com o meu próprio ferrão!!" },
-  { key: "bee-queen-t1",     text: "Intruso tolo! A Colmeia não perdoa invasores!" },
-  { key: "bee-queen-t2",     text: "Sua espécie não é nada além de um inseto a ser esmagado!" },
-  { key: "bee-queen-t3",     text: "Sinta a ira da Colmeia, sua pequena praga!" },
-  { key: "bee-queen-t4",     text: "Você está começando a me IRRITAR!" },
-  { key: "bee-queen-t5",     text: "Todo o Enxame observa enquanto eu te destruo!" },
-  { key: "bee-queen-t6",     text: "Você realmente achou que poderia machucar uma rainha?!" },
-  { key: "bee-queen-t7",     text: "Veja o que você fez! Vou te fazer SOFRER!" },
-  { key: "bee-queen-t8",     text: "Seus gritos vão ecoar por esta Colmeia para sempre!" },
-  { key: "bee-queen-t9",     text: "Nada pode te salvar agora. Nem mesmo os deuses!" },
+  { key: "bee-queen-aggro",       text: "Your presence here is an AFFRONT to the Hive!" },
+  { key: "bee-queen-phase2",      text: "You dare hurt me?! The Swarm will DEVOUR you alive!" },
+  { key: "bee-queen-phase3",      text: "ENOUGH!! I will TEAR you apart with my own stinger!!" },
+  { key: "bee-queen-death-line",  text: "The Swarm... will never... forgive you..." },
+  { key: "bee-queen-soldiers",    text: "SOLDIERS!! ATTACK!!" },
+  { key: "bee-queen-t1",          text: "Foolish intruder! The Hive does not forgive invaders!" },
+  { key: "bee-queen-t2",          text: "Your kind is nothing but a pest to be crushed!" },
+  { key: "bee-queen-t3",          text: "Feel the wrath of the Hive, you little pest!" },
+  { key: "bee-queen-t4",          text: "You are starting to IRRITATE me!" },
+  { key: "bee-queen-t5",          text: "The entire Swarm watches as I destroy you!" },
+  { key: "bee-queen-t6",          text: "Did you really think you could harm a queen?!" },
+  { key: "bee-queen-t7",          text: "Look what you did! I will make you SUFFER!" },
+  { key: "bee-queen-t8",          text: "Your screams will echo through this Hive forever!" },
+  { key: "bee-queen-t9",          text: "Nothing can save you now. Not even the gods!" },
 ];
 
 async function pickVoice() {
   const res = await fetch("https://api.elevenlabs.io/v1/voices", {
     headers: { "xi-api-key": apiKey }
   });
-  if (!res.ok) throw new Error(`Erro ao buscar vozes: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to fetch voices: ${res.status}`);
   const { voices } = await res.json();
 
-  // Prioridade: feminina dramática > feminina > qualquer uma
+  // Priority: dramatic female villain > female > any
   const pick =
-    voices.find(v => v.labels?.gender === "female" && /dramatic|villain|strong|narration/i.test(JSON.stringify(v.labels))) ??
+    voices.find(v => v.labels?.gender === "female" && /dramatic|villain|strong|evil|narrator/i.test(JSON.stringify(v.labels))) ??
+    voices.find(v => v.labels?.gender === "female" && v.labels?.age === "middle-aged") ??
     voices.find(v => v.labels?.gender === "female") ??
     voices[0];
 
-  console.log(`[voz]   Usando: "${pick.name}" (${pick.voice_id})`);
+  console.log(`[voice]  Using: "${pick.name}" (${pick.voice_id})`);
   return pick.voice_id;
 }
 
@@ -60,9 +63,9 @@ async function generateLine(voiceId, text) {
       text,
       model_id: "eleven_multilingual_v2",
       voice_settings: {
-        stability:         0.20,
-        similarity_boost:  0.80,
-        style:             0.85,
+        stability:         0.18,
+        similarity_boost:  0.82,
+        style:             0.90,
         use_speaker_boost: true,
       },
     }),
@@ -78,32 +81,26 @@ async function generateLine(voiceId, text) {
 
 async function generate() {
   const voiceId = await pickVoice();
-  let generated = 0, skipped = 0;
+  let generated = 0, failed = 0;
 
   for (const { key, text } of LINES) {
     const outPath = path.join(OUT_DIR, `${key}.mp3`);
-
-    if (fs.existsSync(outPath)) {
-      console.log(`[skip]  ${key}.mp3  (já existe)`);
-      skipped++;
-      continue;
-    }
-
-    console.log(`[gen]   ${key}  →  "${text}"`);
+    console.log(`[gen]    ${key}  →  "${text}"`);
     try {
       const buffer = await generateLine(voiceId, text);
       fs.writeFileSync(outPath, buffer);
-      console.log(`[ok]    ${key}.mp3  (${(buffer.length / 1024).toFixed(1)} KB)`);
+      console.log(`[ok]     ${key}.mp3  (${(buffer.length / 1024).toFixed(1)} KB)`);
       generated++;
     } catch (err) {
-      console.error(`[erro]  ${key}: ${err.message}`);
+      console.error(`[error]  ${key}: ${err.message}`);
+      failed++;
     }
   }
 
-  console.log(`\nConcluído: ${generated} gerados, ${skipped} ignorados.`);
+  console.log(`\nDone: ${generated} generated, ${failed} failed.`);
   if (generated > 0) {
-    console.log("Arquivos salvos em: assets/audio/");
-    console.log("Reinicie o servidor para carregar os novos áudios.");
+    console.log("Files saved to: assets/audio/");
+    console.log("Commit and push to deploy the new voices.");
   }
 }
 
