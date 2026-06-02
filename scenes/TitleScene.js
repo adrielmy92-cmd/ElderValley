@@ -531,6 +531,8 @@ export default class TitleScene extends Phaser.Scene {
   renderPanel() {
     this.activeScrollArea = null;
     this.contentRoot?.removeAll(true);
+    this._scrollMasks?.forEach(m => m.destroy());
+    this._scrollMasks = [];
     this.tabButtons?.forEach(({ tab, button }) => {
       const active = tab.id === this.activePanel;
       button.setFillStyle(active ? 0x17395c : 0x21150d, 0.98);
@@ -819,9 +821,14 @@ export default class TitleScene extends Phaser.Scene {
     const offset = Phaser.Math.Clamp(this.scrollOffsets[key] ?? 0, 0, maxScroll);
     this.scrollOffsets[key] = offset;
 
-    const maskShape = this.add.graphics().setVisible(false);
+    // maskShape must live at scene level (NOT inside a container) so the
+    // GeometryMask uses correct world coordinates in WebGL / mobile.
+    const maskShape = this.add.graphics().setScrollFactor(0).setVisible(false);
     maskShape.fillStyle(0xffffff, 1);
     maskShape.fillRect(x, y, w, h);
+    this._scrollMasks = this._scrollMasks ?? [];
+    this._scrollMasks.push(maskShape);
+
     const content = this.add.container(0, -offset).setDepth(35);
     content.setMask(maskShape.createGeometryMask());
 
@@ -830,7 +837,7 @@ export default class TitleScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: false })
       .setDepth(31);
 
-    this.contentRoot.add([maskShape, content, hitZone]);
+    this.contentRoot.add([content, hitZone]);
 
     const area = {
       key,
@@ -847,14 +854,13 @@ export default class TitleScene extends Phaser.Scene {
 
     if (maxScroll > 0) {
       const trackX = x + w - 8;
+      const DEPTH = 38;
       const track = this.add.rectangle(trackX, y, 5, h, 0x2b190d, 0.82)
-        .setOrigin(0.5, 0)
-        .setDepth(84);
+        .setOrigin(0.5, 0).setDepth(DEPTH).setScrollFactor(0);
       const handleH = Math.max(34, h * (h / contentHeight));
       const handle = this.add.rectangle(trackX, y + 3, 10, handleH, 0xd29643, 0.98)
-        .setOrigin(0.5, 0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(85);
+        .setOrigin(0.5, 0).setDepth(DEPTH + 1).setScrollFactor(0)
+        .setInteractive({ useHandCursor: true });
       this.input.setDraggable(handle);
       handle.on("drag", (_pointer, _dragX, dragY) => {
         const minY = y + 3;
@@ -865,7 +871,7 @@ export default class TitleScene extends Phaser.Scene {
       });
       area.handle = handle;
       area.handleRange = { minY: y + 3, maxY: y + h - handleH - 3, handleH };
-      this.contentRoot.add([track, handle]);
+      this._scrollMasks.push(track, handle);
       this.updateScrollHandle(area);
     }
 
