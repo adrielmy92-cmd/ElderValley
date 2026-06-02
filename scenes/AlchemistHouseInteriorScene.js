@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=210";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;
@@ -27,7 +27,7 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.addAlchemistCollisions();
     this.addAlchemistInteractions();
     this.addAlchemistExit(spawnKey);
-    this.addNpc(735, 872, 2, "Alquimista", "Nem toda pocao deve ser bebida. Algumas servem apenas para lembrar que curiosidade cobra preco.");
+    this.addNpc(735, 872, 2, "Alchemist", "Not every potion should be drunk. Some serve only to remind us that curiosity has a price.");
   }
 
   addAlchemistCollisions() {
@@ -75,16 +75,16 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       x: 760,
       y: 350,
       promptY: 278,
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: 88,
-      onInteract: () => this.dialog.show("Caldeirao", "O liquido verde pulsa devagar, como se respirasse junto com a casa.")
+      onInteract: () => this.dialog.show("Cauldron", "The green liquid pulses slowly, as if breathing along with the house.")
     });
 
     this.interactions.add({
       x: 610,
       y: 704,
       promptY: 628,
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: 72,
       onInteract: () => this.dialog.show("Workbench", "Flasks, bones, and open pages suggest old alchemy studies.")
     });
@@ -93,18 +93,18 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       x: 218,
       y: 276,
       promptY: 220,
-      promptText: "E Ler",
+      promptText: "E Read",
       radius: 54,
-      onInteract: () => this.dialog.show("Grimorio", "As letras se reorganizam quando voce tenta ler em voz alta.")
+      onInteract: () => this.dialog.show("Grimoire", "The letters rearrange themselves when you try to read aloud.")
     });
 
     this.interactions.add({
       x: 1018,
       y: 884,
       promptY: 814,
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: 66,
-      onInteract: () => this.dialog.show("Destilador", "Tubos de vidro carregam uma luz esverdeada ate um reservatorio lacrado.")
+      onInteract: () => this.dialog.show("Distiller", "Glass tubes carry a greenish light into a sealed reservoir.")
     });
   }
 

@@ -1,5 +1,5 @@
 import Player from "../player/Player.js?v=186";
-import DialogSystem from "../systems/DialogSystem.js?v=132";
+import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=132";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
@@ -61,7 +61,7 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   showDevOnlyNotice() {
-    this.dialog?.show("DEV", "Esse recurso e exclusivo do desenvolvedor.");
+    this.dialog?.show("DEV", "This feature is exclusive to the developer.");
   }
 
   createControls() {
@@ -507,8 +507,8 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
 
-    const shapeLabel = this.manualCollisionShape === "circle" ? "redondo" : "retangulo";
-    this.manualCollisionEditorText?.setText(`Editor colisao: ${shapeLabel} | C muda forma | arraste cria | direito remove | R restaura | F4 fecha`);
+    const shapeLabel = this.manualCollisionShape === "circle" ? "circle" : "rectangle";
+    this.manualCollisionEditorText?.setText(`Collision editor: ${shapeLabel} | C changes shape | drag to create | right-click removes | R restore | F4 close`);
     this.manualCollisionEditorGraphics.lineStyle(2, 0xffd166, 0.95);
     this.manualCollisionEditorGraphics.fillStyle(0xffd166, 0.12);
     this.manualCollisionRects?.forEach((rect) => {
@@ -556,7 +556,7 @@ export default class BaseGameScene extends Phaser.Scene {
       strokeThickness: 4
     }).setScrollFactor(0).setDepth(3000);
 
-    this.hudHint = this.add.text(18, 44, "WASD / Setas para andar  |  E/Espaco interagir  |  T/Enter chat", {
+    this.hudHint = this.add.text(18, 44, "WASD / Arrows to move  |  E/Space interact  |  T/Enter chat", {
       fontFamily: "monospace",
       fontSize: "13px",
       color: "#d9e5ef",
@@ -625,8 +625,8 @@ export default class BaseGameScene extends Phaser.Scene {
     const DEPTH = 3000;
     const SLOT_W = 52, SLOT_H = 44, GAP = 6;
     const spells = [
-      { key: "1", name: "Fogo", bgColor: 0x5c1a00, borderColor: 0xff6a00, iconColors: ["#ff6a00", "#ffb829", "#fff4a3"], label: "Fogo" },
-      { key: "2", name: "Raio Arcano", bgColor: 0x001a3a, borderColor: 0x29b6f6, iconColors: ["#1a8fff", "#a8f4ff", "#ffffff"], label: "Raio" }
+      { key: "1", name: "Fire", bgColor: 0x5c1a00, borderColor: 0xff6a00, iconColors: ["#ff6a00", "#ffb829", "#fff4a3"], label: "Fire" },
+      { key: "2", name: "Arcane Lightning", bgColor: 0x001a3a, borderColor: 0x29b6f6, iconColors: ["#1a8fff", "#a8f4ff", "#ffffff"], label: "Lightning" }
     ];
 
     this.spellSlots = spells.map((spell, i) => {
@@ -983,9 +983,9 @@ export default class BaseGameScene extends Phaser.Scene {
     const returnScene = this.entryData?.returnScene ?? "WorldScene";
     const spawnKey = this.entryData?.exitSpawnKey ?? this.entryData?.spawnKey;
     const msg = capacity >= 999
-      ? `Esta casa esta cheia no momento (${current} visitantes). Tente novamente em breve.`
-      : `Esta casa atingiu o limite de ${capacity} visitantes (${current}/${capacity}). Tente novamente em breve.`;
-    this.dialog?.show("Casa Cheia", msg);
+      ? `This house is currently full (${current} visitors). Please try again shortly.`
+      : `This house has reached the limit of ${capacity} visitors (${current}/${capacity}). Please try again shortly.`;
+    this.dialog?.show("House Full", msg);
     this.time.delayedCall(2800, () => this.fadeTo(returnScene, { spawnKey }));
   }
 
@@ -1354,7 +1354,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.serverWorkSelection = [...(this.serverWorkSelection ?? []), choice];
     this.serverWorkUi.lastMessage = this.serverWorkSelection.length >= max
       ? "Mixture complete. Click MIX."
-      : "Continue preenchendo a receita.";
+      : "Keep filling the recipe.";
     this.updateServerWorkUi(this.serverWork);
   }
 
@@ -1368,7 +1368,7 @@ export default class BaseGameScene extends Phaser.Scene {
     }
     selected.splice(index, 1);
     this.serverWorkSelection = selected;
-    this.serverWorkUi.lastMessage = "Frasco removido.";
+    this.serverWorkUi.lastMessage = "Flask removed.";
     this.updateServerWorkUi(this.serverWork);
   }
 
@@ -1403,7 +1403,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.serverWork = result.work;
       this.serverWorkSelection = [];
       this.serverWorkUi.lastMessage = "";
-      this.updateServerWorkUi(this.serverWork, result.success ? `Acerto: +${result.bonusGameMinutes} min de progresso` : "Sequencia falhou. Uma nova receita chegou.");
+      this.updateServerWorkUi(this.serverWork, result.success ? `Correct: +${result.bonusGameMinutes} min progress` : "Wrong sequence. A new recipe has arrived.");
     } catch (error) {
       this.showWorkNotice(error.message);
     } finally {
@@ -1501,11 +1501,11 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   startTimedWork({
-    label = "Trabalhando",
+    label = "Working",
     durationMs,
     totalGameMinutes,
     coinsPerGameHour = 0,
-    rewardText = "Trabalho concluido.",
+    rewardText = "Work complete.",
     cancelText = "You left work early.",
     allowCancel = true
   } = {}) {
@@ -1551,7 +1551,7 @@ export default class BaseGameScene extends Phaser.Scene {
       strokeThickness: 3,
       align: "center"
     }).setOrigin(0.5);
-    const cancelHint = this.add.text(0, 39, allowCancel ? "ESC sair antes" : "", {
+    const cancelHint = this.add.text(0, 39, allowCancel ? "ESC to leave early" : "", {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#ffd66b",

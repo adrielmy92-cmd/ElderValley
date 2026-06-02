@@ -23,7 +23,7 @@ export default class DialogSystem {
       wordWrap: { width: width - 92 },
       lineSpacing: 6
     }).setOrigin(0, 0);
-    this.promptText = scene.add.text(0, 0, "Espaco / Enter", {
+    this.promptText = scene.add.text(0, 0, "Space / Enter", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#c9d4df"

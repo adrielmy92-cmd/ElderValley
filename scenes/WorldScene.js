@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=227";
+import BaseGameScene from "./BaseGameScene.js?v=228";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -62,7 +62,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "middleForge",
-    label: "Forja",
+    label: "Forge",
     key: "middle-forge-house",
     x: 888,
     y: 338,
@@ -121,7 +121,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "tavernHouse",
-    label: "Taverna",
+    label: "Tavern",
     key: "creative-house-tavern",
     creativeOnly: true,
     x: 0,
@@ -143,7 +143,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "largeManor",
-    label: "Mansao",
+    label: "Manor",
     key: "creative-house-manor",
     creativeOnly: true,
     x: 0,
@@ -200,7 +200,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "redLodgeHouse",
-    label: "Hospedaria",
+    label: "Inn",
     key: "creative-house-red-lodge",
     creativeOnly: true,
     x: 0,
@@ -239,7 +239,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "ivyManorHouse",
-    label: "Mansao verde",
+    label: "Emerald Manor",
     key: "creative-house-ivy-manor",
     creativeOnly: true,
     x: 0,
@@ -291,7 +291,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "blueArcaneManorHouse",
-    label: "Mansao azul",
+    label: "Blue Manor",
     key: "creative-house-blue-arcane-manor",
     creativeOnly: true,
     x: 0,
@@ -304,7 +304,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "elfGreenManorHouse",
-    label: "Mansao elfica",
+    label: "Elven Manor",
     key: "creative-house-elf-green-manor",
     creativeOnly: true,
     x: 0,
@@ -317,7 +317,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "blueGoldTowerHouse",
-    label: "Mansao torre azul",
+    label: "Blue Tower Manor",
     key: "creative-house-blue-gold-tower",
     creativeOnly: true,
     x: 0,
@@ -330,7 +330,7 @@ const HOUSE_DEFS = [
   },
   {
     id: "tealRoofManorHouse",
-    label: "Mansao turquesa",
+    label: "Turquoise Manor",
     key: "creative-house-teal-roof-manor",
     creativeOnly: true,
     x: 0,
@@ -790,7 +790,7 @@ export default class WorldScene extends BaseGameScene {
       ))]
     ].filter(([key]) => Boolean(key));
 
-    this.creativeSaveButtonText?.setText("Salvando...");
+    this.creativeSaveButtonText?.setText("Saving...");
     const results = await Promise.allSettled(saves.map(([key, data]) => this.saveSharedStorage(key, data)));
     const failed = results.some((result) => result.status === "rejected");
     this.setCreativeDirty(failed);
@@ -1400,7 +1400,7 @@ export default class WorldScene extends BaseGameScene {
       },
       post: {
         key: "fence-post",
-        label: "Poste",
+        label: "Post",
         originY: 1,
         scale: 0.72,
         bodyWidth: 12,
@@ -1411,7 +1411,7 @@ export default class WorldScene extends BaseGameScene {
       },
       gate: {
         key: "fence-gate",
-        label: "Portao",
+        label: "Gate",
         originY: 1,
         bodyWidth: 72,
         bodyHeight: 16,
@@ -1421,7 +1421,7 @@ export default class WorldScene extends BaseGameScene {
       },
       openGate: {
         key: "fence-gate-open",
-        label: "Portao aberto",
+        label: "Open Gate",
         originY: 1,
         scale: 0.72,
         collides: false,
@@ -1435,35 +1435,35 @@ export default class WorldScene extends BaseGameScene {
     this.treePieces = {
       pine: {
         key: "creative-tree-pine",
-        label: "Pinheiro",
+        label: "Pine",
         colliders: [[0, 4, 42, 46]],
         depthOffset: 82,
         snap: 16
       },
       flower: {
         key: "creative-tree-flower",
-        label: "Florida",
+        label: "Flowering",
         colliders: [[0, 4, 52, 46]],
         depthOffset: 86,
         snap: 16
       },
       round: {
         key: "creative-tree-round",
-        label: "Copa cheia",
+        label: "Full Canopy",
         colliders: [[0, 4, 56, 46]],
         depthOffset: 86,
         snap: 16
       },
       ancient: {
         key: "creative-tree-ancient",
-        label: "Antiga",
+        label: "Ancient",
         colliders: [[0, 4, 66, 48]],
         depthOffset: 88,
         snap: 16
       },
       twisted: {
         key: "creative-tree-twisted",
-        label: "Tortuosa",
+        label: "Twisted",
         scale: 1,
         colliders: [[0, 6, 48, 52]],
         depthOffset: 104,
@@ -1471,7 +1471,7 @@ export default class WorldScene extends BaseGameScene {
       },
       flowerCone: {
         key: "creative-tree-flower-cone",
-        label: "Cone florida",
+        label: "Flower Cone",
         scale: 1,
         colliders: [[0, 6, 46, 52]],
         depthOffset: 108,
@@ -1479,7 +1479,7 @@ export default class WorldScene extends BaseGameScene {
       },
       layeredPine: {
         key: "creative-tree-layered-pine",
-        label: "Pinheiro camadas",
+        label: "Layered Pine",
         scale: 1,
         colliders: [[0, 6, 44, 52]],
         depthOffset: 112,
@@ -1487,7 +1487,7 @@ export default class WorldScene extends BaseGameScene {
       },
       willow: {
         key: "creative-tree-willow",
-        label: "Salgueiro",
+        label: "Willow",
         scale: 1,
         colliders: [[0, 6, 54, 56]],
         depthOffset: 112,
@@ -1495,7 +1495,7 @@ export default class WorldScene extends BaseGameScene {
       },
       birch: {
         key: "creative-tree-birch",
-        label: "Bordo branco",
+        label: "White Birch",
         scale: 1,
         colliders: [[0, 6, 38, 54]],
         depthOffset: 112,
@@ -1503,7 +1503,7 @@ export default class WorldScene extends BaseGameScene {
       },
       cypress: {
         key: "creative-tree-cypress",
-        label: "Cipreste",
+        label: "Cypress",
         scale: 1,
         colliders: [[0, 6, 40, 56]],
         depthOffset: 112,
@@ -1511,7 +1511,7 @@ export default class WorldScene extends BaseGameScene {
       },
       redMaple: {
         key: "creative-tree-red-maple",
-        label: "Bordo vermelho",
+        label: "Red Maple",
         scale: 1,
         colliders: [[0, 6, 58, 54]],
         depthOffset: 114,
@@ -1519,7 +1519,7 @@ export default class WorldScene extends BaseGameScene {
       },
       palm: {
         key: "creative-tree-palm",
-        label: "Palmeira",
+        label: "Palm",
         scale: 1,
         colliders: [[0, 6, 46, 54]],
         depthOffset: 108,
@@ -1527,30 +1527,30 @@ export default class WorldScene extends BaseGameScene {
       }
     };
     this.floorPieces = {
-      stoneA: { key: "creative-floor-01", label: "Pedra A" },
-      stoneB: { key: "creative-floor-02", label: "Pedra B" },
-      stoneC: { key: "creative-floor-03", label: "Pedra C" },
-      dirtA: { key: "creative-floor-04", label: "Terra A" },
-      dirtB: { key: "creative-floor-05", label: "Terra B" },
-      grassA: { key: "creative-floor-06", label: "Grama A" },
-      grassB: { key: "creative-floor-07", label: "Grama B" },
-      woodA: { key: "creative-floor-08", label: "Madeira A" },
-      woodB: { key: "creative-floor-09", label: "Madeira B" },
-      stoneTop: { key: "creative-floor-10", label: "Pedra topo" },
-      dirtTop: { key: "creative-floor-11", label: "Terra topo" },
-      stoneLeft: { key: "creative-floor-12", label: "Pedra esq" },
-      stoneRight: { key: "creative-floor-13", label: "Pedra dir" },
-      cornerA: { key: "creative-floor-14", label: "Canto A" },
-      cornerB: { key: "creative-floor-15", label: "Canto B" },
-      cornerC: { key: "creative-floor-16", label: "Canto C" },
-      cornerD: { key: "creative-floor-17", label: "Canto D" },
-      grassDirt: { key: "creative-floor-18", label: "Grama terra" },
-      stoneDirt: { key: "creative-floor-19", label: "Pedra terra" }
+      stoneA: { key: "creative-floor-01", label: "Stone A" },
+      stoneB: { key: "creative-floor-02", label: "Stone B" },
+      stoneC: { key: "creative-floor-03", label: "Stone C" },
+      dirtA: { key: "creative-floor-04", label: "Earth A" },
+      dirtB: { key: "creative-floor-05", label: "Earth B" },
+      grassA: { key: "creative-floor-06", label: "Grass A" },
+      grassB: { key: "creative-floor-07", label: "Grass B" },
+      woodA: { key: "creative-floor-08", label: "Wood A" },
+      woodB: { key: "creative-floor-09", label: "Wood B" },
+      stoneTop: { key: "creative-floor-10", label: "Stone Top" },
+      dirtTop: { key: "creative-floor-11", label: "Earth Top" },
+      stoneLeft: { key: "creative-floor-12", label: "Stone Left" },
+      stoneRight: { key: "creative-floor-13", label: "Stone Right" },
+      cornerA: { key: "creative-floor-14", label: "Corner A" },
+      cornerB: { key: "creative-floor-15", label: "Corner B" },
+      cornerC: { key: "creative-floor-16", label: "Corner C" },
+      cornerD: { key: "creative-floor-17", label: "Corner D" },
+      grassDirt: { key: "creative-floor-18", label: "Grass Dirt" },
+      stoneDirt: { key: "creative-floor-19", label: "Stone Dirt" }
     };
     this.structurePieces = {
       fruitStall: {
         key: "creative-structure-fruit-stall",
-        label: "Banca frutas",
+        label: "Fruit Stall",
         scale: 1,
         colliders: [[0, -54, 158, 90]],
         depthOffset: 96,
@@ -1558,7 +1558,7 @@ export default class WorldScene extends BaseGameScene {
       },
       knightStatue: {
         key: "creative-structure-knight-statue",
-        label: "Estatua",
+        label: "Statue",
         scale: 1,
         colliders: [[0, -48, 78, 92]],
         depthOffset: 94,
@@ -1566,7 +1566,7 @@ export default class WorldScene extends BaseGameScene {
       },
       fountain: {
         key: "creative-structure-fountain",
-        label: "Fonte",
+        label: "Fountain",
         scale: 1,
         colliders: [[0, -58, 166, 106]],
         depthOffset: 98,
@@ -1614,7 +1614,7 @@ export default class WorldScene extends BaseGameScene {
       },
       lampMonk: {
         key: "creative-structure-lamp-monk",
-        label: "Estatua luminosa",
+        label: "Light Statue",
         scale: 0.115,
         colliders: [[0, -23, 58, 48]],
         depthOffset: 86,
@@ -1623,7 +1623,7 @@ export default class WorldScene extends BaseGameScene {
       },
       lampVine: {
         key: "creative-structure-lamp-vine",
-        label: "Poste com hera",
+        label: "Vine Lamp",
         scale: 0.115,
         colliders: [[0, -20, 32, 40]],
         depthOffset: 80,
@@ -1632,7 +1632,7 @@ export default class WorldScene extends BaseGameScene {
       },
       cat: {
         key: "creative-animal-cat",
-        label: "Gato",
+        label: "Cat",
         scale: 0.52,
         colliders: [[0, -8, 26, 14]],
         depthOffset: 32,
@@ -1644,7 +1644,7 @@ export default class WorldScene extends BaseGameScene {
       },
       bull: {
         key: "creative-animal-bull",
-        label: "Boi",
+        label: "Bull",
         scale: 0.82,
         colliders: [[0, -20, 54, 32]],
         depthOffset: 50,
@@ -1656,7 +1656,7 @@ export default class WorldScene extends BaseGameScene {
       },
       hooded: {
         key: "creative-npc-hooded",
-        label: "Encapuzado",
+        label: "Hooded",
         scale: 0.7,
         colliders: [[0, -30, 54, 48]],
         depthOffset: 60,
@@ -1668,7 +1668,7 @@ export default class WorldScene extends BaseGameScene {
       },
       skeletonArcher: {
         key: "creative-npc-skeleton-archer",
-        label: "Arqueiro Esqueleto",
+        label: "Skeleton Archer",
         scale: 0.7,
         colliders: [[0, -30, 50, 44]],
         depthOffset: 64,
@@ -1681,7 +1681,7 @@ export default class WorldScene extends BaseGameScene {
     };
     this.windowLightPieces = {
       warmSmall: {
-        label: "Janela baixa",
+        label: "Small Window",
         width: 34,
         height: 20,
         coreWidth: 14,
@@ -1692,7 +1692,7 @@ export default class WorldScene extends BaseGameScene {
         snap: 8
       },
       warmMedium: {
-        label: "Janela media",
+        label: "Medium Window",
         width: 52,
         height: 30,
         coreWidth: 22,
@@ -1703,7 +1703,7 @@ export default class WorldScene extends BaseGameScene {
         snap: 8
       },
       warmLarge: {
-        label: "Janela forte",
+        label: "Large Window",
         width: 72,
         height: 42,
         coreWidth: 32,
@@ -2054,33 +2054,33 @@ export default class WorldScene extends BaseGameScene {
       house: "Houses",
       structure: "Structures",
       windowLight: "Lights"
-    }[this.activeCreativeMode] ?? "Nenhum";
+    }[this.activeCreativeMode] ?? "None";
     this.creativeTitleText?.setText("");
     this.creativeModesText?.setText(`Mode: ${activeLabel}  |  P Floors  |  F Fences  |  T Trees  |  H Houses  |  B Structures  |  L Lights`);
     this.updateCreativeSaveButton();
 
     if (this.isFenceEditorActive()) {
       const label = this.fencePieces[this.selectedFenceType]?.label ?? "Horizontal";
-      this.fenceEditorText.setText(`Cerca: ${label} | clique coloca | direito/remove apaga`);
+      this.fenceEditorText.setText(`Fence: ${label} | click to place | right-click/delete removes`);
     } else if (this.isTreeEditorActive()) {
-      const label = this.treePieces[this.selectedTreeType]?.label ?? "Pinheiro";
-      this.fenceEditorText.setText(`Arvore: ${label} | clique coloca | direito/remove apaga`);
+      const label = this.treePieces[this.selectedTreeType]?.label ?? "Pine";
+      this.fenceEditorText.setText(`Tree: ${label} | click to place | right-click/delete removes`);
     } else if (this.isFloorEditorActive()) {
-      const label = this.floorPieces[this.selectedFloorType]?.label ?? "Pedra A";
-      this.fenceEditorText.setText(`Piso: ${label} | clique pinta | direito/Delete apaga`);
+      const label = this.floorPieces[this.selectedFloorType]?.label ?? "Stone A";
+      this.fenceEditorText.setText(`Floor: ${label} | click to paint | right-click/Delete removes`);
     } else if (this.isHouseEditorActive()) {
       const selectedDef = HOUSE_DEFS.find((def) => def.id === this.selectedHouseType);
-      const label = this.selectedEditableHouse?.def.label ?? selectedDef?.label ?? "nenhuma";
+      const label = this.selectedEditableHouse?.def.label ?? selectedDef?.label ?? "none";
       this.fenceEditorText.setText(`House: ${label} | click place/move | right-click/Delete removes from map`);
     } else if (this.isStructureEditorActive()) {
-      const label = this.structurePieces[this.selectedStructureType]?.label ?? "Banca frutas";
-      const side = this.selectedStructureFlipX ? "invertido" : "normal";
-      this.fenceEditorText.setText(`Estrutura: ${label} | I inverte (${side}) | clique coloca | direito/Delete apaga`);
+      const label = this.structurePieces[this.selectedStructureType]?.label ?? "Fruit Stall";
+      const side = this.selectedStructureFlipX ? "flipped" : "normal";
+      this.fenceEditorText.setText(`Structure: ${label} | I flips (${side}) | click to place | right-click/Delete removes`);
     } else if (this.isWindowLightEditorActive()) {
-      const label = this.windowLightPieces[this.selectedWindowLightType]?.label ?? "Janela media";
-      this.fenceEditorText.setText(`Luz: ${label} | acende a noite | clique coloca | direito/Delete apaga`);
+      const label = this.windowLightPieces[this.selectedWindowLightType]?.label ?? "Medium Window";
+      this.fenceEditorText.setText(`Light: ${label} | glows at night | click to place | right-click/Delete removes`);
     } else {
-      this.fenceEditorText.setText("Escolha um modo criativo");
+      this.fenceEditorText.setText("Choose a creative mode");
     }
     this.renderCreativeInventory();
   }
@@ -3153,7 +3153,7 @@ export default class WorldScene extends BaseGameScene {
     const board = this.add.rectangle(x, y - 52, 96, 32, 0x7c512d, 1)
       .setDepth(y - 1)
       .setStrokeStyle(2, 0x3b2416, 1);
-    const label = this.add.text(x, y - 52, "Cidade", {
+    const label = this.add.text(x, y - 52, "City", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#fff0c2",
@@ -3165,7 +3165,7 @@ export default class WorldScene extends BaseGameScene {
       x,
       y,
       promptY: y - 88,
-      promptText: "E Ir para Cidade",
+      promptText: "E Go to City",
       radius: 82,
       onInteract: () => this.fadeTo("CityScene", { spawnKey: "fromVillage" })
     });
@@ -3176,54 +3176,32 @@ export default class WorldScene extends BaseGameScene {
     const x = 1460;
     const y = -60;
 
-    const g = this.add.graphics().setDepth(y + 80);
-    // Left pillar — pedra vulcânica
-    g.fillStyle(0x2e1a0e, 1);
-    g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0x3d2412, 1);
-    g.fillRect(x - 56, y - 102, 30, 12);
-    // Right pillar
-    g.fillStyle(0x2e1a0e, 1);
-    g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0x3d2412, 1);
-    g.fillRect(x + 26, y - 102, 30, 12);
-    // Top arch
-    g.fillStyle(0x261408, 1);
-    g.fillRect(x - 56, y - 112, 112, 18);
-    // Runas incandescentes
-    g.fillStyle(0xff4400, 0.55);
-    [[x - 41, y - 72], [x - 41, y - 48], [x + 41, y - 72], [x + 41, y - 48]].forEach(([rx, ry]) => {
-      g.fillRect(rx - 4, ry - 4, 8, 8);
-    });
-    // Inner glow — vermelho/laranja
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
-    pg.fillStyle(0xff3300, 0.28);
-    pg.fillEllipse(x, y - 54, 56, 86);
-    pg.fillStyle(0xff7700, 0.12);
-    pg.fillEllipse(x, y - 54, 88, 116);
-    // Sign post
-    g.fillStyle(0x1a0800, 1);
-    g.fillRect(x - 4, y - 130, 8, 26);
-    g.fillStyle(0x2e1206, 1);
-    g.fillRect(x - 56, y - 158, 112, 30);
-    const label = this.add.text(x, y - 143, "Mapa do Fogo", {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      color: "#ff9966",
-      stroke: "#1a0000",
-      strokeThickness: 3
-    }).setOrigin(0.5).setDepth(y + 100);
+    if (this.textures.exists("volcano-gate")) {
+      this.add.image(x, y, "volcano-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x2e1a0e, 1);
+      g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x261408, 1);
+      g.fillRect(x - 56, y - 112, 112, 18);
+      const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
+      pg.fillStyle(0xff3300, 0.28);
+      pg.fillEllipse(x, y - 54, 56, 86);
+    }
 
     this.interactions.add({
       id: "door_forest_gate",
       x,
       y,
-      promptY: y - 170,
-      promptText: "E Entrar no Mapa do Fogo",
-      radius: 72,
+      promptY: y - 260,
+      promptText: "E Enter Volcano",
+      radius: 80,
       onInteract: () => this.fadeTo("ForestScene", { spawnKey: "fromVillage" })
     });
-    return { g, label };
   }
 
   addSwampTransition() {
@@ -3262,7 +3240,7 @@ export default class WorldScene extends BaseGameScene {
     g.fillRect(x - 4, y - 130, 8, 26);
     g.fillStyle(0x2a4010, 1);
     g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Pântano", {
+    this.add.text(x, y - 143, "Swamp", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#88ffaa", stroke: "#0a1a0a", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y + 100);
@@ -3271,7 +3249,7 @@ export default class WorldScene extends BaseGameScene {
       id: "door_swamp_gate",
       x, y,
       promptY: y - 170,
-      promptText: "E Entrar no Pântano",
+      promptText: "E Enter Swamp",
       radius: 72,
       onInteract: () => this.fadeTo("SwampScene", { spawnKey: "fromVillage" })
     });
@@ -3313,7 +3291,7 @@ export default class WorldScene extends BaseGameScene {
     g.fillRect(x - 4, y - 130, 8, 26);
     g.fillStyle(0x7a5000, 1);
     g.fillRect(x - 52, y - 158, 104, 30);
-    this.add.text(x, y - 143, "Colmeia", {
+    this.add.text(x, y - 143, "Hive", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#ffdd88", stroke: "#3a2000", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y + 100);
@@ -3322,7 +3300,7 @@ export default class WorldScene extends BaseGameScene {
       id: "door_bee_gate",
       x, y,
       promptY: y - 170,
-      promptText: "E Entrar na Colmeia",
+      promptText: "E Enter Hive",
       radius: 72,
       onInteract: () => this.fadeTo("BeeScene", { spawnKey: "fromVillage" })
     });
@@ -3482,7 +3460,7 @@ export default class WorldScene extends BaseGameScene {
       x: villager.x,
       y: villager.y,
       promptY: villager.y - 32,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 42,
       onInteract: () => this.dialog.show("Resident", "They say some old cards were hidden inside village houses.")
     });
@@ -3504,9 +3482,9 @@ export default class WorldScene extends BaseGameScene {
       x: character.x,
       y: character.y + 34,
       promptY: character.y - 44,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 44,
-      onInteract: () => this.dialog.show("Viajante", "Passei pelo rio procurando pistas sobre cartas antigas.")
+      onInteract: () => this.dialog.show("Traveler", "I crossed the river looking for clues about ancient cards.")
     };
     this.interactions.add(interaction);
 
@@ -3534,9 +3512,9 @@ export default class WorldScene extends BaseGameScene {
       x: character.x,
       y: character.y + 34,
       promptY: character.y - 44,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 44,
-      onInteract: () => this.dialog.show("Cavaleiro", "Estou patrulhando a vila enquanto os colecionadores chegam.")
+      onInteract: () => this.dialog.show("Knight", "I am patrolling the village while the collectors arrive.")
     };
     this.interactions.add(interaction);
 
@@ -3566,9 +3544,9 @@ export default class WorldScene extends BaseGameScene {
       x: character.x,
       y: character.y + 34,
       promptY: character.y - 44,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 44,
-      onInteract: () => this.dialog.show("Adventurer", "Vou explorar a vila enquanto voce testa essa magia nova.")
+      onInteract: () => this.dialog.show("Adventurer", "I will explore the village while you test that new magic.")
     };
     this.interactions.add(interaction);
 
@@ -3602,9 +3580,9 @@ export default class WorldScene extends BaseGameScene {
       x: character.x,
       y: character.y + 34,
       promptY: character.y - 50,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 50,
-      onInteract: () => this.dialog.show("Cavaleiro", "Estou vigiando a estrada ate o centro da cidade.")
+      onInteract: () => this.dialog.show("Knight", "I am watching the road towards the city center.")
     };
     this.interactions.add(interaction);
 

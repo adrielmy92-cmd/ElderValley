@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=210";
 
 const ART_SCALE = 1.05;
 const SOURCE_SCALE = ART_SCALE / 0.5;
@@ -158,7 +158,7 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       x: sx(398),
       y: sx(270),
       promptY: sx(210),
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: sx(78),
       onInteract: () => this.dialog.show("Mechanism", "The millstone hums softly, locked to the windmill's main shaft.")
     });
@@ -167,25 +167,25 @@ export default class WindmillInteriorScene extends InteriorBaseScene {
       x: sx(178),
       y: sx(130),
       promptY: sx(82),
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: sx(54),
-      onInteract: () => this.dialog.show("Shelf", "Jarras, cestos e pequenos sacos de graos ficam alinhados na madeira.")
+      onInteract: () => this.dialog.show("Shelf", "Jars, baskets and small grain sacks are lined up on the wood.")
     });
 
     this.interactions.add({
       x: sx(214),
       y: sx(380),
       promptY: sx(336),
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: sx(54),
-      onInteract: () => this.dialog.show("Table", "Farinha fina cobre a mesa, iluminada por uma pequena lanterna.")
+      onInteract: () => this.dialog.show("Table", "Fine flour covers the table, lit by a small lantern.")
     });
 
     this.interactions.add({
       x: sx(538),
       y: sx(388),
       promptY: sx(342),
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: sx(58),
       onInteract: () => this.dialog.show("Workbench", "Tools, jars, and loose parts show the windmill receives constant maintenance.")
     });

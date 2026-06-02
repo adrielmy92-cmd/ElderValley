@@ -89,6 +89,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=1", 160, 160);
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
+    this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=1");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
       this.loadImage(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=132`);
@@ -104,10 +105,32 @@ export default class GamePreloadScene extends Phaser.Scene {
   }
 
   create() {
+    this.applyChromaKey("volcano-gate-raw", "volcano-gate", 255, 0, 255);
     this.scene.start(this.targetScene, {
       ...this.entryData,
       spawnKey: this.spawnKey
     });
+  }
+
+  applyChromaKey(sourceKey, destKey, r, g, b) {
+    if (this.textures.exists(destKey) || !this.textures.exists(sourceKey)) {
+      return;
+    }
+    const src = this.textures.get(sourceKey).source[0];
+    const canvas = document.createElement("canvas");
+    canvas.width = src.width;
+    canvas.height = src.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(src.image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > 180 && data[i + 1] < 60 && data[i + 2] > 180) {
+        data[i + 3] = 0;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    this.textures.addCanvas(destKey, canvas);
   }
 
   loadImage(key, url) {

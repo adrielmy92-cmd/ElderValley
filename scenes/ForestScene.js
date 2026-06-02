@@ -66,27 +66,25 @@ export default class ForestScene extends WorldScene {
   addArenaReturnPortal() {
     const x = ARENA_W / 2;
     const y = 88;
-    const g = this.add.graphics().setDepth(y + 80);
-    g.fillStyle(0x2e1a0e, 1); g.fillRect(x - 52, y - 96, 22, 96);
-    g.fillStyle(0x3d2412, 1); g.fillRect(x - 56, y - 102, 30, 12);
-    g.fillStyle(0x2e1a0e, 1); g.fillRect(x + 30, y - 96, 22, 96);
-    g.fillStyle(0x3d2412, 1); g.fillRect(x + 26, y - 102, 30, 12);
-    g.fillStyle(0x261408, 1); g.fillRect(x - 56, y - 112, 112, 18);
-    g.fillStyle(0xff4400, 0.5);
-    [[x-41,y-72],[x-41,y-52],[x-41,y-32],[x+41,y-72],[x+41,y-52],[x+41,y-32]]
-      .forEach(([rx,ry]) => g.fillRect(rx-4, ry-4, 8, 8));
-    const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y+40);
-    pg.fillStyle(0xff3300, 0.3); pg.fillEllipse(x, y-54, 56, 86);
-    pg.fillStyle(0xff7700, 0.15); pg.fillEllipse(x, y-54, 88, 116);
-    g.fillStyle(0x1a0800, 1); g.fillRect(x-4, y-130, 8, 26);
-    g.fillStyle(0x2e1206, 1); g.fillRect(x-44, y-158, 88, 30);
-    this.add.text(x, y-143, "Mapa do Fogo", {
-      fontFamily:"monospace", fontSize:"13px", color:"#ff9966", stroke:"#1a0000", strokeThickness:3
-    }).setOrigin(0.5).setDepth(y+100);
+
+    if (this.textures.exists("volcano-gate")) {
+      this.add.image(x, y, "volcano-gate")
+        .setOrigin(0.5, 0.88)
+        .setScale(0.24)
+        .setDepth(y + 120);
+    } else {
+      const g = this.add.graphics().setDepth(y + 80);
+      g.fillStyle(0x2e1a0e, 1); g.fillRect(x - 52, y - 96, 22, 96);
+      g.fillRect(x + 30, y - 96, 22, 96);
+      g.fillStyle(0x261408, 1); g.fillRect(x - 56, y - 112, 112, 18);
+      const pg = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(y + 40);
+      pg.fillStyle(0xff3300, 0.3); pg.fillEllipse(x, y - 54, 56, 86);
+    }
+
     this.interactions.add({
-      id:"boss_arena_exit", x, y, promptY:y-170,
-      promptText:"E Retornar ao Vilarejo", radius:72,
-      onInteract:() => this.fadeTo("WorldScene", { spawnKey:"forestGate" })
+      id: "boss_arena_exit", x, y, promptY: y - 260,
+      promptText: "E Return to Village", radius: 80,
+      onInteract: () => this.fadeTo("WorldScene", { spawnKey: "forestGate" })
     });
   }
 
@@ -151,7 +149,7 @@ export default class ForestScene extends WorldScene {
     bg.fillStyle(0x000000, 0.7); bg.fillRoundedRect(0, 0, BAR_W+20, 46, 6);
     this.bossHpContainer.add(bg);
 
-    this.bossNameText = this.add.text(10, 4, "GOLEM DE LAVA  ●  Fase 1", {
+    this.bossNameText = this.add.text(10, 4, "LAVA GOLEM  ●  Phase 1", {
       fontFamily:"monospace", fontSize:"12px", color:"#ff9944", stroke:"#1a0000", strokeThickness:3
     });
     this.bossHpContainer.add(this.bossNameText);
@@ -211,7 +209,7 @@ export default class ForestScene extends WorldScene {
         color: "#ff9966", stroke: "#1a0000", strokeThickness: 5
       }).setOrigin(0.5).setDepth(5000);
 
-      this._countdownSub = this.add.text(cx, cy + 18, "GOLEM DE LAVA", {
+      this._countdownSub = this.add.text(cx, cy + 18, "LAVA GOLEM", {
         fontFamily: "monospace", fontSize: "13px",
         color: "#ff6633", stroke: "#1a0000", strokeThickness: 3
       }).setOrigin(0.5).setDepth(5000);
@@ -241,7 +239,7 @@ export default class ForestScene extends WorldScene {
     this.bossHp = 10000;
     this.bossPhase = 1;
     this.updateBossHpBar();
-    this.bossNameText?.setText("GOLEM DE LAVA  ●  Fase 1");
+    this.bossNameText?.setText("LAVA GOLEM  ●  Phase 1");
     this.bossHpContainer?.setVisible(true);
     this.bossGolem.setVisible(true).setActive(true).clearTint();
     this.bossGolem.play("golem-walk", true);
@@ -255,7 +253,7 @@ export default class ForestScene extends WorldScene {
       this.bossGolem.setScale(0);
       this.tweens.add({ targets: this.bossGolem, scaleX: 1.4, scaleY: 1.4, duration: 800, ease: "Back.easeOut" });
       this.cameras.main.shake(600, 0.018);
-      this.showPhaseAnnouncement("GOLEM DE LAVA RENASCEU!");
+      this.showPhaseAnnouncement("LAVA GOLEM HAS RISEN!");
     }
   }
 
@@ -276,9 +274,9 @@ export default class ForestScene extends WorldScene {
         // Efeitos de morte só uma vez
         this.bossHpContainer?.setVisible(false);
         this.cameras.main.shake(600, 0.02);
-        this.showPhaseAnnouncement("GOLEM DERROTADO!");
+        this.showPhaseAnnouncement("GOLEM DEFEATED!");
         this.time.delayedCall(2000, () => {
-          this.dialog?.show("Golem de Lava", "O Golem foi derrotado! A arena esfria...");
+          this.dialog?.show("Lava Golem", "The Golem has been defeated! The arena cools down...");
         });
       }
 
@@ -344,9 +342,9 @@ export default class ForestScene extends WorldScene {
     if (phase <= this.bossPhase) return;
     this.bossPhase = phase;
     const tints = [null, null, 0xff8833, 0xff2200];
-    const labels = ["", "", "O Golem enfurece!", "FÚRIA VULCÂNICA!"];
+    const labels = ["", "", "The Golem rages!", "VOLCANIC FURY!"];
     if (tints[phase]) this.bossGolem?.setTint(tints[phase]);
-    this.bossNameText?.setText(`GOLEM DE LAVA  ●  Fase ${phase}`);
+    this.bossNameText?.setText(`LAVA GOLEM  ●  Phase ${phase}`);
     this.showPhaseAnnouncement(labels[phase]);
     this.cameras.main.shake(400, 0.012);
   }
@@ -389,7 +387,7 @@ export default class ForestScene extends WorldScene {
     this.player?.setVelocity(0, 0);
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
-    const msg = this.add.text(cx, cy, "Você foi derrotado...", {
+    const msg = this.add.text(cx, cy, "You were defeated...", {
       fontFamily:"monospace", fontSize:"28px", color:"#ff4444", stroke:"#000000", strokeThickness:6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
     this.cameras.main.shake(300, 0.018);

@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=227";
+import BaseGameScene from "./BaseGameScene.js?v=228";
 
 const TILE = 32;
 
@@ -63,7 +63,7 @@ export default class InteriorBaseScene extends BaseGameScene {
         x,
         y,
         promptY: y - obj.height,
-        promptText: "E Ver",
+        promptText: "E Look",
         radius: 44,
         onInteract: () => this.dialog.show(name, text)
       });
@@ -89,7 +89,7 @@ export default class InteriorBaseScene extends BaseGameScene {
       x,
       y,
       promptY: y - 32,
-      promptText: "E Falar",
+      promptText: "E Talk",
       radius: 42,
       onInteract: () => this.dialog.show(name, line)
     });

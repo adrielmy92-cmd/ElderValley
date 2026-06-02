@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=209";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=210";
 
 export default class MiddleForgeInteriorScene extends InteriorBaseScene {
   constructor() {
@@ -9,7 +9,7 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
     this.makeRoom({
       width: 704,
       height: 544,
-      title: "Forja Central",
+      title: "Central Forge",
       spawnX: 352,
       spawnY: 464
     });
@@ -17,8 +17,8 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
     this.addForgeArchitecture();
 
     this.add.image(352, 378, "tile-rug").setScale(3.1, 1.1).setDepth(120);
-    this.addFurniture(160, 184, "bookcase", 38, 18, "Ferramentas pequenas, couro e caixas de rebites estao organizados aqui.", "Shelf");
-    this.addFurniture(244, 392, "table", 70, 24, "A bancada tem martelos, limas e pecas de metal ainda mornas.", "Workbench");
+    this.addFurniture(160, 184, "bookcase", 38, 18, "Small tools, leather and rivet boxes are organized here.", "Shelf");
+    this.addFurniture(244, 392, "table", 70, 24, "The workbench has hammers, files and still-warm metal pieces.", "Workbench");
     this.addFurniture(484, 390, "card-table", 72, 24, "Some cards have been protected with thin plates of polished metal.", "Order Table");
     this.addFurniture(578, 266, "chest-closed", 36, 20, "A heavy chest holds old tools.", "Tool Chest");
 
@@ -31,7 +31,7 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
       x: 356,
       y: 326,
       promptY: 276,
-      promptText: "E Ver",
+      promptText: "E Look",
       radius: 46,
       onInteract: () => this.dialog.show("Anvil", "The anvil has deep marks from many years of work.")
     });

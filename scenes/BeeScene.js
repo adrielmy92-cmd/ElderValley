@@ -170,7 +170,7 @@ export default class BeeScene extends WorldScene {
 
   _callSoldiers(_count) {
     // Servidor controla spawn — cliente só toca a voz
-    this._queenSpeak("bee-queen-soldiers", "SOLDADOS!! ATAQUEM!!");
+    this._queenSpeak("bee-queen-soldiers", "SOLDIERS!! ATTACK!!");
   }
 
   // _updateSoldiers removido — posição vem do servidor via onBeeSoldierSync
@@ -315,7 +315,7 @@ export default class BeeScene extends WorldScene {
 
     boss.topBg = this.add.graphics().setDepth(9950).setScrollFactor(0);
     boss.topFg = this.add.graphics().setDepth(9951).setScrollFactor(0);
-    boss.topLabel = this.add.text(cw / 2, 12, "⚔  Rainha das Abelhas  ⚔", {
+    boss.topLabel = this.add.text(cw / 2, 12, "⚔  Queen of Bees  ⚔", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#ffdd44", stroke: "#1a0a00", strokeThickness: 4
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(9952);
@@ -399,7 +399,7 @@ export default class BeeScene extends WorldScene {
     if (this._voicePlayed) return;
     this._voicePlayed = true;
     this.time.delayedCall(1200, () => {
-      this._queenSpeak("bee-queen-aggro", "Sua presença aqui é uma AFRONTA à Colmeia!");
+      this._queenSpeak("bee-queen-aggro", "Your presence here is an AFFRONT to the Hive!");
     });
   }
 
@@ -510,18 +510,18 @@ export default class BeeScene extends WorldScene {
   _triggerBattleTaunt(phase) {
     const pool = {
       1: [
-        { k: "bee-queen-t1", t: "Intruso tolo! A Colmeia não perdoa invasores!" },
-        { k: "bee-queen-t2", t: "Sua espécie não é nada além de um inseto a ser esmagado!" },
-        { k: "bee-queen-t3", t: "Sinta a ira da Colmeia, sua pequena praga!" },
+        { k: "bee-queen-t1", t: "Foolish intruder! The Hive does not forgive invaders!" },
+        { k: "bee-queen-t2", t: "Your kind is nothing but a pest to be crushed!" },
+        { k: "bee-queen-t3", t: "Feel the wrath of the Hive, you little pest!" },
       ],
       2: [
-        { k: "bee-queen-t4", t: "Você está começando a me IRRITAR!" },
-        { k: "bee-queen-t5", t: "Todo o Enxame observa enquanto eu te destruo!" },
-        { k: "bee-queen-t6", t: "Você realmente achou que poderia machucar uma rainha?!" },
+        { k: "bee-queen-t4", t: "You are starting to IRRITATE me!" },
+        { k: "bee-queen-t5", t: "The entire Swarm watches as I destroy you!" },
+        { k: "bee-queen-t6", t: "Did you really think you could harm a queen?!" },
       ],
       3: [
-        { k: "bee-queen-t7", t: "Veja o que você fez! Vou te fazer SOFRER!" },
-        { k: "bee-queen-t8", t: "Seus gritos vão ecoar por esta Colmeia para sempre!" },
+        { k: "bee-queen-t7", t: "Look what you did! I will make you SUFFER!" },
+        { k: "bee-queen-t8", t: "Your screams will echo through this Hive forever!" },
         { k: "bee-queen-t9", t: "Nada pode te salvar agora. Nem mesmo os deuses!" },
       ]
     };
@@ -900,8 +900,8 @@ export default class BeeScene extends WorldScene {
     const tints   = { 2: 0xff9944,        3: 0xff5522 };
     const shakes  = { 2: 0.014,           3: 0.024 };
     const taunts  = {
-      2: "Você ousa me ferir?! O Enxame vai te DEVORAR vivo!",
-      3: "CHEGA!! Vou te RASGAR com o meu próprio ferrão!!"
+      2: "You dare hurt me?! The Swarm will DEVOUR you alive!",
+      3: "ENOUGH!! I will TEAR you apart with my own stinger!!"
     };
 
     this.cameras.main.shake(500, shakes[phase]);
@@ -955,7 +955,7 @@ export default class BeeScene extends WorldScene {
 
     this._sfx("bee-boss-death", 0.8);
     this._queenSpeaking = false;
-    this._queenSpeak("bee-queen-death-line", "O Enxame... nunca vai... te perdoar...");
+    this._queenSpeak("bee-queen-death-line", "The Swarm... will never... forgive you...");
     this._stopBattleMusic();
     this.cameras.main.shake(500, 0.022);
     this.tweens.add({
@@ -1189,7 +1189,7 @@ export default class BeeScene extends WorldScene {
 
   onBeeSoldierSpawn(data) {
     this._spawnSoldier(data.fromX, data.fromY, data.i);
-    this._queenSpeak("bee-queen-soldiers", "SOLDADOS!! ATAQUEM!!");
+    this._queenSpeak("bee-queen-soldiers", "SOLDIERS!! ATTACK!!");
   }
 
   onBeeSoldierDied(idx) {
@@ -1286,7 +1286,7 @@ export default class BeeScene extends WorldScene {
 
   _handleRadialBurstEvent(data) {
     const { bossX, bossY, waves } = data;
-    this._showSpecialAnnounce("Fúria do Enxame!");
+    this._showSpecialAnnounce("Swarm Fury!");
     if (this.beeBoss) this.beeBoss.setTint(0xff3300);
     this.tweens.add({ targets: this.beeBoss, alpha: 0.3, duration: 120, yoyo: true, repeat: 4,
       onComplete: () => { if (this.beeBoss && !this.beeBoss.dead) this.beeBoss.setAlpha(1); }

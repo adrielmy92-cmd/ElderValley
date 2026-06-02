@@ -108,12 +108,12 @@ export default class CityScene extends WorldScene {
     this.createKnightAnimations();
     this.cityGuards = [];
     this.cityGuardPhrases = [
-      "Mantenha a paz dentro das muralhas.",
-      "A guarda esta de olho nas ruas.",
-      "Boa jornada, viajante.",
-      "Sem confusao no centro da cidade.",
+      "Keep the peace within the walls.",
+      "The guard is watching the streets.",
+      "Safe travels, wanderer.",
+      "No trouble in the city center.",
       "The houses here are under protection.",
-      "Qualquer movimento estranho, avise a guarda."
+      "Any suspicious movement, alert the guard."
     ];
 
     const left = 180;
@@ -159,7 +159,7 @@ export default class CityScene extends WorldScene {
         x: guard.x,
         y: guard.y + 34,
         promptY: guard.y - 50,
-        promptText: "E Falar",
+        promptText: "E Talk",
         radius: 52,
         onInteract: () => this.dialog.show(guardConfig.name, this.cityGuardPhrases[index % this.cityGuardPhrases.length])
       };

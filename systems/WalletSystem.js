@@ -89,7 +89,7 @@ export default class WalletSystem {
     };
     await this.authenticateEvmWallet(provider);
     await this.loadProfile();
-    this.status = "MetaMask conectada.";
+    this.status = "MetaMask connected.";
     this.saveWallet();
     return this.wallet;
   }

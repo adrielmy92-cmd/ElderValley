@@ -22,9 +22,9 @@ const TROLL_FIRE_PAUSE   = 900;  // ms que o troll fica parado ao soltar poder
 //   Linha 1 (frames 24-47): ESPINHO_LAMA  — espinhos em linha
 //   Linha 2 (frames 48-71): ONDA_LODO     — onda rasteira
 const ATK = {
-  BOLHA_TOXICA: { frames: [0, 23],  dmg: 25, radius: 70,  label: "Bolha Tóxica"   },
-  ESPINHO_LAMA: { frames: [24, 47], dmg: 20, radius: 40,  label: "Espinho de Lama" },
-  ONDA_LODO:    { frames: [48, 71], dmg: 22, radius: 50,  label: "Onda de Lodo"   }
+  BOLHA_TOXICA: { frames: [0, 23],  dmg: 25, radius: 70,  label: "Toxic Bubble"   },
+  ESPINHO_LAMA: { frames: [24, 47], dmg: 20, radius: 40,  label: "Mud Spike" },
+  ONDA_LODO:    { frames: [48, 71], dmg: 22, radius: 50,  label: "Sludge Wave"   }
 };
 const ATK_LIST = Object.values(ATK);
 
@@ -138,7 +138,7 @@ export default class SwampScene extends WorldScene {
     g.fillRect(x - 4, y - 130, 8, 26);
     g.fillStyle(0x2a4010, 1);
     g.fillRect(x - 44, y - 158, 88, 30);
-    this.add.text(x, y - 143, "Pântano", {
+    this.add.text(x, y - 143, "Swamp", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#88ffaa", stroke: "#0a1a0a", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y + 100);
@@ -147,7 +147,7 @@ export default class SwampScene extends WorldScene {
       id: "swamp_exit",
       x, y,
       promptY: y - 170,
-      promptText: "E Retornar ao Vilarejo",
+      promptText: "E Return to Village",
       radius: 72,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "swampGate" })
     });
@@ -511,7 +511,7 @@ export default class SwampScene extends WorldScene {
     this.player?.setVelocity(0, 0);
     const cx = this.cameras.main.centerX;
     const cy = this.cameras.main.centerY;
-    const msg = this.add.text(cx, cy, "Você foi derrotado...", {
+    const msg = this.add.text(cx, cy, "You were defeated...", {
       fontFamily: "monospace", fontSize: "28px", color: "#ff4444",
       stroke: "#000000", strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);

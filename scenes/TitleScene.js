@@ -583,7 +583,7 @@ export default class TitleScene extends Phaser.Scene {
     const profile = this.walletSystem.profile;
     const loginLabel = this.loginMode === "wallet" && this.walletSystem.connected
       ? this.walletSystem.getShortAddress()
-      : "Entrando como convidado";
+      : "Entering as guest";
     const houses = profile?.ownedHouses?.length ?? 0;
     const characters = profile?.ownedCharacters?.length ?? 0;
     this.addContentText(x + 14, y + 20, loginLabel, 13, "#ffd889", w - 28);
@@ -934,7 +934,7 @@ export default class TitleScene extends Phaser.Scene {
     if (this.walletSystem.connected) {
       this.drawWalletProfilePanel(x + 24, y + 118, panelW - 48, panelH - 198);
       this.addModalButton(width / 2 - 248, y + panelH - 58, 150, "Enter", () => this.beginGame());
-      this.addModalButton(width / 2 - 76, y + panelH - 58, 150, "Desconectar", () => {
+      this.addModalButton(width / 2 - 76, y + panelH - 58, 150, "Disconnect", () => {
         this.walletSystem.disconnect();
         this.loginMode = "wallet";
         localStorage.setItem("eldervalley-login-mode", "wallet");
@@ -984,10 +984,10 @@ export default class TitleScene extends Phaser.Scene {
     const selected = characterCatalog.find((character) => character.id === (profile.selectedCharacter ?? this.selectedCharacter)) ?? characterCatalog[0];
     const ownedCharacters = ownedCharacterIds
       .map((id) => characterCatalog.find((character) => character.id === id)?.name ?? id)
-      .join(", ") || "Nenhum personagem comprado ainda";
+      .join(", ") || "No characters purchased yet";
     const ownedHouses = houses
       .map((house) => house.name ?? this.getHouseCatalog().find((item) => item.key === house.id)?.name ?? house.id)
-      .join("\n") || "Nenhuma casa comprada ainda";
+      .join("\n") || "No houses purchased yet";
 
     const g = this.add.graphics();
     g.fillStyle(0x090f18, 0.98);
@@ -1014,11 +1014,11 @@ export default class TitleScene extends Phaser.Scene {
     const infoW = w - 214;
     const info = [
       `Wallet: ${this.walletSystem.getShortAddress()}`,
-      `Rede: ${this.walletSystem.wallet?.chain ?? "EVM"}`,
+      `Network: ${this.walletSystem.wallet?.chain ?? "EVM"}`,
       `Purchased houses: ${houses.length}`,
       `Characters: ${ownedCharacterIds.length}`
     ];
-    this.addProfileBox(infoX, y + 22, infoW, 104, "Resumo da Conta", info.join("\n"));
+    this.addProfileBox(infoX, y + 22, infoW, 104, "Account Summary", info.join("\n"));
     this.addProfileBox(infoX, y + 138, infoW, 96, "Your Houses", ownedHouses);
     this.addProfileBox(infoX, y + 246, infoW, Math.max(70, h - 268), "Your Characters", ownedCharacters);
   }
