@@ -390,6 +390,7 @@
   <ul>
     <li><a href="#genesis">Genesis Collection</a></li>
     <li><a href="#ownership">House Ownership</a></li>
+    <li><a href="#ownership">Token Yield</a></li>
   </ul>
 
   <p class="nav-section">Technical</p>
@@ -733,24 +734,46 @@
       <h2>House Ownership</h2>
       <p class="section-lead">What it means to own a house in ElderValley.</p>
 
-      <h3>On-Chain Verification</h3>
-      <p>Every house in the game world corresponds to an NFT token on the Base blockchain. The server runs an indexer that watches the smart contract for <code>HousePurchased</code> and <code>Transfer</code> events, keeping ownership records always in sync with the chain.</p>
+      <h3>💰 Token Volume Yield</h3>
+      <p>This is the core value of owning a house. <strong>50% of all trading volume fees from the ElderValley token are distributed to house owners.</strong> The distribution is weighted by tier — the rarer the house, the greater the share.</p>
+
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Fee Weight</th><th>Houses</th><th>Total Weight</th><th>Share of Pool</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tier-common">Common</span></td><td>1×</td><td>25</td><td>25</td><td>20.7%</td></tr>
+          <tr><td><span class="tier-uncommon">Uncommon</span></td><td>2×</td><td>12</td><td>24</td><td>19.8%</td></tr>
+          <tr><td><span class="tier-rare">Rare</span></td><td>4×</td><td>8</td><td>32</td><td>26.4%</td></tr>
+          <tr><td><span class="tier-legendary">Legendary</span></td><td>8×</td><td>5</td><td>40</td><td>33.1%</td></tr>
+          <tr style="font-weight:600"><td>Total</td><td>—</td><td>50</td><td>121</td><td>100%</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-success">
+        <span class="callout-icon">📈</span>
+        <p><strong>Example:</strong> If the token generates 100 ETH in trading fees, 50 ETH goes to house owners. A Legendary owner receives <code>8/121 × 50 ETH = 3.3 ETH</code>. A Common owner receives <code>1/121 × 50 ETH = 0.41 ETH</code>. The more the token trades, the more every house earns.</p>
+      </div>
+
+      <p>This creates direct alignment: house owners are incentivized to grow the token's trading volume. The fee weight values are hardcoded in the smart contract via <code>feeWeightOf(tokenId)</code> — tamper-proof and verifiable on-chain.</p>
 
       <h3>In-Game Benefits</h3>
       <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
-        <li>Enter your house in the game world from any session</li>
-        <li>Set your house as your character's home base</li>
-        <li>Visitor capacity based on tier (4 / 8 / 16 / unlimited)</li>
-        <li>Work alchemy inside the Arcane House to earn coins</li>
-        <li>Creative interior customization (floors, decorations)</li>
+        <li>Exclusive entry — private houses reject wallets that don't own them (server-verified)</li>
+        <li>Visitor capacity based on tier: Common 4 · Uncommon 8 · Rare 16 · Legendary unlimited</li>
+        <li>Persistent interior — your decorations and layout are visible to every visitor</li>
+        <li>Creative customization — floors, structures, and lights inside your house</li>
       </ul>
 
+      <h3>On-Chain Verification</h3>
+      <p>Every house in the game world corresponds to an ERC-721 token on Base. The server runs an indexer watching <code>HousePurchased</code> and <code>Transfer</code> events, keeping ownership always in sync with the chain. Ownership checks happen server-side on every door interaction — not client-side.</p>
+
       <h3>Wallet Authentication</h3>
-      <p>Players sign a SIWE-style challenge with MetaMask or Phantom. The server verifies the signature with <code>ethers.verifyMessage</code> and issues a JWT session token valid for 7 days. Private houses reject entry from wallets that don't own them — verified server-side on every door interaction.</p>
+      <p>Players sign a challenge with MetaMask or Phantom. The server verifies with <code>ethers.verifyMessage</code> and issues a JWT session token valid for 7 days.</p>
 
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <p>Guest mode allows exploring the world without a wallet, but house ownership features, profile persistence, and alchemy earnings require a connected wallet.</p>
+        <p>Guest mode allows exploring the world without a wallet, but house ownership features, profile persistence, and yield distribution require a connected wallet.</p>
       </div>
     </section>
 
