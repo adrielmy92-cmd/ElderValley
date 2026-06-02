@@ -406,16 +406,7 @@ export default class BeeScene extends WorldScene {
   _queenSpeak(audioKey, line) {
     if (this._queenSpeaking) return;
     this._queenSpeaking = true;
-
-    if (this.cache.audio.exists(audioKey)) {
-      const snd = this.sound.add(audioKey, { volume: 1.0 });
-      snd.once("complete", () => { this._queenSpeaking = false; });
-      snd.once("stop",     () => { this._queenSpeaking = false; });
-      snd.play();
-    } else {
-      this._queenTTS(line, () => { this._queenSpeaking = false; });
-    }
-
+    this._queenTTS(line, () => { this._queenSpeaking = false; });
     this._showQueenScreamEffect();
     this._showQueenSubtitle(`" ${line} "`);
   }
@@ -423,16 +414,18 @@ export default class BeeScene extends WorldScene {
   _queenTTS(text, onDone) {
     if (!window.speechSynthesis) { onDone?.(); return; }
     window.speechSynthesis.cancel();
-    const u    = new SpeechSynthesisUtterance(text);
-    u.lang     = "pt-BR";
-    u.pitch    = 0.4;
-    u.rate     = 0.72;
-    u.volume   = 1.0;
-    u.onend    = () => onDone?.();
-    u.onerror  = () => onDone?.();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang   = "en-US";
+    u.pitch  = 0.35;
+    u.rate   = 0.78;
+    u.volume = 1.0;
+    u.onend  = () => onDone?.();
+    u.onerror = () => onDone?.();
     const speak = () => {
       const voices = window.speechSynthesis.getVoices();
-      const pick = voices.find(v => v.lang.startsWith("pt")) ?? voices[0];
+      const pick = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
+        ?? voices.find(v => v.lang.startsWith("en"))
+        ?? voices[0];
       if (pick) u.voice = pick;
       window.speechSynthesis.speak(u);
     };
