@@ -1,0 +1,24 @@
+{
+  "network": "base",
+  "chainId": 8453,
+  "deployedAt": "2026-06-02T21:13:07.778Z",
+  "deployer": "0x2654981127E3d2187316d80f304b9477B2aEc860",
+  "treasury": "0x9d6B9918422F76207f5d1239c24bC79cC9dD0B51",
+  "marketplaceFeeBps": 250,
+  "houses": {
+    "address": "0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97",
+    "deploymentBlock": 46822722,
+    "constructorArguments": [
+      "0x9d6B9918422F76207f5d1239c24bC79cC9dD0B51"
+    ]
+  },
+  "marketplace": {
+    "address": "0x87d217313CAE423EBFB1a462cb11403862A9bcd7",
+    "deploymentBlock": 46822723,
+    "constructorArguments": [
+      "0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97",
+      "0x9d6B9918422F76207f5d1239c24bC79cC9dD0B51",
+      250
+    ]
+  }
+}
