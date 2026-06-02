@@ -257,7 +257,7 @@ export default class TitleScene extends Phaser.Scene {
       color: "#ffd574", stroke: "#251006", strokeThickness: 7,
       shadow: { offsetX: 3, offsetY: 4, color: "#030201", blur: 0, fill: true }
     }).setOrigin(0.5).setDepth(20);
-    this.add.text(width / 2, 75, "Demo Version", {
+    this.add.text(width / 2, 75, "Own your home · Earn from fees", {
       fontFamily: "monospace", fontSize: "13px",
       color: "#e7ba61", stroke: "#120905", strokeThickness: 3
     }).setOrigin(0.5).setDepth(21);
@@ -292,7 +292,7 @@ export default class TitleScene extends Phaser.Scene {
       shadow: { offsetX: 4, offsetY: 5, color: "#030201", blur: 0, fill: true }
     }).setOrigin(0.5).setDepth(20);
 
-    this.add.text(width / 2, 118, "Demo Version", {
+    this.add.text(width / 2, 118, "Own your home · Earn from fees", {
       fontFamily: "monospace",
       fontSize: "18px",
       color: "#e7ba61",
