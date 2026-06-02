@@ -116,32 +116,35 @@ export default class CityScene extends WorldScene {
       "Any suspicious movement, alert the guard."
     ];
 
-    const left = 180;
-    const right = Math.max(620, this.worldWidth - 180);
-    const top = 220;
-    const bottom = Math.max(760, this.worldHeight - 180);
+    // Road area matches drawCityGround exactly — guards never leave pavement
+    const cL = Math.max(320, Math.floor(this.worldWidth * 0.42)) + 40;
+    const cR = cL + 384 - 80;
+    const cT = 224 + 48;
+    const cMid = 224 + 288;
+    const cB = 224 + 576 - 48;
 
     [
       {
-        x: left,
-        y: top,
-        facing: "down",
+        x: cL, y: cT,
+        facing: "right",
         name: "Guard Rowan",
-        patrol: [{ x: left, y: top }, { x: left + 90, y: top }, { x: left + 90, y: top + 90 }, { x: left, y: top + 90 }]
+        patrol: [
+          { x: cL,  y: cT   },
+          { x: cR,  y: cT   },
+          { x: cR,  y: cMid },
+          { x: cL,  y: cMid }
+        ]
       },
       {
-        x: right,
-        y: top,
+        x: cR, y: cMid,
         facing: "left",
         name: "Guard Cedric",
-        patrol: [{ x: right, y: top }, { x: right - 90, y: top }, { x: right - 90, y: top + 90 }, { x: right, y: top + 90 }]
-      },
-      {
-        x: right,
-        y: bottom,
-        facing: "up",
-        name: "Guard Alden",
-        patrol: [{ x: right, y: bottom }, { x: right - 110, y: bottom }, { x: right - 110, y: bottom - 90 }, { x: right, y: bottom - 90 }]
+        patrol: [
+          { x: cR,  y: cMid },
+          { x: cL,  y: cMid },
+          { x: cL,  y: cB   },
+          { x: cR,  y: cB   }
+        ]
       }
     ].forEach((guardConfig, index) => {
       const guard = this.physics.add.sprite(guardConfig.x, guardConfig.y, "knight-npc-sheet", this.getGuardIdleFrame(guardConfig.facing))
