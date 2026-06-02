@@ -2,14 +2,15 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title ElderValleyHouses
 /// @notice ERC-721 house ownership contract for ElderValley.
-/// @dev The game server should trust this contract's events/ownership, not client clicks.
-contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGuard {
+/// @dev The game server trusts this contract's events/ownership, not client input.
+contract ElderValleyHouses is ERC721Enumerable, IERC2981, Ownable, Pausable, ReentrancyGuard {
     struct HouseType {
         string key;
         string name;
@@ -24,11 +25,16 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
     uint256 public nextTokenId = 1;
     uint256 public nextHouseTypeId = 1;
 
+    string private _baseTokenURI;
+    uint256 public royaltyBps = 500; // 5% default royalty on secondary sales
+
     mapping(uint256 => HouseType) public houseTypes;
     mapping(bytes32 => uint256) public houseTypeIdByKeyHash;
     mapping(uint256 => uint256) public tokenHouseTypeId;
 
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event BaseURIUpdated(string newBaseURI);
+    event RoyaltyUpdated(uint256 newBps);
     event HouseTypeCreated(
         uint256 indexed houseTypeId,
         string key,
@@ -61,24 +67,28 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         require(initialTreasury != address(0), "Invalid treasury");
         treasury = initialTreasury;
 
-        // Genesis Collection — 50 casas totais
-        // Common (tier 0, peso 1x, 4 visitantes) — 25 unidades
-        _createHouseType("creative-house-cottage",       "Tall House",     0.025 ether, 7,  true, 0);
-        _createHouseType("creative-house-thatch-cottage","Thatch Cottage",  0.025 ether, 6,  true, 0);
-        _createHouseType("creative-house-red-lodge",     "Red Lodge",       0.025 ether, 6,  true, 0);
-        _createHouseType("creative-house-green-cottage", "Green House",     0.025 ether, 6,  true, 0);
-        // Uncommon (tier 1, peso 2x, 8 visitantes) — 12 unidades
-        _createHouseType("creative-house-blue-cottage",  "Blue House",      0.050 ether, 4,  true, 1);
-        _createHouseType("creative-house-ivy-manor",     "Emerald Manor",   0.050 ether, 4,  true, 1);
-        _createHouseType("creative-house-elf-green-manor","Elvish Manor",   0.050 ether, 4,  true, 1);
-        // Rare (tier 2, peso 4x, 16 visitantes) — 8 unidades
-        _createHouseType("creative-house-blue-arcane-manor","Arcane Manor", 0.100 ether, 3,  true, 2);
-        _createHouseType("creative-house-blue-gold-tower",  "Golden Tower", 0.100 ether, 3,  true, 2);
-        _createHouseType("creative-house-teal-roof-manor",  "Teal Manor",   0.100 ether, 2,  true, 2);
-        // Legendary (tier 3, peso 8x, visitantes ilimitados) — 5 unidades
-        _createHouseType("creative-house-manor",          "Grand Manor",    0.200 ether, 3,  true, 3);
-        _createHouseType("creative-house-red-tower-cottage","Red Tower",    0.200 ether, 2,  true, 3);
+        // Genesis Collection — 50 houses total
+        // Common (tier 0, weight 1x, 4 visitors) — 25 units
+        _createHouseType("creative-house-cottage",        "Tall House",      0.025 ether, 7, true, 0);
+        _createHouseType("creative-house-thatch-cottage", "Thatch Cottage",  0.025 ether, 6, true, 0);
+        _createHouseType("creative-house-red-lodge",      "Red Lodge",       0.025 ether, 6, true, 0);
+        _createHouseType("creative-house-green-cottage",  "Green House",     0.025 ether, 6, true, 0);
+        // Uncommon (tier 1, weight 2x, 8 visitors) — 12 units
+        _createHouseType("creative-house-blue-cottage",   "Blue House",      0.050 ether, 4, true, 1);
+        _createHouseType("creative-house-ivy-manor",      "Emerald Manor",   0.050 ether, 4, true, 1);
+        _createHouseType("creative-house-elf-green-manor","Elven Manor",     0.050 ether, 4, true, 1);
+        // Rare (tier 2, weight 4x, 16 visitors) — 8 units
+        _createHouseType("creative-house-blue-arcane-manor", "Arcane Manor", 0.100 ether, 3, true, 2);
+        _createHouseType("creative-house-blue-gold-tower",   "Golden Tower", 0.100 ether, 3, true, 2);
+        _createHouseType("creative-house-teal-roof-manor",   "Teal Manor",   0.100 ether, 2, true, 2);
+        // Legendary (tier 3, weight 8x, unlimited visitors) — 5 units
+        _createHouseType("creative-house-manor",             "Grand Manor",  0.200 ether, 3, true, 3);
+        _createHouseType("creative-house-red-tower-cottage", "Red Tower",    0.200 ether, 2, true, 3);
     }
+
+    // -------------------------------------------------------------------------
+    // Purchase
+    // -------------------------------------------------------------------------
 
     function buyHouse(uint256 houseTypeId)
         external payable nonReentrant whenNotPaused returns (uint256 tokenId)
@@ -92,6 +102,10 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         return _executeBuy(houseTypeIdByKeyHash[keccak256(bytes(key))]);
     }
 
+    // -------------------------------------------------------------------------
+    // View helpers
+    // -------------------------------------------------------------------------
+
     function walletOfOwner(address ownerAddress) external view returns (uint256[] memory tokenIds) {
         uint256 count = balanceOf(ownerAddress);
         tokenIds = new uint256[](count);
@@ -100,23 +114,63 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         }
     }
 
-    function houseTypeForToken(uint256 tokenId) external view returns (HouseType memory houseType) {
+    function houseTypeForToken(uint256 tokenId) external view returns (HouseType memory) {
         require(_ownerOf(tokenId) != address(0), "Unknown token");
         return houseTypes[tokenHouseTypeId[tokenId]];
     }
 
-    /// @notice Retorna o peso de taxa do token. Common=1 Uncommon=2 Rare=4 Legendary=8.
+    /// @notice Fee weight for token yield distribution. Common=1 Uncommon=2 Rare=4 Legendary=8.
     function feeWeightOf(uint256 tokenId) external view returns (uint256) {
         require(_ownerOf(tokenId) != address(0), "Unknown token");
-        uint8 tier = houseTypes[tokenHouseTypeId[tokenId]].tier;
-        return uint256(1) << tier;
+        return uint256(1) << houseTypes[tokenHouseTypeId[tokenId]].tier;
     }
 
-    /// @notice Retorna o peso de taxa de um tipo de casa.
+    /// @notice Fee weight for a house type.
     function feeWeightOfType(uint256 houseTypeId) external view returns (uint256) {
         require(bytes(houseTypes[houseTypeId].key).length != 0, "Unknown type");
         return uint256(1) << houseTypes[houseTypeId].tier;
     }
+
+    // -------------------------------------------------------------------------
+    // Metadata — ERC-721 tokenURI
+    // -------------------------------------------------------------------------
+
+    function _baseURI() internal view override returns (string memory) {
+        return _baseTokenURI;
+    }
+
+    /// @notice Set base URI for token metadata. tokenURI(1) → baseURI + "1"
+    function setBaseURI(string calldata baseURI) external onlyOwner {
+        _baseTokenURI = baseURI;
+        emit BaseURIUpdated(baseURI);
+    }
+
+    // -------------------------------------------------------------------------
+    // Royalties — EIP-2981
+    // -------------------------------------------------------------------------
+
+    /// @notice Returns royalty info for secondary sales. Default 5%.
+    function royaltyInfo(uint256, uint256 salePrice)
+        external view override returns (address receiver, uint256 royaltyAmount)
+    {
+        return (treasury, (salePrice * royaltyBps) / 10_000);
+    }
+
+    function setRoyaltyBps(uint256 newBps) external onlyOwner {
+        require(newBps <= 1000, "Royalty too high");
+        royaltyBps = newBps;
+        emit RoyaltyUpdated(newBps);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public view override(ERC721Enumerable, IERC165) returns (bool)
+    {
+        return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Owner admin
+    // -------------------------------------------------------------------------
 
     function createHouseType(
         string calldata key,
@@ -143,7 +197,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         HouseType storage houseType = houseTypes[houseTypeId];
         require(bytes(houseType.key).length != 0, "Unknown house type");
         require(maxSupply == 0 || maxSupply >= houseType.minted, "Max below minted");
-        // Tier é imutável após o primeiro mint para garantir direitos já adquiridos pelos holders.
+        // Tier is immutable after first mint to protect existing holders.
         if (houseType.minted > 0) require(tier == houseType.tier, "Tier immutable after mint");
 
         bytes32 oldKeyHash = keccak256(bytes(houseType.key));
@@ -171,7 +225,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         emit TreasuryUpdated(oldTreasury, newTreasury);
     }
 
-    /// @notice Drena ETH residual (ex: recebido via selfdestruct) para a treasury. Fluxo normal não acumula ETH.
+    /// @notice Drain any residual ETH (e.g. from selfdestruct) to treasury.
     function drainETH() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No ETH to drain");
@@ -179,13 +233,8 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         require(ok, "Transfer failed");
     }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
 
     // -------------------------------------------------------------------------
     // Internal
@@ -202,7 +251,7 @@ contract ElderValleyHouses is ERC721Enumerable, Ownable, Pausable, ReentrancyGua
         houseType.minted += 1;
         tokenHouseTypeId[tokenId] = houseTypeId;
 
-        // Forward ETH imediatamente para a treasury — o contrato nunca acumula fundos.
+        // Forward ETH immediately to treasury — contract never holds funds.
         (bool ok, ) = treasury.call{value: msg.value}("");
         require(ok, "Treasury transfer failed");
 
