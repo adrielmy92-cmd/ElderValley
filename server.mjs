@@ -1225,7 +1225,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({
         name: "ElderValley Houses",
         description: "50 Genesis houses in the ElderValley world on Base. Holders earn daily yield from 50% of ElderValley token trading fees, distributed proportionally by tier weight (Common 1× · Uncommon 2× · Rare 4× · Legendary 8×).",
-        image: `${baseUrl}/assets/nft/creative-house-manor.png`,
+        image: `${baseUrl}/assets/nft/collection-logo.png`,
         external_link: baseUrl,
         seller_fee_basis_points: 500,
         fee_recipient: process.env.TREASURY_ADDRESS ?? ""
