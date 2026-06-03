@@ -300,30 +300,70 @@ export default class TitleScene extends Phaser.Scene {
       stroke: "#120905",
       strokeThickness: 4
     }).setOrigin(0.5).setDepth(21);
-    this.drawTokenContract(width / 2, 142, 13);
+    this.drawContractBadge(width);
 
     if (width >= 1180) {
       this.drawTopLink(38, 44, 116, "X", "Twitter", "https://x.com/Eldervalley", "x-logo");
-      this.drawTopLink(164, 44, 146, "Buy $ELDER", "Flaunch.gg", "https://flaunch.gg/base/coins/0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8", "flaunch-logo");
+      this.drawTopLink(164, 44, 146, "Buy", "$ELDER · Flaunch", "https://flaunch.gg/base/coins/0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8", "flaunch-logo");
       this.drawTopLink(320, 44, 132, "Docs", "Whitepaper", "/docs.html", "docs-logo");
       this.drawTopLink(462, 44, 150, "OpenSea", "Collection", "https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97", "opensea-logo");
     }
   }
 
+  // $ELDER contract address. Full constant reused by the badge + the mobile chip.
+  static ELDER_CA = "0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8";
+
+  // Desktop: a prominent, highlighted CA badge in the top-right corner
+  // (below the wallet dock, above the body panels).
+  drawContractBadge(width) {
+    const full = TitleScene.ELDER_CA;
+    const fontPx = 15;
+    const idle = `CA: ${full}  ⧉`;
+    const charW = fontPx * 0.62;
+    const boxW = Math.ceil(idle.length * charW) + 28;
+    const boxH = 34;
+    const x = width - boxW - 28;
+    const y = 150; // gap between header band (ends ~150) and body (starts 198)
+
+    const g = this.add.graphics().setDepth(40);
+    const paint = (fill, stroke) => {
+      g.clear();
+      g.fillStyle(fill, 0.98); g.fillRoundedRect(x, y, boxW, boxH, 8);
+      g.lineStyle(2, stroke, 1); g.strokeRoundedRect(x, y, boxW, boxH, 8);
+    };
+    paint(0x161d10, 0xffd166);
+
+    const t = this.add.text(x + 14, y + boxH / 2, idle, {
+      fontFamily: "monospace", fontSize: `${fontPx}px`,
+      color: "#ffe9a8", stroke: "#0c1206", strokeThickness: 3
+    }).setOrigin(0, 0.5).setDepth(41);
+
+    const zone = this.add.zone(x, y, boxW, boxH).setOrigin(0)
+      .setInteractive({ useHandCursor: true }).setDepth(42);
+    zone.on("pointerup", () => {
+      try { navigator.clipboard?.writeText(full); } catch { /* ignore */ }
+      t.setText("CA copiado! ✓").setColor("#d6ffd8");
+      this.time.delayedCall(1200, () => t.setText(idle).setColor("#ffe9a8"));
+    });
+    this.attachHoverFx(zone, g, () => paint(0x222b13, 0xfff0b0), () => paint(0x161d10, 0xffd166));
+    return g;
+  }
+
+  // Mobile: compact copyable chip (full address won't fit, so shortened).
   drawTokenContract(x, y, fontSize = 13) {
-    const full = "0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8";
+    const full = TitleScene.ELDER_CA;
     const short = `${full.slice(0, 6)}…${full.slice(-4)}`;
-    const baseColor = "#9fd0a0";
-    const idle = `$ELDER  ${short}  ⧉`;
+    const baseColor = "#ffe9a8";
+    const idle = `CA: ${short}  ⧉`;
     const label = this.add.text(x, y, idle, {
       fontFamily: "monospace", fontSize: `${fontSize}px`,
-      color: baseColor, stroke: "#0c1a0e", strokeThickness: 3
+      color: baseColor, stroke: "#0c1206", strokeThickness: 3
     }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
-    label.on("pointerover", () => label.setColor("#d6ffd8"));
+    label.on("pointerover", () => label.setColor("#fff0b0"));
     label.on("pointerout", () => label.setColor(baseColor));
     label.on("pointerup", () => {
       try { navigator.clipboard?.writeText(full); } catch { /* ignore */ }
-      label.setText("$ELDER  endereço copiado! ✓").setColor("#d6ffd8");
+      label.setText("CA copiado! ✓").setColor("#d6ffd8");
       this.time.delayedCall(1200, () => label.setText(idle).setColor(baseColor));
     });
     return label;
