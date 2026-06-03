@@ -3591,7 +3591,10 @@ export default class WorldScene extends BaseGameScene {
   addKnightCharacter() {
     this.createKnightAnimations();
 
-    const character = this.physics.add.sprite(1510, 704, "knight-npc-sheet", 16)
+    // Placed on the open eastern road to the city gate, well clear of the house
+    // cluster (which sits to the west/north) so he can't wander into and snag on
+    // the buildings.
+    const character = this.physics.add.sprite(2300, 704, "knight-npc-sheet", 16)
       .setDepth(704 + 120);
     character.body.setSize(20, 14).setOffset(30, 68);
     character.body.setCollideWorldBounds(true);
