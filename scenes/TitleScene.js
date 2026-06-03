@@ -313,17 +313,29 @@ export default class TitleScene extends Phaser.Scene {
   // $ELDER contract address. Full constant reused by the badge + the mobile chip.
   static ELDER_CA = "0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8";
 
-  // Desktop: a prominent, highlighted CA badge in the top-right corner
-  // (below the wallet dock, above the body panels).
+  // Desktop: a prominent, highlighted CA badge in the clean strip between the
+  // header band (ends ~150) and the body panels (start at 198). Centered over
+  // the main/video column so it never overlaps the right-hand tabs or panels.
   drawContractBadge(width) {
     const full = TitleScene.ELDER_CA;
     const fontPx = 15;
     const idle = `CA: ${full}  ⧉`;
     const charW = fontPx * 0.62;
     const boxW = Math.ceil(idle.length * charW) + 28;
-    const boxH = 34;
-    const x = width - boxW - 28;
-    const y = 150; // gap between header band (ends ~150) and body (starts 198)
+    const boxH = 32;
+    const margin = 28;
+
+    // Right edge of the main/video column (left of the side tabs).
+    let colRight;
+    if (width < 1120) {
+      colRight = width - margin; // compact: main column spans full width
+    } else {
+      const sideW = Math.min(540, Math.max(430, Math.floor(width * 0.32)));
+      colRight = width - sideW - margin * 2;
+    }
+    let x = Math.round((margin + colRight - boxW) / 2);
+    if (x < margin) x = margin;
+    const y = 158;
 
     const g = this.add.graphics().setDepth(40);
     const paint = (fill, stroke) => {
