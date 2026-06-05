@@ -54,6 +54,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=2");
     this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=2");
     this.loadImage("bee-map", "./assets/maps/bee-map.jpg?v=1");
+    this.load.video("cemetery-map", "./assets/videos/cemetery-map.mp4?v=1");
     this.loadSheet("bee-boss-idle-sheet",   "./assets/sprites/bee-boss-idle-sheet.png?v=1", 102, 102);
     this.loadSheet("bee-soldier-sheet",     "./assets/sprites/bee-soldier-sheet.png", 60, 60);
     this.loadSheet("bee-honey-puddle-sheet","./assets/sprites/bee-honey-puddle-sheet.png?v=1", 192, 192);
@@ -98,6 +99,8 @@ export default class GamePreloadScene extends Phaser.Scene {
     }
 
     this.loadSheet("windmill-house", "./assets/sprites/windmill-house-sheet.png?v=132", 300, 388);
+    this.loadSheet("ghost-green", "./assets/sprites/ghost-green-sheet.png?v=1", 118, 118);
+    this.loadSheet("skeleton", "./assets/sprites/skeleton-sheet.png?v=1", 178, 176);
     this.loadImage("reference-tree", "./assets/sprites/reference-tree.png");
     this.loadSheet("silver-npc-sheet", "./assets/sprites/silver-npc-sheet.png?v=132", 48, 68);
     this.loadSheet("blond-npc-sheet", "./assets/sprites/blond-npc-sheet.png?v=132", 48, 68);

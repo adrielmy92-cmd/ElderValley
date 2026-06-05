@@ -1,8 +1,10 @@
 import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=211";
-import GamePreloadScene from "./scenes/GamePreloadScene.js?v=218";
+import GamePreloadScene from "./scenes/GamePreloadScene.js?v=222";
 import TitleScene from "./scenes/TitleScene.js?v=236";
-import WorldScene from "./scenes/WorldScene.js?v=230";
+import WorldScene from "./scenes/WorldScene.js?v=234";
+import VillageWestScene from "./scenes/VillageWestScene.js?v=14";
+import CemeteryScene from "./scenes/CemeteryScene.js?v=4";
 import CityScene from "./scenes/CityScene.js?v=213";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=209";
 import ShopInteriorScene from "./scenes/ShopInteriorScene.js?v=209";
@@ -44,6 +46,8 @@ const config = {
     GamePreloadScene,
     TitleScene,
     WorldScene,
+    VillageWestScene,
+    CemeteryScene,
     CityScene,
     ForestScene,
     SwampScene,

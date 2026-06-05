@@ -19,7 +19,8 @@ const SPAWNS = {
   collector: { x: 930, y: 626 },
   forestGate: { x: 1460, y: -44 },
   swampGate:  { x: 420,  y: 1220 },
-  beeGate:    { x: 2500, y: 1220 }
+  beeGate:    { x: 2500, y: 1220 },
+  villageWest:{ x: 180,  y: 400 }
 };
 
 const HOUSE_STORAGE_KEY = "market-village-editable-houses-v1";
@@ -570,6 +571,7 @@ export default class WorldScene extends BaseGameScene {
     this.addKnightCharacter();
     this.addNpc();
     this.addCityTransition();
+    this.addWestForestGate();
     this.buildGates();
     this.addWorldBounds();
   }
@@ -590,19 +592,8 @@ export default class WorldScene extends BaseGameScene {
     });
     this.waterCollisionZones = [];
 
-    for (let y = RIVER_TOP; y < RIVER_BOTTOM; y += WATER_COLLISION_TILE) {
-      const height = Math.min(WATER_COLLISION_TILE, RIVER_BOTTOM - y);
-      for (let x = 0; x < this.worldWidth; x += WATER_COLLISION_TILE) {
-        const width = Math.min(WATER_COLLISION_TILE, this.worldWidth - x);
-        const centerX = x + width / 2;
-        const centerY = y + height / 2;
-        if (this.isBuiltInBridgeArea(centerX, centerY) || this.isCoveredByManualFloor(centerX, centerY)) {
-          continue;
-        }
-        this.waterCollisionZones.push(this.addWaterCollisionZone(centerX, centerY, width, height));
-      }
-    }
-
+    // Rio PASSÁVEL: sem colisão na água — não divide mais o mapa norte/sul.
+    // (A água continua sendo desenhada normalmente em drawGround.)
     this.redrawCollisionDebug();
   }
 
@@ -3260,6 +3251,37 @@ export default class WorldScene extends BaseGameScene {
       promptText: "E Go to City",
       radius: 82,
       onInteract: () => this.fadeTo("CityScene", { spawnKey: "fromVillage" })
+    });
+    return { post, board, label };
+  }
+
+  // Saída a OESTE (lado oposto à cidade) → carrega a Floresta Antiga (mapa separado).
+  // Mesmo esquema da cidade: só uma plaquinha, sem portal/colisão — chega e aperta E.
+  // Fica no fim oeste da estrada que cruza a vila (cruzamento em ~(224,400)).
+  addWestForestGate() {
+    const x = 110;
+    const y = 400;
+    const post = this.add.rectangle(x + 42, y - 18, 8, 44, 0x5a3721, 1)
+      .setOrigin(0.5, 1)
+      .setDepth(y - 2);
+    const board = this.add.rectangle(x, y - 52, 110, 32, 0x3f6b2e, 1)
+      .setDepth(y - 1)
+      .setStrokeStyle(2, 0x223b18, 1);
+    const label = this.add.text(x, y - 52, "Floresta", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#eaf6df",
+      stroke: "#16240f",
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(y);
+    this.interactions.add({
+      id: "door_west_forest_gate",
+      x,
+      y,
+      promptY: y - 88,
+      promptText: "E Ir para a Floresta",
+      radius: 82,
+      onInteract: () => this.fadeTo("VillageWestScene", { spawnKey: "fromVillage" })
     });
     return { post, board, label };
   }
