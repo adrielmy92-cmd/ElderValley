@@ -16,6 +16,11 @@ export const ALCHEMIST_ITEMS = [
   { key: "potion-health-greater", name: "Greater Health Potion", rarity: "rare",      price: 150, effect: "Restore 50% Health",      heal: 0.50 },
   { key: "potion-health-supreme", name: "Supreme Health Potion", rarity: "legendary", price: 700, effect: "Fully restore Health",    heal: 1.00 },
 
+  // Mana potions (consumables). `mana` is the fraction of max mana restored.
+  { key: "potion-mana-minor",     name: "Minor Mana Potion",     rarity: "uncommon",  price: 50,  effect: "Restore 25% Mana",        mana: 0.25 },
+  { key: "potion-mana-greater",   name: "Greater Mana Potion",   rarity: "rare",      price: 150, effect: "Restore 50% Mana",        mana: 0.50 },
+  { key: "potion-mana-supreme",   name: "Supreme Mana Potion",   rarity: "legendary", price: 700, effect: "Fully restore Mana",      mana: 1.00 },
+
   { key: "tidecaller-ring",      name: "Tidecaller",          rarity: "rare",      price: 320, effect: "+15 Mana · slow health regen near water" },
   { key: "runelord-band",        name: "Runelord Band",       rarity: "epic",      price: 540, effect: "+12% Spell Power" },
   { key: "bloodsteel-ring",      name: "Bloodsteel Ring",     rarity: "uncommon",  price: 180, effect: "+8 Attack" },
