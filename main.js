@@ -1,6 +1,6 @@
 import BootScene from "./scenes/BootScene.js?v=180";
 import PreloadScene from "./scenes/PreloadScene.js?v=212";
-import GamePreloadScene from "./scenes/GamePreloadScene.js?v=222";
+import GamePreloadScene from "./scenes/GamePreloadScene.js?v=223";
 import TitleScene from "./scenes/TitleScene.js?v=237";
 import WorldScene from "./scenes/WorldScene.js?v=236";
 import VillageWestScene from "./scenes/VillageWestScene.js?v=15";
@@ -14,7 +14,7 @@ import MiddleForgeInteriorScene from "./scenes/MiddleForgeInteriorScene.js?v=210
 import ReferenceHouseInteriorScene from "./scenes/ReferenceHouseInteriorScene.js?v=209";
 import WindmillLoadScene from "./scenes/WindmillLoadScene.js?v=209";
 import WindmillInteriorScene from "./scenes/WindmillInteriorScene.js?v=210";
-import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=210";
+import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=211";
 import ForestScene from "./scenes/ForestScene.js?v=27";
 import SwampScene from "./scenes/SwampScene.js?v=20";
 import BeeScene from "./scenes/BeeScene.js?v=5";

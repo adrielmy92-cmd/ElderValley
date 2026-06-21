@@ -1,4 +1,5 @@
 import InteriorBaseScene from "./InteriorBaseScene.js?v=210";
+import ShopSystem from "../systems/ShopSystem.js?v=1";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;
@@ -28,6 +29,50 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.addAlchemistInteractions();
     this.addAlchemistExit(spawnKey);
     this.addNpc(735, 872, 2, "Alchemist", "Not every potion should be drunk. Some serve only to remind us that curiosity has a price.");
+
+    this.shop = new ShopSystem(this);
+    this.addShopVendor(470, 992);
+  }
+
+  // Hooded merchant: idle animation + an "E Shop" prompt that opens the shop UI.
+  addShopVendor(x, y) {
+    if (!this.anims.exists("alchemy-vendor-idle")) {
+      this.anims.create({
+        key: "alchemy-vendor-idle",
+        frames: this.anims.generateFrameNumbers("alchemy-vendor", { start: 0, end: 7 }),
+        frameRate: 7,
+        repeat: -1
+      });
+    }
+    const npc = this.physics.add.sprite(x, y, "alchemy-vendor", 0).setDepth(y).setScale(1.05);
+    npc.body.setSize(30, 16).setOffset(39, 86);
+    npc.body.immovable = true;
+    this.solids.add(npc);
+    npc.play("alchemy-vendor-idle");
+
+    // Soft pedestal shadow so he reads as standing on the floor.
+    this.add.ellipse(x, y + 44, 64, 18, 0x000000, 0.28).setDepth(y - 1);
+
+    this.interactions.add({
+      x,
+      y: y + 6,
+      promptY: y - 60,
+      promptText: "E Shop",
+      radius: 76,
+      enabled: () => !this.shop.isOpen(),
+      onInteract: () => this.shop.open()
+    });
+    return npc;
+  }
+
+  update() {
+    // Freeze the player (and stop re-triggering interactions) while the shop is open.
+    if (this.shop?.isOpen()) {
+      this.player?.update(this.cursors, this.wasd, true);
+      this.interactions?.prompt?.setVisible(false);
+      return;
+    }
+    this.updateBase();
   }
 
   addAlchemistCollisions() {

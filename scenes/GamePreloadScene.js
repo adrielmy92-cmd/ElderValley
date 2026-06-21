@@ -1,3 +1,5 @@
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=1";
+
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {
     super("GamePreloadScene");
@@ -90,6 +92,8 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=1", 160, 160);
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
+    this.loadSheet("alchemy-vendor", "./assets/sprites/alchemy-vendor-sheet.png?v=1", 108, 108);
+    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=1`));
     this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=2");
     this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=2");
     this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=2");
