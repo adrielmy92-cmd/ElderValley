@@ -3267,7 +3267,7 @@ export default class WorldScene extends BaseGameScene {
     const board = this.add.rectangle(x, y - 52, 110, 32, 0x3f6b2e, 1)
       .setDepth(y - 1)
       .setStrokeStyle(2, 0x223b18, 1);
-    const label = this.add.text(x, y - 52, "Floresta", {
+    const label = this.add.text(x, y - 52, "Forest", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#eaf6df",
@@ -3279,9 +3279,10 @@ export default class WorldScene extends BaseGameScene {
       x,
       y,
       promptY: y - 88,
-      promptText: "E Ir para a Floresta",
+      promptText: "E Enter the Forest",
       radius: 82,
-      onInteract: () => this.fadeTo("VillageWestScene", { spawnKey: "fromVillage" })
+      // Temporarily gated off — area still under construction.
+      onInteract: () => this.dialog.show("Forest", "Coming soon — this area is still under construction.")
     });
     return { post, board, label };
   }

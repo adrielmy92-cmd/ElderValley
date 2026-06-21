@@ -185,7 +185,7 @@ export default class TitleScene extends Phaser.Scene {
     gfx.fillEllipse(cx, cy - 20, width * 0.9, heroH * 0.7);
 
     // Tagline
-    this.add.text(cx, cy + 18, "A social RPG on Base", {
+    this.add.text(cx, cy + 18, "A social RPG on Solana", {
       fontFamily: "monospace",
       fontSize: "14px",
       color: "#a0b8cc",
@@ -304,20 +304,24 @@ export default class TitleScene extends Phaser.Scene {
 
     if (width >= 1180) {
       this.drawTopLink(38, 44, 116, "X", "Twitter", "https://x.com/Eldervalley", "x-logo");
-      this.drawTopLink(164, 44, 146, "Buy", "$ELDER · Flaunch", "https://flaunch.gg/base/coins/0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8", "flaunch-logo");
+      this.drawTopLink(164, 44, 146, "Buy", "$ELDER · Pump.fun", TitleScene.PUMPFUN_URL, "pumpfun-logo");
       this.drawTopLink(320, 44, 132, "Docs", "Whitepaper", "/docs.html", "docs-logo");
       this.drawTopLink(462, 44, 150, "OpenSea", "Collection", "https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97", "opensea-logo");
     }
   }
 
-  // $ELDER contract address. Full constant reused by the badge + the mobile chip.
-  static ELDER_CA = "0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8";
+  // $ELDER Solana mint (Pump.fun). Fill in after the launch — leave empty and the
+  // CA badge/chip stay hidden until then (no dead Base address shown).
+  static ELDER_CA = "";
+  // Pump.fun coin page. Until the mint is known, link to pump.fun home.
+  static PUMPFUN_URL = "https://pump.fun";
 
   // Desktop: a prominent, highlighted CA badge in the clean strip between the
   // header band (ends ~150) and the body panels (start at 198). Centered over
   // the main/video column so it never overlaps the right-hand tabs or panels.
   drawContractBadge(width) {
     const full = TitleScene.ELDER_CA;
+    if (!full) return null; // hidden until the Solana mint is set
     const fontPx = 15;
     const idle = `CA: ${full}  ⧉`;
     const charW = fontPx * 0.62;
@@ -364,6 +368,7 @@ export default class TitleScene extends Phaser.Scene {
   // Mobile: compact copyable chip (full address won't fit, so shortened).
   drawTokenContract(x, y, fontSize = 13) {
     const full = TitleScene.ELDER_CA;
+    if (!full) return null; // hidden until the Solana mint is set
     const short = `${full.slice(0, 6)}…${full.slice(-4)}`;
     const baseColor = "#ffe9a8";
     const idle = `CA: ${short}  ⧉`;
@@ -737,20 +742,21 @@ export default class TitleScene extends Phaser.Scene {
 
   getHouseCatalog() {
     return [
-      // Prices match the on-chain Genesis tiers (ElderValleyHouses): Common 0.025,
-      // Uncommon 0.05, Rare 0.1, Legendary 0.2 ETH. Keys must equal the contract keys.
-      { name: "Tall House", key: "creative-house-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.78 },
-      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.025 ETH", maxW: 0.96, maxH: 0.76 },
-      { name: "Green House", key: "creative-house-green-cottage", price: "0.025 ETH", maxW: 0.96, maxH: 0.78 },
-      { name: "Blue House", key: "creative-house-blue-cottage", price: "0.05 ETH", maxW: 0.88, maxH: 0.84 },
-      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "0.05 ETH", maxW: 0.96, maxH: 0.8 },
-      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "0.05 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Arcane Manor", key: "creative-house-blue-arcane-manor", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Golden Tower", key: "creative-house-blue-gold-tower", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Teal Manor", key: "creative-house-teal-roof-manor", price: "0.1 ETH", maxW: 0.96, maxH: 0.86 },
-      { name: "Grand Manor", key: "creative-house-manor", price: "0.2 ETH", maxW: 0.96, maxH: 0.76 },
-      { name: "Red Tower", key: "creative-house-red-tower-cottage", price: "0.2 ETH", maxW: 0.82, maxH: 0.88 }
+      // Display-only SOL prices for the Solana relaunch (placeholders — adjust later).
+      // NOTE: on-chain minting is still the Base contract; the Buy button is paused
+      // (see renderHouses) until the Solana house contract ships.
+      { name: "Tall House", key: "creative-house-cottage", price: "0.5 SOL", maxW: 0.96, maxH: 0.78 },
+      { name: "Thatch Cottage", key: "creative-house-thatch-cottage", price: "0.5 SOL", maxW: 0.96, maxH: 0.8 },
+      { name: "Red Lodge", key: "creative-house-red-lodge", price: "0.5 SOL", maxW: 0.96, maxH: 0.76 },
+      { name: "Green House", key: "creative-house-green-cottage", price: "0.5 SOL", maxW: 0.96, maxH: 0.78 },
+      { name: "Blue House", key: "creative-house-blue-cottage", price: "1 SOL", maxW: 0.88, maxH: 0.84 },
+      { name: "Emerald Manor", key: "creative-house-ivy-manor", price: "1 SOL", maxW: 0.96, maxH: 0.8 },
+      { name: "Elven Manor", key: "creative-house-elf-green-manor", price: "1 SOL", maxW: 0.96, maxH: 0.86 },
+      { name: "Arcane Manor", key: "creative-house-blue-arcane-manor", price: "2 SOL", maxW: 0.96, maxH: 0.86 },
+      { name: "Golden Tower", key: "creative-house-blue-gold-tower", price: "2 SOL", maxW: 0.96, maxH: 0.86 },
+      { name: "Teal Manor", key: "creative-house-teal-roof-manor", price: "2 SOL", maxW: 0.96, maxH: 0.86 },
+      { name: "Grand Manor", key: "creative-house-manor", price: "4 SOL", maxW: 0.96, maxH: 0.76 },
+      { name: "Red Tower", key: "creative-house-red-tower-cottage", price: "4 SOL", maxW: 0.82, maxH: 0.88 }
     ];
   }
 
@@ -827,7 +833,9 @@ export default class TitleScene extends Phaser.Scene {
       if (!inButton) return;
       const house = houses[index];
       if (this.walletSystem.isHouseOwned(house.key)) return;
-      this.handleHousePurchase(house);
+      // Purchases paused during the Solana move — don't trigger the Base/ETH flow.
+      this.walletSystem.status = "House minting is moving to Solana — purchases are paused. Coming soon!";
+      this.refreshWalletDock();
     });
   }
 
@@ -888,7 +896,7 @@ export default class TitleScene extends Phaser.Scene {
       return "Purchase cancelled in the wallet.";
     }
     if (error?.shortMessage?.includes("insufficient funds") || String(error?.message).includes("insufficient funds")) {
-      return "Not enough ETH on Base to cover the price + gas.";
+      return "Not enough balance to cover the price + network fee.";
     }
     return error?.shortMessage ?? error?.message ?? "Could not complete the purchase.";
   }
