@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=1";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=2";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -138,7 +138,7 @@ export default class ShopSystem {
       icon.setScale(fit);
       this._track(icon);
 
-      const owned = this.isOwned(item.key);
+      const owned = !this._isConsumable(item) && this.isOwned(item.key);
       if (owned) {
         const oTag = s.add.text(sx + cell - 6, sy + 6, "✓", {
           fontFamily: "monospace", fontSize: "14px", color: "#8fe89a", stroke: "#06120a", strokeThickness: 3
@@ -241,7 +241,7 @@ export default class ShopSystem {
   _buyButton(item, cx, cy) {
     const s = this.scene;
     const w = Math.min(this._detail.w - 36, 220);
-    const owned = this.isOwned(item.key);
+    const owned = !this._isConsumable(item) && this.isOwned(item.key);
     const affordable = this._coins() >= item.price;
 
     const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
@@ -266,19 +266,27 @@ export default class ShopSystem {
   }
 
   _buy(item) {
-    if (this.isOwned(item.key)) return;
+    const consumable = this._isConsumable(item);
+    if (!consumable && this.isOwned(item.key)) return;
     const coins = this._coins();
     if (coins < item.price) { this._toast("Not enough coins", "#ffb4b4"); return; }
     this.scene.setCoins(coins - item.price);
-    this._addOwned(item.key);
     if (this.coinText) this.coinText.setText(String(this._coins()));
     this._toast(`Purchased ${item.name}!`, "#bff7c4");
-    // Repaint affected slot + detail to reflect ownership
     const slot = this.slots[this.selected];
+    if (consumable) {
+      // Consumables stay buyable; just refresh the detail (affordability may change).
+      this._renderDetail();
+      return;
+    }
+    this._addOwned(item.key);
     this._renderDetail();
-    // Re-render grid owned ticks: cheapest is full grid rebuild of ticks — repaint slot only
     if (slot) this._paintSlot(slot.g, slot.sx, slot.sy, slot.cell, slot.rar, true, false);
     this._refreshOwnedTicks();
+  }
+
+  _isConsumable(item) {
+    return typeof item.heal === "number";
   }
 
   _refreshOwnedTicks() {

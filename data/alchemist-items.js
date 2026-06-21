@@ -11,6 +11,11 @@ export const RARITY = {
 };
 
 export const ALCHEMIST_ITEMS = [
+  // Healing potions (consumables). `heal` is the fraction of max health restored.
+  { key: "potion-health-minor",   name: "Minor Health Potion",   rarity: "uncommon",  price: 50,  effect: "Restore 25% Health",      heal: 0.25 },
+  { key: "potion-health-greater", name: "Greater Health Potion", rarity: "rare",      price: 150, effect: "Restore 50% Health",      heal: 0.50 },
+  { key: "potion-health-supreme", name: "Supreme Health Potion", rarity: "legendary", price: 700, effect: "Fully restore Health",    heal: 1.00 },
+
   { key: "tidecaller-ring",      name: "Tidecaller",          rarity: "rare",      price: 320, effect: "+15 Mana · slow health regen near water" },
   { key: "runelord-band",        name: "Runelord Band",       rarity: "epic",      price: 540, effect: "+12% Spell Power" },
   { key: "bloodsteel-ring",      name: "Bloodsteel Ring",     rarity: "uncommon",  price: 180, effect: "+8 Attack" },
