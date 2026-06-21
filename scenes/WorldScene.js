@@ -3281,8 +3281,16 @@ export default class WorldScene extends BaseGameScene {
       promptY: y - 88,
       promptText: "E Enter the Forest",
       radius: 82,
-      // Temporarily gated off — area still under construction.
-      onInteract: () => this.dialog.show("Forest", "Coming soon — this area is still under construction.")
+      // Dev-only while under construction: same gate as creator mode
+      // (isDevMode → server-set profile.isDeveloper, keyed off the dev wallet).
+      // Everyone else sees a Coming Soon notice.
+      onInteract: () => {
+        if (this.isDevMode()) {
+          this.fadeTo("VillageWestScene", { spawnKey: "fromVillage" });
+        } else {
+          this.dialog.show("Forest", "Coming soon — this area is still under construction.");
+        }
+      }
     });
     return { post, board, label };
   }
