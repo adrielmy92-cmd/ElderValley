@@ -31,10 +31,24 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.addNpc(735, 872, 2, "Alchemist", "Not every potion should be drunk. Some serve only to remind us that curiosity has a price.");
 
     this.shop = new ShopSystem(this);
-    this.addShopVendor(470, 992);
+    const pos = this.getVendorPos();
+    this.addShopVendor(pos.x, pos.y);
+  }
+
+  vendorPosKey() {
+    return "eldervalley-alchemy-vendor-pos";
+  }
+
+  getVendorPos() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(this.vendorPosKey()) ?? "null");
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) return saved;
+    } catch { /* ignore */ }
+    return { x: 470, y: 992 };
   }
 
   // Hooded merchant: idle animation + an "E Shop" prompt that opens the shop UI.
+  // In dev mode the merchant is draggable so the position can be tuned in-game.
   addShopVendor(x, y) {
     if (!this.anims.exists("alchemy-vendor-idle")) {
       this.anims.create({
@@ -49,11 +63,12 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     npc.body.immovable = true;
     this.solids.add(npc);
     npc.play("alchemy-vendor-idle");
+    this.vendor = npc;
 
     // Soft pedestal shadow so he reads as standing on the floor.
-    this.add.ellipse(x, y + 44, 64, 18, 0x000000, 0.28).setDepth(y - 1);
+    this.vendorShadow = this.add.ellipse(x, y + 44, 64, 18, 0x000000, 0.28).setDepth(y - 1);
 
-    this.interactions.add({
+    this.shopInteraction = this.interactions.add({
       x,
       y: y + 6,
       promptY: y - 60,
@@ -62,7 +77,39 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
       enabled: () => !this.shop.isOpen(),
       onInteract: () => this.shop.open()
     });
+
+    if (this.isDevMode()) {
+      this.enableVendorDrag(npc);
+    }
     return npc;
+  }
+
+  enableVendorDrag(npc) {
+    npc.setInteractive({ draggable: true, useHandCursor: true });
+    this.input.setDraggable(npc);
+
+    const hint = this.add.text(12, 12,
+      "DEV: drag the merchant to reposition (saved locally)", {
+        fontFamily: "monospace", fontSize: "13px", color: "#ffe1a4",
+        backgroundColor: "#000000aa", padding: { left: 6, right: 6, top: 3, bottom: 3 }
+      }).setScrollFactor(0).setDepth(9500);
+
+    this.input.on("drag", (_p, obj, dragX, dragY) => {
+      if (obj !== npc) return;
+      npc.setPosition(dragX, dragY).setDepth(dragY);
+      this.vendorShadow.setPosition(dragX, dragY + 44).setDepth(dragY - 1);
+      this.shopInteraction.x = dragX;
+      this.shopInteraction.y = dragY + 6;
+      this.shopInteraction.promptY = dragY - 60;
+      hint.setText(`DEV: merchant at (${Math.round(dragX)}, ${Math.round(dragY)})`);
+    });
+
+    this.input.on("dragend", (_p, obj) => {
+      if (obj !== npc) return;
+      const x = Math.round(npc.x), y = Math.round(npc.y);
+      try { localStorage.setItem(this.vendorPosKey(), JSON.stringify({ x, y })); } catch { /* ignore */ }
+      hint.setText(`DEV: saved at (${x}, ${y}) — tell me to bake it in`);
+    });
   }
 
   update() {
