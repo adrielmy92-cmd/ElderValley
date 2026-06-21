@@ -149,13 +149,13 @@ export default class CemeteryScene extends WorldScene {
       .setOrigin(0.5, 1).setDepth(y - 2);
     this.add.rectangle(x - 14, y - 52, 100, 32, 0x3f6b2e, 1)
       .setDepth(y - 1).setStrokeStyle(2, 0x223b18, 1);
-    this.add.text(x - 14, y - 52, "Floresta", {
+    this.add.text(x - 14, y - 52, "Forest", {
       fontFamily: "monospace", fontSize: "13px", color: "#eaf6df",
       stroke: "#16240f", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y);
     this.interactions.add({
       id: "cemetery_exit", x, y, promptY: y - 84,
-      promptText: "E Voltar à Floresta", radius: 92,
+      promptText: "E Back to the Forest", radius: 92,
       onInteract: () => this.fadeTo("VillageWestScene", { spawnKey: "fromCemetery" })
     });
     return post;
@@ -164,7 +164,7 @@ export default class CemeteryScene extends WorldScene {
   // ─── NOME DA REGIÃO (banner que some) ─────────────────────────────────────
   addRegionBanner() {
     const cam = this.cameras.main;
-    const label = this.add.text(cam.width / 2, 96, "Cemitério", {
+    const label = this.add.text(cam.width / 2, 96, "Cemetery", {
       fontFamily: "monospace", fontSize: "30px", color: "#bff7c4",
       stroke: "#0c2410", strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(5000).setAlpha(0);

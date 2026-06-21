@@ -348,12 +348,12 @@ export default class VillageWestScene extends WorldScene {
     const y = ROAD_MID;
     const post = this.add.rectangle(x - 42, y - 18, 8, 44, 0x5a3721, 1).setOrigin(0.5, 1).setDepth(y - 2);
     this.add.rectangle(x, y - 52, 96, 32, 0x7c512d, 1).setDepth(y - 1).setStrokeStyle(2, 0x3b2416, 1);
-    this.add.text(x, y - 52, "Vila", {
+    this.add.text(x, y - 52, "Village", {
       fontFamily: "monospace", fontSize: "14px", color: "#fff0c2", stroke: "#241409", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y);
     this.interactions.add({
       id: "west_return_village", x, y, promptY: y - 88,
-      promptText: "E Voltar à Vila", radius: 84,
+      promptText: "E Back to the Village", radius: 84,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "villageWest" })
     });
     return post;
@@ -368,13 +368,13 @@ export default class VillageWestScene extends WorldScene {
       .setOrigin(0.5, 1).setDepth(y - 2);
     const board = this.add.rectangle(x, y - 52, 120, 32, 0x4a4f58, 1)
       .setDepth(y - 1).setStrokeStyle(2, 0x23262d, 1);
-    const label = this.add.text(x, y - 52, "Cemitério", {
+    const label = this.add.text(x, y - 52, "Cemetery", {
       fontFamily: "monospace", fontSize: "13px", color: "#cdd6cf",
       stroke: "#16190f", strokeThickness: 3
     }).setOrigin(0.5).setDepth(y);
     this.cemeteryGate = this.interactions.add({
       id: "west_cemetery_gate", x, y, promptY: y - 88,
-      promptText: "E Ir para o Cemitério", radius: 84,
+      promptText: "E Enter the Cemetery", radius: 84,
       onInteract: () => this.fadeTo("CemeteryScene", { spawnKey: "fromWest" })
     });
     return { post, board, label };
@@ -383,7 +383,7 @@ export default class VillageWestScene extends WorldScene {
   // ─── NOME DA REGIÃO (banner que some) ─────────────────────────────────────
   addRegionBanner() {
     const cam = this.cameras.main;
-    const label = this.add.text(cam.width / 2, 96, "Floresta Antiga", {
+    const label = this.add.text(cam.width / 2, 96, "Ancient Forest", {
       fontFamily: "monospace", fontSize: "30px", color: "#eaf6df",
       stroke: "#13210f", strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(5000).setAlpha(0);
