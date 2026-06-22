@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=3";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=4";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -271,6 +271,7 @@ export default class ShopSystem {
     const coins = this._coins();
     if (coins < item.price) { this._toast("Not enough coins", "#ffb4b4"); return; }
     this.scene.setCoins(coins - item.price);
+    this.scene.bag?.add(item.key);
     if (this.coinText) this.coinText.setText(String(this._coins()));
     this._toast(`Purchased ${item.name}!`, "#bff7c4");
     const slot = this.slots[this.selected];
@@ -279,7 +280,6 @@ export default class ShopSystem {
       this._renderDetail();
       return;
     }
-    this._addOwned(item.key);
     this._renderDetail();
     if (slot) this._paintSlot(slot.g, slot.sx, slot.sy, slot.cell, slot.rar, true, false);
     this._refreshOwnedTicks();
@@ -354,7 +354,7 @@ export default class ShopSystem {
   }
 
   isOwned(key) {
-    return this.getOwned().has(key);
+    return this.scene.bag?.has(key) ?? false;
   }
 
   _addOwned(key) {

@@ -4,6 +4,8 @@ import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 import MobileControls from "../systems/MobileControls.js?v=1";
+import Inventory from "../systems/Inventory.js?v=1";
+import InventoryUI from "../systems/InventoryUI.js?v=1";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -80,7 +82,8 @@ export default class BaseGameScene extends Phaser.Scene {
       chat: Phaser.Input.Keyboard.KeyCodes.T,
       attack: Phaser.Input.Keyboard.KeyCodes.Q,
       spell1: Phaser.Input.Keyboard.KeyCodes.ONE,
-      spell2: Phaser.Input.Keyboard.KeyCodes.TWO
+      spell2: Phaser.Input.Keyboard.KeyCodes.TWO,
+      inventory: Phaser.Input.Keyboard.KeyCodes.I
     });
   }
 
@@ -88,6 +91,9 @@ export default class BaseGameScene extends Phaser.Scene {
     this.player = new Player(this, x, y);
     this.dialog = new DialogSystem(this);
     this.interactions = new InteractionSystem(this, this.player, this.dialog);
+    this.bag = new Inventory(this);
+    this.inventoryUI = new InventoryUI(this);
+    this._potCooldownUntil = { hp: 0, mp: 0 };
     return this.player;
   }
 
@@ -700,8 +706,11 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   createPlayerHpBar() {
-    this.playerMaxHp = 100;
+    const b = this.bag?.bonuses() ?? {};
+    this.playerMaxHp = 100 + (b.maxHp ?? 0);
     this.playerHp = this.playerHp ?? this.playerMaxHp;
+    this.playerMaxMp = 50 + (b.maxMp ?? 0);
+    this.playerMp = this.playerMp ?? this.playerMaxMp;
     this.playerInvincible = false;
 
     const BAR_W = 160;
@@ -728,7 +737,81 @@ export default class BaseGameScene extends Phaser.Scene {
     this._hpBarW = BAR_W;
     this._hpBarX = X + 38;
     this._hpBarY = Y;
+
+    // MP bar, just below HP.
+    const MY = Y + 22;
+    this.mpLabel = this.add.text(X, MY - 2, "✦ MP", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#6fb6ff", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+    this.mpBarBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH);
+    this.mpBarFg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    this.mpBarBg.fillStyle(0x00121a, 0.85);
+    this.mpBarBg.fillRoundedRect(X + 38, MY - 1, BAR_W, BAR_H + 2, 4);
+    this.mpValueText = this.add.text(X + 38 + BAR_W + 6, MY - 1, "", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#bfe0ff", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+    this._mpBarX = X + 38;
+    this._mpBarY = MY;
+
     this.updatePlayerHpBar();
+    this.updatePlayerMpBar();
+  }
+
+  updatePlayerMpBar() {
+    if (!this.mpBarFg) return;
+    const pct = Math.max(0, Math.min(1, this.playerMp / this.playerMaxMp));
+    this.mpBarFg.clear();
+    this.mpBarFg.fillStyle(0x3aa0ff, 1);
+    this.mpBarFg.fillRoundedRect(this._mpBarX, this._mpBarY - 1, Math.max(0, this._hpBarW * pct), 15, 4);
+    this.mpValueText?.setText(`${Math.max(0, Math.round(this.playerMp))}/${this.playerMaxMp}`);
+  }
+
+  // Recompute max HP/MP from equipped gear, keep current values in range, refresh bars.
+  recomputeStats() {
+    const b = this.bag?.bonuses() ?? {};
+    this.playerMaxHp = 100 + (b.maxHp ?? 0);
+    this.playerMaxMp = 50 + (b.maxMp ?? 0);
+    this.playerHp = Math.min(this.playerHp ?? this.playerMaxHp, this.playerMaxHp);
+    this.playerMp = Math.min(this.playerMp ?? this.playerMaxMp, this.playerMaxMp);
+    this.updatePlayerHpBar?.();
+    this.updatePlayerMpBar?.();
+  }
+
+  // Drink a potion from the bag: restore HP/MP (fraction of max), cooldown-gated.
+  useConsumable(item) {
+    if (!item) return false;
+    const now = this.time.now;
+    const kind = typeof item.heal === "number" ? "hp" : (typeof item.mana === "number" ? "mp" : null);
+    if (!kind) return false;
+    if (this.bag.count(item.key) <= 0) return false;
+    if (now < (this._potCooldownUntil?.[kind] ?? 0)) {
+      const left = Math.ceil(((this._potCooldownUntil[kind]) - now) / 1000);
+      this.flashHudMessage?.(`${kind === "hp" ? "Healing" : "Mana"} on cooldown (${left}s)`);
+      return false;
+    }
+    if (kind === "hp") {
+      if (this.playerHp >= this.playerMaxHp) { this.flashHudMessage?.("HP already full"); return false; }
+      this.playerHp = Math.min(this.playerMaxHp, this.playerHp + Math.round(this.playerMaxHp * item.heal));
+      this.updatePlayerHpBar?.();
+    } else {
+      if (this.playerMp >= this.playerMaxMp) { this.flashHudMessage?.("MP already full"); return false; }
+      this.playerMp = Math.min(this.playerMaxMp, this.playerMp + Math.round(this.playerMaxMp * item.mana));
+      this.updatePlayerMpBar?.();
+    }
+    this._potCooldownUntil[kind] = now + (item.cooldownMs ?? 8000);
+    this.bag.remove(item.key, 1);
+    return true;
+  }
+
+  flashHudMessage(msg) {
+    this._hudMsg?.destroy();
+    const cam = this.cameras.main;
+    this._hudMsg = this.add.text(cam.width / 2, cam.height - 80, msg, {
+      fontFamily: "monospace", fontSize: "16px", color: "#ffe6a8", stroke: "#06070a", strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9600);
+    this.tweens.add({ targets: this._hudMsg, y: this._hudMsg.y - 24, alpha: 0, duration: 1200, onComplete: () => this._hudMsg?.destroy() });
   }
 
   updatePlayerHpBar() {
@@ -2054,6 +2137,17 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateWorldClock();
     this.chat?.update();
     this.multiplayer?.update(this.time.now);
+
+    if (this.inventoryUI?.isOpen()) {
+      this.player.update(this.cursors, this.wasd, true);
+      this.interactions.prompt?.setVisible(false);
+      return;
+    }
+    if (!this.dialog.active && !this.chat?.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.inventory)) {
+      this.inventoryUI.toggle();
+      this.player.update(this.cursors, this.wasd, true);
+      return;
+    }
 
     if (this.isWorking) {
       this.player.setVelocity(0, 0);
