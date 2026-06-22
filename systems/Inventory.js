@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=4";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=5";
 
 const ITEMS_BY_KEY = Object.fromEntries(ALCHEMIST_ITEMS.map((i) => [i.key, i]));
 
@@ -97,6 +97,16 @@ export default class Inventory {
       for (const [k, v] of Object.entries(item.stats)) sum[k] = (sum[k] ?? 0) + v;
     }
     return sum;
+  }
+
+  // First available shot item (e.g. spiritshot), or null. Used by the cast logic.
+  firstShot() {
+    const e = ALCHEMIST_ITEMS.find((i) => typeof i.shot === "number" && this.count(i.key) > 0);
+    return e ?? null;
+  }
+
+  shotCount() {
+    return ALCHEMIST_ITEMS.reduce((n, i) => n + (typeof i.shot === "number" ? this.count(i.key) : 0), 0);
   }
 
   // Bag entries with stack count, in catalog order (consumables first there).

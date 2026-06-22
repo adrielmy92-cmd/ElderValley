@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=4";
-import { itemData, isConsumable } from "./Inventory.js?v=1";
+import { RARITY } from "../data/alchemist-items.js?v=5";
+import { itemData, isConsumable } from "./Inventory.js?v=2";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -230,16 +230,17 @@ export default class InventoryUI {
       this._t(icon);
       this._t(s.add.text(x + 58, ry + 8, item.name, { fontFamily: "monospace", fontSize: "13px", color: rar.text })
         .setScrollFactor(0).setDepth(DEPTH + 3));
-      this._t(s.add.text(x + 58, ry + 26, isConsumable(item) ? `${item.effect}  ·  x${count}` : item.effect, {
+      const isShot = typeof item.shot === "number";
+      const consumable = isConsumable(item);
+      this._t(s.add.text(x + 58, ry + 26, (consumable || isShot) ? `${item.effect}  ·  x${count}` : item.effect, {
         fontFamily: "monospace", fontSize: "10px", color: "#9aa8bc"
       }).setScrollFactor(0).setDepth(DEPTH + 3));
 
-      const consumable = isConsumable(item);
-      const equipped = !consumable && s.bag.isEquipped(item.key);
-      const label = consumable ? "Use" : (equipped ? "On" : "Equip");
+      const equipped = !consumable && !isShot && s.bag.isEquipped(item.key);
+      const label = isShot ? (s.shotsEnabled ? "ON" : "OFF") : (consumable ? "Use" : (equipped ? "On" : "Equip"));
       const bw = 62, bx = x + w - 18 - bw, by = ry + (rowH - 7) / 2;
-      const bgc = consumable ? 0x1f6d34 : (equipped ? 0x3a3326 : 0x274a8c);
-      const bdc = consumable ? 0x57d36f : (equipped ? 0x8a7a52 : 0x6f9bff);
+      const bgc = isShot ? (s.shotsEnabled ? 0x274a8c : 0x3a3326) : (consumable ? 0x1f6d34 : (equipped ? 0x3a3326 : 0x274a8c));
+      const bdc = isShot ? (s.shotsEnabled ? 0x6f9bff : 0x8a7a52) : (consumable ? 0x57d36f : (equipped ? 0x8a7a52 : 0x6f9bff));
       const btn = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
       btn.fillStyle(bgc, 1); btn.fillRoundedRect(bx, by - 13, bw, 26, 6);
       btn.lineStyle(1, bdc, 1); btn.strokeRoundedRect(bx, by - 13, bw, 26, 6);
@@ -249,7 +250,8 @@ export default class InventoryUI {
       const z = s.add.zone(bx, by - 13, bw, 26).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 5)
         .setInteractive({ useHandCursor: true });
       z.on("pointerdown", () => {
-        if (consumable) s.useConsumable?.(item);
+        if (isShot) s.toggleShots?.();
+        else if (consumable) s.useConsumable?.(item);
         else { s.bag.equip(item.key); s.recomputeStats?.(); }
         this._refresh();
       });

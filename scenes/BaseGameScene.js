@@ -4,8 +4,8 @@ import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 import MobileControls from "../systems/MobileControls.js?v=1";
-import Inventory from "../systems/Inventory.js?v=1";
-import InventoryUI from "../systems/InventoryUI.js?v=3";
+import Inventory from "../systems/Inventory.js?v=2";
+import InventoryUI from "../systems/InventoryUI.js?v=4";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -83,7 +83,8 @@ export default class BaseGameScene extends Phaser.Scene {
       attack: Phaser.Input.Keyboard.KeyCodes.Q,
       spell1: Phaser.Input.Keyboard.KeyCodes.ONE,
       spell2: Phaser.Input.Keyboard.KeyCodes.TWO,
-      inventory: Phaser.Input.Keyboard.KeyCodes.I
+      inventory: Phaser.Input.Keyboard.KeyCodes.I,
+      shots: Phaser.Input.Keyboard.KeyCodes.G
     });
   }
 
@@ -94,6 +95,9 @@ export default class BaseGameScene extends Phaser.Scene {
     this.bag = new Inventory(this);
     this.inventoryUI = new InventoryUI(this);
     this._potCooldownUntil = { hp: 0, mp: 0 };
+    this.shotsEnabled = this.shotsEnabled ?? true;
+    this._castMult = 1;
+    this._castAtk = 0;
     return this.player;
   }
 
@@ -755,8 +759,49 @@ export default class BaseGameScene extends Phaser.Scene {
     this._mpBarX = X + 38;
     this._mpBarY = MY;
 
+    // Spiritshot indicator, below the MP bar.
+    this.shotText = this.add.text(X, MY + 22, "", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#bfe0ff", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+
     this.updatePlayerHpBar();
     this.updatePlayerMpBar();
+    this.updateShotHud();
+  }
+
+  updateShotHud() {
+    if (!this.shotText) return;
+    const n = this.bag?.shotCount?.() ?? 0;
+    const on = this.shotsEnabled && n > 0;
+    this.shotText.setText(`✦ Spiritshot x${n}  [${this.shotsEnabled ? "ON" : "OFF"}]  (G)`);
+    this.shotText.setColor(on ? "#8fd0ff" : "#7a8aa0");
+  }
+
+  toggleShots() {
+    this.shotsEnabled = !this.shotsEnabled;
+    this.updateShotHud();
+    this.flashHudMessage?.(`Spiritshots ${this.shotsEnabled ? "ON" : "OFF"}`);
+  }
+
+  // Call once per spell cast: burns a shot (if enabled & available) and snapshots
+  // the attack bonus, so spellDamage() can be read for every enemy the cast hits.
+  beginCast() {
+    this._castAtk = this.bag?.bonuses?.().attack ?? 0;
+    this._castMult = 1;
+    if (this.shotsEnabled && this.bag) {
+      const shot = this.bag.firstShot?.();
+      if (shot) {
+        this.bag.remove(shot.key, 1);
+        this._castMult = shot.shot;
+        this.updateShotHud();
+      }
+    }
+  }
+
+  // Final damage for the current cast = (base + attack bonus) * shot multiplier.
+  spellDamage(base) {
+    return Math.max(1, Math.round((base + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
   }
 
   updatePlayerMpBar() {
@@ -1838,6 +1883,7 @@ export default class BaseGameScene extends Phaser.Scene {
       return null;
     }
 
+    this.beginCast();
     this.ensureFireballTextures();
     const vectors = {
       down: { x: 0, y: 1, angle: Math.PI / 2, offsetX: 0, offsetY: 30 },
@@ -2100,6 +2146,7 @@ export default class BaseGameScene extends Phaser.Scene {
             pG.fillCircle(wx, wy, RADIUS);
             this.tweens.add({ targets: pG, alpha: 0, duration: 220, onComplete: () => pG.destroy() });
             drawZone(1);
+            this.beginCast();
             this.applyLightningDamage(wx, wy, RADIUS);
           }
         });
@@ -2147,6 +2194,9 @@ export default class BaseGameScene extends Phaser.Scene {
       this.inventoryUI.toggle();
       this.player.update(this.cursors, this.wasd, true);
       return;
+    }
+    if (!this.dialog.active && !this.chat?.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.shots)) {
+      this.toggleShots();
     }
 
     if (this.isWorking) {

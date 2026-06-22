@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=4";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=5";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -286,7 +286,7 @@ export default class ShopSystem {
   }
 
   _isConsumable(item) {
-    return typeof item.heal === "number" || typeof item.mana === "number";
+    return typeof item.heal === "number" || typeof item.mana === "number" || typeof item.shot === "number";
   }
 
   _refreshOwnedTicks() {

@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=239";
+import WorldScene from "./WorldScene.js?v=240";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
@@ -356,9 +356,10 @@ export default class ForestScene extends WorldScene {
     const dx = this.bossGolem.x - wx;
     const dy = this.bossGolem.y - wy;
     if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) {
+      const dmg = this.spellDamage(200);
       this.showHitSparks(this.bossGolem.x, this.bossGolem.y);
-      this.showDamageNumber(this.bossGolem.x, this.bossGolem.y - 40, 200);
-      this.multiplayer?.sendHitBoss(200);
+      this.showDamageNumber(this.bossGolem.x, this.bossGolem.y - 40, dmg);
+      this.multiplayer?.sendHitBoss(dmg);
     }
   }
 
@@ -367,11 +368,12 @@ export default class ForestScene extends WorldScene {
     if (fireball && this.bossHitzone && !this.bossDead) {
       this.physics.add.overlap(fireball, this.bossHitzone, () => {
         if (!fireball.active) return;
+        const dmg = this.spellDamage(200);
         this.showHitSparks(fireball.x, fireball.y);
-        this.showDamageNumber(fireball.x, fireball.y - 40, 200);
+        this.showDamageNumber(fireball.x, fireball.y - 40, dmg);
         fireball.destroy();
         // Envia dano ao servidor — ele processa e distribui HP para todos
-        this.multiplayer?.sendHitBoss(200);
+        this.multiplayer?.sendHitBoss(dmg);
       });
     }
     return fireball;

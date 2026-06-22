@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=239";
+import WorldScene from "./WorldScene.js?v=240";
 
 const BEE_W = 2752;
 const BEE_H = 1536;
@@ -1030,7 +1030,7 @@ export default class BeeScene extends WorldScene {
     this.physics.add.overlap(projectile, boss, () => {
       if (!projectile.active) return;
       projectile.destroy();
-      this._hitBeeBoss(damage);
+      this._hitBeeBoss(this.spellDamage(damage));
     });
     // Projétil também acerta soldados
     this._addSoldierOverlap(projectile, damage * 0.5);
@@ -1042,7 +1042,7 @@ export default class BeeScene extends WorldScene {
       this.physics.add.overlap(projectile, s, () => {
         if (!projectile.active || s.dead) return;
         projectile.destroy();
-        this._hitSoldier(s, damage);
+        this._hitSoldier(s, this.spellDamage(damage));
       });
     }
   }
@@ -1050,12 +1050,12 @@ export default class BeeScene extends WorldScene {
   applyLightningDamage(wx, wy, radius) {
     if (this.beeBoss && !this.beeBoss.dead && this.beeBoss.active) {
       const dx = this.beeBoss.x - wx, dy = this.beeBoss.y - wy;
-      if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) this._hitBeeBoss(BOSS_FIREBALL_DMG);
+      if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) this._hitBeeBoss(this.spellDamage(BOSS_FIREBALL_DMG));
     }
     for (const s of this._soldiers.values()) {
       if (!s.active || s.dead) continue;
       const dx = s.x - wx, dy = s.y - wy;
-      if (Math.sqrt(dx * dx + dy * dy) <= radius) this._hitSoldier(s, BOSS_FIREBALL_DMG * 0.5);
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) this._hitSoldier(s, this.spellDamage(BOSS_FIREBALL_DMG * 0.5));
     }
   }
 

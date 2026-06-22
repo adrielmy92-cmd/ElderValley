@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=239";
+import WorldScene from "./WorldScene.js?v=240";
 
 const SWAMP_W = 1920;
 const SWAMP_H = 1920;
@@ -361,7 +361,7 @@ export default class SwampScene extends WorldScene {
         this.physics.add.overlap(projectile, troll, () => {
           if (!projectile.active) return;
           projectile.destroy();
-          this._hitTroll(troll, damage);
+          this._hitTroll(troll, this.spellDamage(damage));
         });
       }
     });
@@ -384,7 +384,7 @@ export default class SwampScene extends WorldScene {
       if (!troll.active || troll.dead) return;
       const dx = troll.x - wx, dy = troll.y - wy;
       if (Math.sqrt(dx * dx + dy * dy) <= radius) {
-        this._hitTroll(troll, 150);
+        this._hitTroll(troll, this.spellDamage(150));
       }
     });
   }

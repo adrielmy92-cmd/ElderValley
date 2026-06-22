@@ -25,6 +25,10 @@ export const ALCHEMIST_ITEMS = [
   { key: "potion-mana-greater",   name: "Greater Mana Potion",   rarity: "rare",      price: 150, effect: "Restore 50% Mana",     mana: 0.50, cooldownMs: 25000 },
   { key: "potion-mana-supreme",   name: "Supreme Mana Potion",   rarity: "legendary", price: 700, effect: "Fully restore Mana",   mana: 1.00, cooldownMs: 30000 },
 
+  // Spiritshot — the mage's shot. Consumed per spell cast (auto), multiplies
+  // spell damage. Bottomless Gold sink: buy stacks, burn them while fighting.
+  { key: "spiritshot",            name: "Spiritshot",            rarity: "uncommon",  price: 8,   effect: "Doubles spell damage (1 per cast)", shot: 2.0 },
+
   // Jewelry (equippable). slot: 2 ring slots + 1 amulet slot.
   { key: "tidecaller-ring",      name: "Tidecaller",          rarity: "rare",      price: 320, effect: "+15 Mana · slow regen near water", slot: "ring",   stats: { maxMp: 15 } },
   { key: "runelord-band",        name: "Runelord Band",       rarity: "epic",      price: 540, effect: "+12% Spell Power",                 slot: "ring",   stats: { maxMp: 10, attack: 6 } },
