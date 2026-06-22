@@ -4,8 +4,8 @@ import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 import MobileControls from "../systems/MobileControls.js?v=1";
-import Inventory from "../systems/Inventory.js?v=2";
-import InventoryUI from "../systems/InventoryUI.js?v=4";
+import Inventory, { itemData } from "../systems/Inventory.js?v=3";
+import InventoryUI from "../systems/InventoryUI.js?v=5";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -802,6 +802,50 @@ export default class BaseGameScene extends Phaser.Scene {
   // Final damage for the current cast = (base + attack bonus) * shot multiplier.
   spellDamage(base) {
     return Math.max(1, Math.round((base + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
+  }
+
+  // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────
+  ENCHANT_MAX = 10;
+  ENCHANT_SHATTER_FROM = 4; // failing at +4 or higher can shatter (normal scroll)
+
+  // Success chance for the attempt that takes gear from `level` to `level+1`.
+  enchantChance(level) {
+    const table = [1, 1, 1, 0.65, 0.55, 0.45, 0.35, 0.30, 0.25, 0.20];
+    return table[level] ?? 0.15;
+  }
+
+  // Try to enchant an owned gear item. `blessed` scrolls never shatter (reset to +0).
+  enchant(itemKey, blessed = false) {
+    const scrollKey = blessed ? "blessed-enchant-scroll" : "enchant-scroll";
+    if (!this.bag || this.bag.count(scrollKey) <= 0) {
+      this.flashHudMessage?.(`No ${blessed ? "Blessed " : ""}Enchant Scroll`);
+      return { ok: false };
+    }
+    const level = this.bag.enchantLevel(itemKey);
+    if (level >= this.ENCHANT_MAX) { this.flashHudMessage?.("Already at max enchant"); return { ok: false }; }
+
+    this.bag.remove(scrollKey, 1);
+    const success = Math.random() < this.enchantChance(level);
+    if (success) {
+      this.bag.setEnchant(itemKey, level + 1);
+      this.recomputeStats?.();
+      this.flashHudMessage?.(`Enchant success! +${level + 1}`);
+      return { ok: true, success: true, level: level + 1 };
+    }
+    // failure
+    if (!blessed && level >= this.ENCHANT_SHATTER_FROM) {
+      const price = itemData(itemKey)?.price ?? 0;
+      const refund = Math.floor(price * 0.25);
+      this.bag.destroyItem(itemKey);
+      if (refund > 0) this.addCoins?.(refund);
+      this.recomputeStats?.();
+      this.flashHudMessage?.(`Shattered! Crystallized for ${refund} coins`);
+      return { ok: true, success: false, shattered: true, refund };
+    }
+    this.bag.setEnchant(itemKey, 0);
+    this.recomputeStats?.();
+    this.flashHudMessage?.("Enchant failed — reset to +0");
+    return { ok: true, success: false, reset: true };
   }
 
   updatePlayerMpBar() {

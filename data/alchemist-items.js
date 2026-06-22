@@ -29,6 +29,11 @@ export const ALCHEMIST_ITEMS = [
   // spell damage. Bottomless Gold sink: buy stacks, burn them while fighting.
   { key: "spiritshot",            name: "Spiritshot",            rarity: "uncommon",  price: 8,   effect: "Doubles spell damage (1 per cast)", shot: 2.0 },
 
+  // Enchant scrolls (Gold-only). Used from the inventory to upgrade jewelry.
+  // Normal can SHATTER gear on high-level failure; Blessed only resets to +0.
+  { key: "enchant-scroll",         name: "Enchant Scroll",         rarity: "uncommon",  price: 40,  effect: "Enchant gear +1 — may shatter on failure",  scroll: "normal" },
+  { key: "blessed-enchant-scroll", name: "Blessed Enchant Scroll", rarity: "rare",      price: 120, effect: "Enchant gear +1 — safe (resets, never shatters)", scroll: "blessed" },
+
   // Jewelry (equippable). slot: 2 ring slots + 1 amulet slot.
   { key: "tidecaller-ring",      name: "Tidecaller",          rarity: "rare",      price: 320, effect: "+15 Mana · slow regen near water", slot: "ring",   stats: { maxMp: 15 } },
   { key: "runelord-band",        name: "Runelord Band",       rarity: "epic",      price: 540, effect: "+12% Spell Power",                 slot: "ring",   stats: { maxMp: 10, attack: 6 } },

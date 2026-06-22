@@ -1,4 +1,7 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=5";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=6";
+
+// Each enchant level adds this much of the item's base stats.
+const ENCHANT_STEP = 0.12;
 
 const ITEMS_BY_KEY = Object.fromEntries(ALCHEMIST_ITEMS.map((i) => [i.key, i]));
 
@@ -26,19 +29,37 @@ export default class Inventory {
   load() {
     this.stacks = {};
     this.equipped = { ring1: null, ring2: null, amulet: null };
+    this.enchants = {};
     try {
       const raw = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null");
       if (raw && typeof raw === "object") {
         this.stacks = raw.stacks ?? {};
         this.equipped = { ring1: null, ring2: null, amulet: null, ...(raw.equipped ?? {}) };
+        this.enchants = raw.enchants ?? {};
       }
     } catch { /* ignore */ }
   }
 
   save() {
     try {
-      localStorage.setItem(this._storageKey(), JSON.stringify({ stacks: this.stacks, equipped: this.equipped }));
+      localStorage.setItem(this._storageKey(), JSON.stringify({ stacks: this.stacks, equipped: this.equipped, enchants: this.enchants }));
     } catch { /* ignore */ }
+  }
+
+  enchantLevel(key) { return this.enchants[key] ?? 0; }
+  setEnchant(key, level) {
+    if (level > 0) this.enchants[key] = level; else delete this.enchants[key];
+    this.save();
+  }
+
+  // Fully remove an item (shatter): drop from bag, any equip slot, and enchant map.
+  destroyItem(key) {
+    delete this.stacks[key];
+    for (const slot of Object.keys(this.equipped)) {
+      if (this.equipped[slot] === key) this.equipped[slot] = null;
+    }
+    delete this.enchants[key];
+    this.save();
   }
 
   count(key) { return this.stacks[key] ?? 0; }
@@ -87,14 +108,18 @@ export default class Inventory {
     return true;
   }
 
-  // Summed stat bonuses from all equipped pieces.
+  // Summed stat bonuses from all equipped pieces (scaled by enchant level).
   bonuses() {
     const sum = {};
     for (const slot of Object.keys(this.equipped)) {
       const key = this.equipped[slot];
       const item = key && itemData(key);
       if (!item?.stats) continue;
-      for (const [k, v] of Object.entries(item.stats)) sum[k] = (sum[k] ?? 0) + v;
+      const mult = 1 + this.enchantLevel(key) * ENCHANT_STEP;
+      for (const [k, v] of Object.entries(item.stats)) {
+        const scaled = Number.isInteger(v) ? Math.round(v * mult) : v * mult;
+        sum[k] = (sum[k] ?? 0) + scaled;
+      }
     }
     return sum;
   }

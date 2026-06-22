@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=5";
-import { itemData, isConsumable } from "./Inventory.js?v=2";
+import { RARITY } from "../data/alchemist-items.js?v=6";
+import { itemData, isConsumable } from "./Inventory.js?v=3";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -155,6 +155,12 @@ export default class InventoryUI {
       const icon = s.add.image(cx, cy, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
       icon.setScale((size - 14) / 256);
       this._t(icon);
+      const lvl = s.bag.enchantLevel(key);
+      if (lvl > 0) {
+        this._t(s.add.text(cx + half - 4, cy - half + 4, `+${lvl}`, {
+          fontFamily: "monospace", fontSize: "12px", color: "#ffe08a", stroke: "#160a04", strokeThickness: 3
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH + 4));
+      }
       const z = s.add.zone(cx - half, cy - half, size, size).setOrigin(0)
         .setScrollFactor(0).setDepth(DEPTH + 4).setInteractive({ useHandCursor: true });
       z.on("pointerdown", () => { s.bag.unequip(slotKey); s.recomputeStats?.(); this._refresh(); });
@@ -225,38 +231,117 @@ export default class InventoryUI {
       rg.lineStyle(1, rar.color, 0.85); rg.strokeRoundedRect(x + 10, ry, w - 20, rowH - 7, 7);
       this._t(rg);
 
+      const isShot = typeof item.shot === "number";
+      const isScroll = typeof item.scroll === "string";
+      const consumable = isConsumable(item);
+      const isGear = !consumable && !isShot && !isScroll;
+      const lvl = isGear ? s.bag.enchantLevel(item.key) : 0;
+
       const icon = s.add.image(x + 32, ry + (rowH - 7) / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
       icon.setScale(36 / 256);
       this._t(icon);
-      this._t(s.add.text(x + 58, ry + 8, item.name, { fontFamily: "monospace", fontSize: "13px", color: rar.text })
+      const dispName = lvl > 0 ? `${item.name} +${lvl}` : item.name;
+      this._t(s.add.text(x + 58, ry + 8, dispName, { fontFamily: "monospace", fontSize: "13px", color: lvl > 0 ? "#ffe08a" : rar.text })
         .setScrollFactor(0).setDepth(DEPTH + 3));
-      const isShot = typeof item.shot === "number";
-      const consumable = isConsumable(item);
-      this._t(s.add.text(x + 58, ry + 26, (consumable || isShot) ? `${item.effect}  ·  x${count}` : item.effect, {
+      this._t(s.add.text(x + 58, ry + 26, (consumable || isShot || isScroll) ? `${item.effect}  ·  x${count}` : item.effect, {
         fontFamily: "monospace", fontSize: "10px", color: "#9aa8bc"
       }).setScrollFactor(0).setDepth(DEPTH + 3));
 
-      const equipped = !consumable && !isShot && s.bag.isEquipped(item.key);
-      const label = isShot ? (s.shotsEnabled ? "ON" : "OFF") : (consumable ? "Use" : (equipped ? "On" : "Equip"));
-      const bw = 62, bx = x + w - 18 - bw, by = ry + (rowH - 7) / 2;
-      const bgc = isShot ? (s.shotsEnabled ? 0x274a8c : 0x3a3326) : (consumable ? 0x1f6d34 : (equipped ? 0x3a3326 : 0x274a8c));
-      const bdc = isShot ? (s.shotsEnabled ? 0x6f9bff : 0x8a7a52) : (consumable ? 0x57d36f : (equipped ? 0x8a7a52 : 0x6f9bff));
-      const btn = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
-      btn.fillStyle(bgc, 1); btn.fillRoundedRect(bx, by - 13, bw, 26, 6);
-      btn.lineStyle(1, bdc, 1); btn.strokeRoundedRect(bx, by - 13, bw, 26, 6);
-      this._t(btn);
-      this._t(s.add.text(bx + bw / 2, by, label, { fontFamily: "Georgia, serif", fontSize: "13px", color: "#eafff0" })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
-      const z = s.add.zone(bx, by - 13, bw, 26).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 5)
-        .setInteractive({ useHandCursor: true });
-      z.on("pointerdown", () => {
-        if (isShot) s.toggleShots?.();
-        else if (consumable) s.useConsumable?.(item);
-        else { s.bag.equip(item.key); s.recomputeStats?.(); }
-        this._refresh();
-      });
-      this._t(z);
+      const by = ry + (rowH - 7) / 2;
+      const mkBtn = (bx, bw, label, fill, stroke, onClick) => {
+        const btn = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+        btn.fillStyle(fill, 1); btn.fillRoundedRect(bx, by - 13, bw, 26, 6);
+        btn.lineStyle(1, stroke, 1); btn.strokeRoundedRect(bx, by - 13, bw, 26, 6);
+        this._t(btn);
+        this._t(s.add.text(bx + bw / 2, by, label, { fontFamily: "Georgia, serif", fontSize: "13px", color: "#eafff0" })
+          .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
+        const z = s.add.zone(bx, by - 13, bw, 26).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 5)
+          .setInteractive({ useHandCursor: true });
+        z.on("pointerdown", onClick);
+        this._t(z);
+      };
+
+      if (isScroll) {
+        // scrolls are used from the enchant popup, not here — display only
+        this._t(s.add.text(x + w - 18, by, "Scroll", { fontFamily: "monospace", fontSize: "11px", color: "#b9a06a" })
+          .setOrigin(1, 0.5).setScrollFactor(0).setDepth(DEPTH + 4));
+      } else if (isShot) {
+        mkBtn(x + w - 18 - 62, 62, s.shotsEnabled ? "ON" : "OFF",
+          s.shotsEnabled ? 0x274a8c : 0x3a3326, s.shotsEnabled ? 0x6f9bff : 0x8a7a52,
+          () => { s.toggleShots?.(); this._refresh(); });
+      } else if (consumable) {
+        mkBtn(x + w - 18 - 62, 62, "Use", 0x1f6d34, 0x57d36f,
+          () => { s.useConsumable?.(item); this._refresh(); });
+      } else {
+        // gear: Equip + Enchant
+        const equipped = s.bag.isEquipped(item.key);
+        mkBtn(x + w - 18 - 62, 62, equipped ? "On" : "Equip",
+          equipped ? 0x3a3326 : 0x274a8c, equipped ? 0x8a7a52 : 0x6f9bff,
+          () => { s.bag.equip(item.key); s.recomputeStats?.(); this._refresh(); });
+        mkBtn(x + w - 18 - 62 - 52, 46, "⚒", 0x5a3d6e, 0xb07be0,
+          () => this._enchantPopup(item.key));
+      }
     });
+  }
+
+  // Small modal over the inventory: the enchant gamble for one gear item.
+  _enchantPopup(itemKey) {
+    const s = this.scene;
+    const item = itemData(itemKey);
+    if (!item) return;
+    const cam = s.cameras.main;
+    const W = cam.width, H = cam.height;
+    const pw = 360, ph = 250;
+    const px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2);
+    const lvl = s.bag.enchantLevel(itemKey);
+    const chance = Math.round(s.enchantChance(lvl) * 100);
+    const canShatter = lvl >= (s.ENCHANT_SHATTER_FROM ?? 4);
+    const normalN = s.bag.count("enchant-scroll");
+    const blessedN = s.bag.count("blessed-enchant-scroll");
+
+    const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 20);
+    g.fillStyle(0x000000, 0.5); g.fillRect(0, 0, W, H);
+    g.fillStyle(0x140f0a, 1); g.fillRoundedRect(px, py, pw, ph, 12);
+    g.lineStyle(2, 0xb07be0, 1); g.strokeRoundedRect(px + 6, py + 6, pw - 12, ph - 12, 9);
+    this._t(g);
+
+    this._t(s.add.text(px + pw / 2, py + 22, `Enchant — ${item.name} +${lvl}`, {
+      fontFamily: "Georgia, serif", fontSize: "17px", color: "#e8c8ff", stroke: "#150a1e", strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 21));
+    this._t(s.add.text(px + pw / 2, py + 56, `+${lvl}  →  +${lvl + 1}\nSuccess chance: ${chance}%`, {
+      fontFamily: "monospace", fontSize: "14px", color: "#d9e2ee", align: "center", lineSpacing: 5
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH + 21));
+    this._t(s.add.text(px + pw / 2, py + 108,
+      canShatter ? "⚠ Failure with a normal scroll SHATTERS the item!" : "Failure resets to +0 (item survives).", {
+      fontFamily: "monospace", fontSize: "11px", color: canShatter ? "#ff9a9a" : "#9adf9a", align: "center",
+      wordWrap: { width: pw - 36 }
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH + 21));
+
+    const doEnchant = (blessed) => { s.enchant(itemKey, blessed); this._refresh(); };
+    const by = py + ph - 54;
+    const mk = (bx, bw, label, sub, fill, stroke, enabled, cb) => {
+      const gg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 21);
+      gg.fillStyle(enabled ? fill : 0x2a2622, 1); gg.fillRoundedRect(bx, by, bw, 40, 7);
+      gg.lineStyle(1, enabled ? stroke : 0x55504a, 1); gg.strokeRoundedRect(bx, by, bw, 40, 7);
+      this._t(gg);
+      this._t(s.add.text(bx + bw / 2, by + 11, label, { fontFamily: "Georgia, serif", fontSize: "13px", color: enabled ? "#eafff0" : "#8a857e" })
+        .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 22));
+      this._t(s.add.text(bx + bw / 2, by + 27, sub, { fontFamily: "monospace", fontSize: "10px", color: enabled ? "#cfe0ff" : "#75706a" })
+        .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 22));
+      if (enabled) {
+        const z = s.add.zone(bx, by, bw, 40).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 23).setInteractive({ useHandCursor: true });
+        z.on("pointerdown", cb); this._t(z);
+      }
+    };
+    mk(px + 20, 150, "Enchant", `Normal scroll  x${normalN}`, 0x274a8c, 0x6f9bff, normalN > 0, () => doEnchant(false));
+    mk(px + pw - 170, 150, "Blessed", `Safe scroll  x${blessedN}`, 0x6e5a23, 0xe7c25a, blessedN > 0, () => doEnchant(true));
+
+    // close (X) for the popup
+    const cz = s.add.zone(px + pw - 20, py + 20, 30, 30).setScrollFactor(0).setDepth(DEPTH + 23).setInteractive({ useHandCursor: true });
+    this._t(s.add.text(px + pw - 20, py + 20, "✕", { fontFamily: "monospace", fontSize: "15px", color: "#ffd9d9" })
+      .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 22));
+    cz.on("pointerdown", () => this._refresh());
+    this._t(cz);
   }
 
   _closeBtn(x, y) {
