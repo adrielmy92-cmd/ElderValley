@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=246";
+import WorldScene from "./WorldScene.js?v=247";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
@@ -225,6 +225,27 @@ export default class ForestScene extends WorldScene {
   }
 
   // Boss nasceu / renasceu
+  _sfx(key, volume = 0.6) {
+    if (this.cache.audio.exists(key)) this.sound.play(key, { volume });
+  }
+
+  _startBattleMusic() {
+    if (this._battleMusic?.isPlaying) return;
+    if (!this.cache.audio.exists("golem-battle")) return;
+    this._battleMusic = this.sound.add("golem-battle", { loop: true, volume: 0 });
+    this._battleMusic.play();
+    this.tweens.add({ targets: this._battleMusic, volume: 0.14, duration: 1500 });
+    this.events.once("shutdown", () => this._battleMusic?.stop());
+  }
+
+  _stopBattleMusic() {
+    if (!this._battleMusic?.isPlaying) return;
+    this.tweens.add({
+      targets: this._battleMusic, volume: 0, duration: 1200,
+      onComplete: () => { this._battleMusic?.stop(); }
+    });
+  }
+
   onBossSpawned(silent = false) {
     // Limpa countdown
     this._countdownText?.destroy(); this._countdownText = null;
@@ -246,6 +267,7 @@ export default class ForestScene extends WorldScene {
     this.bossShadow?.setVisible(true);
     if (this.bossHitzone) this.bossHitzone.body.enable = true;
 
+    this._startBattleMusic();
     if (silent) {
       this.bossGolem.setScale(1.4);
     } else {
@@ -253,6 +275,7 @@ export default class ForestScene extends WorldScene {
       this.bossGolem.setScale(0);
       this.tweens.add({ targets: this.bossGolem, scaleX: 1.4, scaleY: 1.4, duration: 800, ease: "Back.easeOut" });
       this.cameras.main.shake(600, 0.018);
+      this._sfx("golem-roar", 0.7);
       this.showPhaseAnnouncement("LAVA GOLEM HAS RISEN!");
     }
   }
@@ -274,6 +297,8 @@ export default class ForestScene extends WorldScene {
         // Efeitos de morte só uma vez
         this.bossHpContainer?.setVisible(false);
         this.cameras.main.shake(600, 0.02);
+        this._sfx("golem-death", 0.8);
+        this._stopBattleMusic();
         this.showPhaseAnnouncement("GOLEM DEFEATED!");
         this.time.delayedCall(2000, () => {
           this.dialog?.show("Lava Golem", "The Golem has been defeated! The arena cools down...");
@@ -323,16 +348,19 @@ export default class ForestScene extends WorldScene {
     }
     if (this.bossDead) return; // ignora ataques depois da morte
     if (event === "meteor") {
+      this._sfx("golem-meteor", 0.5);
       (data.targets ?? []).forEach(({ tx, ty, delay=0 }) => {
         this.time.delayedCall(delay, () => this.spawnSingleMeteor(tx, ty));
       });
     }
     if (event === "eruption") {
+      this._sfx("golem-eruption", 0.5);
       (data.targets ?? []).forEach(({ tx, ty, delay=0 }) => {
         this.time.delayedCall(delay, () => this.spawnSingleEruption(tx, ty));
       });
     }
     if (event === "projectile") {
+      this._sfx("golem-boulder", 0.5);
       this.spawnRockProjectile(data.bx, data.by, data.dx, data.dy);
     }
   }
@@ -346,6 +374,7 @@ export default class ForestScene extends WorldScene {
     if (tints[phase]) this.bossGolem?.setTint(tints[phase]);
     this.bossNameText?.setText(`LAVA GOLEM  ●  Phase ${phase}`);
     this.showPhaseAnnouncement(labels[phase]);
+    this._sfx("golem-roar", 0.6);
     this.cameras.main.shake(400, 0.012);
   }
 

@@ -40,6 +40,70 @@ const SFX = [
     duration: 2.0,
     prompt_influence: 0.35,
     text: "Sticky honey bubbling and simmering on ground, thick viscous liquid slow bubbling loop, magical golden puddle gurgling, gooey substance pulsing ambient sound, fantasy game hazard zone audio loop"
+  },
+
+  // ── Lava Golem boss ──────────────────────────────────────────────────────────
+  {
+    key: "golem-roar",
+    duration: 3.0,
+    prompt_influence: 0.4,
+    text: "Massive molten lava golem awakening roar, deep guttural monster bellow with rumbling magma and cracking stone, low-frequency earth-shaking growl, volcanic boss monster vocalization, cinematic fantasy game"
+  },
+  {
+    key: "golem-meteor",
+    duration: 2.5,
+    prompt_influence: 0.4,
+    text: "Flaming meteor falling from the sky and crashing into the ground, high whoosh of a descending fireball followed by an explosive fiery impact, burning rock smashing earth with debris, fantasy game spell impact"
+  },
+  {
+    key: "golem-eruption",
+    duration: 2.2,
+    prompt_influence: 0.4,
+    text: "Volcanic lava eruption bursting up from the ground, sudden geyser of molten magma exploding upward with hissing fire and spraying embers, fantasy game ground hazard effect"
+  },
+  {
+    key: "golem-boulder",
+    duration: 2.0,
+    prompt_influence: 0.4,
+    text: "Heavy stone boulder hurled through the air and smashing, whoosh of a thrown rock followed by a hard crushing impact and falling rubble, fantasy monster attack"
+  },
+  {
+    key: "golem-death",
+    duration: 3.5,
+    prompt_influence: 0.4,
+    text: "Giant lava golem dying, a final agonized monster roar fading as the stone body crumbles and collapses into rubble with cooling magma hiss, epic boss defeat fantasy game"
+  },
+
+  // ── UI / progression ─────────────────────────────────────────────────────────
+  {
+    key: "sfx-levelup",
+    duration: 2.5,
+    prompt_influence: 0.3,
+    text: "Triumphant level up reward, ascending magical sparkle arpeggio with shimmering bells and a bright uplifting fanfare swell, satisfying RPG progression jingle, positive achievement chime"
+  },
+  {
+    key: "sfx-purchase",
+    duration: 1.2,
+    prompt_influence: 0.35,
+    text: "Coins jingle purchase confirmation, a pleasant bag of gold coins clinking with a soft bright bell ding, satisfying RPG shop buy sound"
+  },
+  {
+    key: "sfx-sell",
+    duration: 1.2,
+    prompt_influence: 0.35,
+    text: "Receiving gold coins reward, a cheerful cascade of coins pouring with a warm chime, RPG marketplace sell confirmation sound"
+  },
+  {
+    key: "sfx-enchant-success",
+    duration: 2.2,
+    prompt_influence: 0.35,
+    text: "Magical enchantment success, shimmering arcane power infusing metal with a rising sparkle and a resonant bright magical chime, fantasy RPG gear upgrade sound"
+  },
+  {
+    key: "sfx-enchant-shatter",
+    duration: 1.8,
+    prompt_influence: 0.4,
+    text: "Enchanted item shattering and failing, a sharp glassy magical crack and crystalline shatter with a dark fizzling power-down, fantasy RPG failure sound"
   }
 ];
 

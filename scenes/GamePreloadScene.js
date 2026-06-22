@@ -86,6 +86,19 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadAudio("swamp-bubble-burst", "./assets/audio/swamp-bubble-burst.ogg");
     this.loadAudio("swamp-spike",        "./assets/audio/swamp-spike.ogg");
     this.loadAudio("swamp-sludge",       "./assets/audio/swamp-sludge.ogg");
+    // Lava Golem boss SFX + battle music
+    this.loadAudio("golem-roar",     "./assets/audio/golem-roar.mp3");
+    this.loadAudio("golem-meteor",   "./assets/audio/golem-meteor.mp3");
+    this.loadAudio("golem-eruption", "./assets/audio/golem-eruption.mp3");
+    this.loadAudio("golem-boulder",  "./assets/audio/golem-boulder.mp3");
+    this.loadAudio("golem-death",    "./assets/audio/golem-death.mp3");
+    this.loadAudio("golem-battle",   "./assets/audio/golem-battle.mp3");
+    // UI / progression SFX
+    this.loadAudio("sfx-levelup",          "./assets/audio/sfx-levelup.mp3");
+    this.loadAudio("sfx-purchase",         "./assets/audio/sfx-purchase.mp3");
+    this.loadAudio("sfx-sell",             "./assets/audio/sfx-sell.mp3");
+    this.loadAudio("sfx-enchant-success",  "./assets/audio/sfx-enchant-success.mp3");
+    this.loadAudio("sfx-enchant-shatter",  "./assets/audio/sfx-enchant-shatter.mp3");
     this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=2", 200, 200);
     this.loadSheet("boss-golem-attack", "./assets/sprites/boss-golem-attack-sheet.png?v=2", 200, 200);
     this.loadSheet("boss-meteor", "./assets/sprites/boss-meteor-sheet.png?v=1", 128, 128);

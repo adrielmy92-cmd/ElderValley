@@ -272,6 +272,7 @@ export default class ShopSystem {
     // buy) and returns the outcome — never pre-deduct here.
     const result = await (this.scene.bag?.buy(item) ?? Promise.resolve({ ok: false, error: "No bag" }));
     if (!result.ok) { this._toast(result.error ?? "Purchase failed", "#ffb4b4"); return; }
+    this.scene.playSfx?.("sfx-purchase", 0.5);
     if (this.coinText) this.coinText.setText(String(this._coins()));
     this._toast(`Purchased ${item.name}!`, "#bff7c4");
     const slot = this.slots[this.selected];

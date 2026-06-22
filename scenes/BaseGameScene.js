@@ -866,9 +866,9 @@ export default class BaseGameScene extends Phaser.Scene {
       const data = await this.bag.serverEnchant(itemKey, blessed);
       if (!data?.ok) { this.flashHudMessage?.(data?.error ?? "Enchant failed"); return data ?? { ok: false }; }
       this.recomputeStats?.();
-      if (data.success) this.flashHudMessage?.(`Enchant success! +${data.level}`);
-      else if (data.shattered) this.flashHudMessage?.(`Shattered! Crystallized for ${data.refund} coins`);
-      else this.flashHudMessage?.("Enchant failed — reset to +0");
+      if (data.success) { this.flashHudMessage?.(`Enchant success! +${data.level}`); this.playSfx("sfx-enchant-success", 0.6); }
+      else if (data.shattered) { this.flashHudMessage?.(`Shattered! Crystallized for ${data.refund} coins`); this.playSfx("sfx-enchant-shatter", 0.6); }
+      else { this.flashHudMessage?.("Enchant failed — reset to +0"); this.playSfx("sfx-enchant-shatter", 0.4); }
       return data;
     }
     const scrollKey = blessed ? "blessed-enchant-scroll" : "enchant-scroll";
@@ -885,6 +885,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.bag.setEnchant(itemKey, level + 1);
       this.recomputeStats?.();
       this.flashHudMessage?.(`Enchant success! +${level + 1}`);
+      this.playSfx("sfx-enchant-success", 0.6);
       return { ok: true, success: true, level: level + 1 };
     }
     // failure
@@ -895,11 +896,13 @@ export default class BaseGameScene extends Phaser.Scene {
       if (refund > 0) this.addCoins?.(refund);
       this.recomputeStats?.();
       this.flashHudMessage?.(`Shattered! Crystallized for ${refund} coins`);
+      this.playSfx("sfx-enchant-shatter", 0.6);
       return { ok: true, success: false, shattered: true, refund };
     }
     this.bag.setEnchant(itemKey, 0);
     this.recomputeStats?.();
     this.flashHudMessage?.("Enchant failed — reset to +0");
+    this.playSfx("sfx-enchant-shatter", 0.4);
     return { ok: true, success: false, reset: true };
   }
 
@@ -945,6 +948,11 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updatePlayerHpBar?.();
   }
 
+  // Play a one-shot sound effect if it was preloaded.
+  playSfx(key, volume = 0.6) {
+    if (this.cache?.audio?.exists(key)) this.sound.play(key, { volume });
+  }
+
   // Authoritative XP update pushed from the server (kill / work).
   onXpGained(payload) {
     const before = this.leveling?.level ?? 1;
@@ -952,6 +960,7 @@ export default class BaseGameScene extends Phaser.Scene {
     const leveled = (payload?.leveledUp ?? 0) > 0 || (this.leveling?.level ?? 1) > before;
     if (leveled) {
       this.flashHudMessage?.(`LEVEL UP!  Lv ${this.leveling.level}  ·  +${payload?.leveledUp ?? 1} point${(payload?.leveledUp ?? 1) > 1 ? "s" : ""}`);
+      this.playSfx("sfx-levelup", 0.6);
     } else if ((payload?.gained ?? 0) > 0) {
       this.showXpPopup?.(payload.gained);
     }

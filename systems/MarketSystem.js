@@ -226,6 +226,7 @@ export default class MarketSystem {
     const d = await this._post("buy", { listingId }).catch(() => ({ ok: false, error: "Server unreachable" }));
     this.busy = false;
     if (!d?.ok) { this._toast(d?.error ?? "Purchase failed", "#ffb4b4"); this._loadBrowse(); return; }
+    this.scene.playSfx?.("sfx-purchase", 0.5);
     this._applyState(d);
     this.selected = null;
     this._toast(`Bought ${d.item?.name ?? "item"}!`, "#bff7c4");
@@ -314,6 +315,7 @@ export default class MarketSystem {
     const d = await this._post("list", { itemKey, price }).catch(() => ({ ok: false, error: "Server unreachable" }));
     this.busy = false;
     if (!d?.ok) { this._toast(d?.error ?? "Could not list", "#ffb4b4"); return; }
+    this.scene.playSfx?.("sfx-sell", 0.5);
     this._applyState(d);
     this.sellKey = null;
     this._toast("Listed on the market!", "#bff7c4");
