@@ -488,11 +488,9 @@ export default class WorldScene extends BaseGameScene {
         );
         const grassVariant = (((x / TILE) + (y / TILE)) % 3 + 3) % 3;
         const key = water && !bridge ? "tile-water-0" : path ? "tile-path" : `tile-grass-${grassVariant}`;
-        if (water && !bridge) {
-          this.drawGroundTile(key, x, y, { animated: true, kind: "water", variant: 0 });
-        } else {
-          this.drawGroundTile(key, x, y);
-        }
+        // River water is now a seamless animated TileSprite (addRiverWater); bake a
+        // static water base underneath it as a fallback.
+        this.drawGroundTile(key, x, y);
       }
     }
 
@@ -562,6 +560,8 @@ export default class WorldScene extends BaseGameScene {
   }
 
   buildVillage() {
+    this.addVillageMusic();
+    this.addRiverWater();
     this.addRiverEdges();
     this.addHouses();
     this.addDecorations();
@@ -3524,6 +3524,33 @@ export default class WorldScene extends BaseGameScene {
       return Math.sin(((time - (17 * 60 + 30)) / 150) * Math.PI) * 0.18;
     }
     return 0;
+  }
+
+  // Calm background music for the village (only the village build calls this).
+  addVillageMusic() {
+    if (this._villageMusic?.isPlaying) return;
+    if (!this.cache.audio.exists("village-calm")) return;
+    this._villageMusic = this.sound.add("village-calm", { loop: true, volume: 0 });
+    this._villageMusic.play();
+    this.tweens.add({ targets: this._villageMusic, volume: 0.10, duration: 2000 });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._villageMusic?.stop());
+  }
+
+  // Seamless animated water across the river strip (no bridge in this map).
+  addRiverWater() {
+    if (!this.textures.exists("village-water")) return;
+    const y = RIVER_TOP;
+    const h = RIVER_BOTTOM - RIVER_TOP;
+    const tile = this.add.tileSprite(0, y, this.worldWidth, h, "village-water", 0)
+      .setOrigin(0, 0)
+      .setDepth(-20);
+    this._riverWater = tile;
+    let frame = 0;
+    this._riverWaterTimer = this.time.addEvent({
+      delay: 140, loop: true,
+      callback: () => { frame = (frame + 1) % 6; tile.setFrame(frame); }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._riverWaterTimer?.remove(false));
   }
 
   addRiverEdges() {

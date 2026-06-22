@@ -18,6 +18,11 @@ const TRACKS = [
     key: "golem-battle",
     duration: 22,
     prompt: "Epic intense orchestral boss battle music, relentless driving war drums and dramatic staccato low brass with a dark ominous choir, fast-paced heroic fantasy combat theme, menacing volcanic tone, high energy looping instrumental, steady tempo with no fade in or out"
+  },
+  {
+    key: "village-calm",
+    duration: 22,
+    prompt: "Calm peaceful medieval fantasy village background music, gentle soft acoustic lute and flute melody with warm strings, relaxing cozy and pastoral, slow tempo, soothing wholesome daytime town theme, seamless gentle loop with no percussion and no fade"
   }
 ];
 
