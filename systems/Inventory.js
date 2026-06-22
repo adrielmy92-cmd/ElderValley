@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=6";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=7";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -254,14 +254,14 @@ export default class Inventory {
     return sum;
   }
 
-  // First available shot item (e.g. spiritshot), or null. Used by the cast logic.
-  firstShot() {
-    const e = ALCHEMIST_ITEMS.find((i) => typeof i.shot === "number" && this.count(i.key) > 0);
+  // First available shot of the given class type (spirit/soul), or null.
+  firstShot(type) {
+    const e = ALCHEMIST_ITEMS.find((i) => typeof i.shot === "number" && (!type || i.shotType === type) && this.count(i.key) > 0);
     return e ?? null;
   }
 
-  shotCount() {
-    return ALCHEMIST_ITEMS.reduce((n, i) => n + (typeof i.shot === "number" ? this.count(i.key) : 0), 0);
+  shotCount(type) {
+    return ALCHEMIST_ITEMS.reduce((n, i) => n + ((typeof i.shot === "number" && (!type || i.shotType === type)) ? this.count(i.key) : 0), 0);
   }
 
   // Bag entries with stack count, in catalog order (consumables first there).

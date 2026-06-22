@@ -1,5 +1,5 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=225";
-import ShopSystem from "../systems/ShopSystem.js?v=5";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=226";
+import ShopSystem from "../systems/ShopSystem.js?v=6";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;

@@ -1,11 +1,11 @@
-import Player from "../player/Player.js?v=188";
+import Player from "../player/Player.js?v=189";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=224";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=225";
 import MobileControls from "../systems/MobileControls.js?v=1";
-import Inventory, { itemData } from "../systems/Inventory.js?v=5";
-import InventoryUI from "../systems/InventoryUI.js?v=8";
+import Inventory, { itemData } from "../systems/Inventory.js?v=6";
+import InventoryUI from "../systems/InventoryUI.js?v=9";
 import Leveling from "../systems/Leveling.js?v=3";
 
 export default class BaseGameScene extends Phaser.Scene {
@@ -786,16 +786,16 @@ export default class BaseGameScene extends Phaser.Scene {
       color: "#7fe6a0", stroke: "#1a202b", strokeThickness: 3
     }).setScrollFactor(0).setDepth(DEPTH);
 
-    // Melee characters (warrior) don't use mana or spiritshots — hide that mage UI.
+    // Melee characters (warrior) don't use mana — hide the MP bar. They DO use shots
+    // (Soulshot), so the shot indicator stays; move it up into the freed MP row.
     if (this.player?.profile?.melee) {
-      [this.mpLabel, this.mpBarBg, this.mpBarFg, this.mpValueText, this.shotText].forEach((o) => o?.setVisible(false));
+      [this.mpLabel, this.mpBarBg, this.mpBarFg, this.mpValueText].forEach((o) => o?.setVisible(false));
+      this.shotText?.setY(MY - 2);
     }
 
     this.updatePlayerHpBar();
-    if (!this.player?.profile?.melee) {
-      this.updatePlayerMpBar();
-      this.updateShotHud();
-    }
+    if (!this.player?.profile?.melee) this.updatePlayerMpBar();
+    this.updateShotHud();
     this.updateXpHud();
   }
 
@@ -823,16 +823,21 @@ export default class BaseGameScene extends Phaser.Scene {
 
   updateShotHud() {
     if (!this.shotText) return;
-    const n = this.bag?.shotCount?.() ?? 0;
+    const type = this.player?.profile?.shotType;
+    if (!type) { this.shotText.setVisible(false); return; }
+    const n = this.bag?.shotCount?.(type) ?? 0;
     const on = this.shotsEnabled && n > 0;
-    this.shotText.setText(`✦ Spiritshot x${n}  [${this.shotsEnabled ? "ON" : "OFF"}]  (G)`);
-    this.shotText.setColor(on ? "#8fd0ff" : "#7a8aa0");
+    const label = type === "soul" ? "Soulshot" : "Spiritshot";
+    const color = type === "soul" ? "#ffae6b" : "#8fd0ff";
+    this.shotText.setText(`✦ ${label} x${n}  [${this.shotsEnabled ? "ON" : "OFF"}]  (G)`);
+    this.shotText.setColor(on ? color : "#7a8aa0");
   }
 
   toggleShots() {
     this.shotsEnabled = !this.shotsEnabled;
     this.updateShotHud();
-    this.flashHudMessage?.(`Spiritshots ${this.shotsEnabled ? "ON" : "OFF"}`);
+    const label = this.player?.profile?.shotType === "soul" ? "Soulshots" : "Spiritshots";
+    this.flashHudMessage?.(`${label} ${this.shotsEnabled ? "ON" : "OFF"}`);
   }
 
   // Call once per spell cast: burns a shot (if enabled & available) and snapshots
@@ -840,8 +845,10 @@ export default class BaseGameScene extends Phaser.Scene {
   beginCast() {
     this._castAtk = (this.bag?.bonuses?.().attack ?? 0) + (this.leveling?.bonusAttack() ?? 0);
     this._castMult = 1;
-    if (this.shotsEnabled && this.bag) {
-      const shot = this.bag.firstShot?.();
+    // Consume one shot of the player's class type (spirit=mage / soul=warrior/archer).
+    const type = this.player?.profile?.shotType;
+    if (this.shotsEnabled && this.bag && type) {
+      const shot = this.bag.firstShot?.(type);
       if (shot) {
         this.bag.consume(shot.key, 1);
         this._castMult = shot.shot;
@@ -859,8 +866,7 @@ export default class BaseGameScene extends Phaser.Scene {
   // combat scene's applyLightningDamage (boss/trolls/bees) so damage + hit sparks +
   // damage numbers all work per scene. Uses the attack bonus, never burns a spiritshot.
   applyMeleeDamage(x, y, radius) {
-    this._castAtk = (this.bag?.bonuses?.().attack ?? 0) + (this.leveling?.bonusAttack() ?? 0);
-    this._castMult = 1;
+    this.beginCast(); // attack bonus + consumes a Soulshot (the warrior's shot type)
     this.applyLightningDamage?.(x, y, radius);
   }
 
@@ -2370,7 +2376,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.player.update(this.cursors, this.wasd, true);
       return;
     }
-    if (!this.dialog.active && !this.chat?.active && !this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.shots)) {
+    if (!this.dialog.active && !this.chat?.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.shots)) {
       this.toggleShots();
     }
 

@@ -27,7 +27,10 @@ export const ALCHEMIST_ITEMS = [
 
   // Spiritshot — the mage's shot. Consumed per spell cast (auto), multiplies
   // spell damage. Bottomless Gold sink: buy stacks, burn them while fighting.
-  { key: "spiritshot",            name: "Spiritshot",            rarity: "uncommon",  price: 8,   effect: "Doubles spell damage (1 per cast)", shot: 2.0 },
+  // Shots — consumed per attack to multiply damage. Class-gated by shotType:
+  // mages use Spiritshot (magic), warriors/archers use Soulshot (physical).
+  { key: "spiritshot",            name: "Spiritshot",            rarity: "uncommon",  price: 8,   effect: "Doubles spell damage (1 per cast)",   shot: 2.0, shotType: "spirit" },
+  { key: "soulshot",              name: "Soulshot",              rarity: "uncommon",  price: 8,   effect: "Doubles physical damage (1 per hit)", shot: 2.0, shotType: "soul" },
 
   // Enchant scrolls (Gold-only). Used from the inventory to upgrade jewelry.
   // Normal can SHATTER gear on high-level failure; Blessed only resets to +0.
