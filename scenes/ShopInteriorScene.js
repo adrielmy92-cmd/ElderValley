@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=226";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=227";
 
 export default class ShopInteriorScene extends InteriorBaseScene {
   constructor() {

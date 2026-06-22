@@ -763,7 +763,7 @@ export default class TitleScene extends Phaser.Scene {
   getCharacterCatalog() {
     return [
       { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
-      { id: "warrior", name: "Guerreiro", key: "warrior-walk-sheet", frame: 0, scale: 0.62 }
+      { id: "warrior", name: "Guerreiro", key: "warrior-walk-sheet", frame: 0, scale: 0.74 }
     ];
   }
 

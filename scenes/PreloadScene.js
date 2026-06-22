@@ -53,13 +53,13 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 96,
       frameHeight: 128
     });
-    this.load.spritesheet("warrior-walk-sheet", "./assets/sprites/warrior-walk-sheet.png?v=1", {
-      frameWidth: 100,
-      frameHeight: 102
+    this.load.spritesheet("warrior-walk-sheet", "./assets/sprites/warrior-walk-sheet.png?v=2", {
+      frameWidth: 82,
+      frameHeight: 84
     });
-    this.load.spritesheet("warrior-attack-sheet", "./assets/sprites/warrior-attack-sheet.png?v=1", {
-      frameWidth: 100,
-      frameHeight: 102
+    this.load.spritesheet("warrior-attack-sheet", "./assets/sprites/warrior-attack-sheet.png?v=2", {
+      frameWidth: 82,
+      frameHeight: 84
     });
     createPixelArtTextures(this);
   }
