@@ -1283,7 +1283,9 @@ async function runEconomyAction(action, profileId, payload) {
 
   if (action === "consume") {
     const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
-    if (!item || !isConsumableItem(item)) return fail("Not a consumable");
+    // Consumed during play: potions (heal/mana) AND spiritshots (shot, burned per cast).
+    const consumable = item && (typeof item.heal === "number" || typeof item.mana === "number" || typeof item.shot === "number");
+    if (!consumable) return fail("Not a consumable");
     if (bagCount(bag, item.key) <= 0) return fail("None left");
     bagRemove(bag, item.key, 1);
     return commit();
