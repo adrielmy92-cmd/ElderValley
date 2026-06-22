@@ -63,6 +63,14 @@ export default class Inventory {
     this.stacks = { ...(bag?.stacks ?? {}) };
     this.equipped = { ring1: null, ring2: null, amulet: null, ...(bag?.equipped ?? {}) };
     this.enchants = { ...(bag?.enchants ?? {}) };
+    // Keep registry.playerProfile fresh so a scene change re-hydrates the current
+    // bag (not the stale login-time one).
+    if (this.serverMode) {
+      const p = this.scene.registry?.get("playerProfile");
+      if (p) this.scene.registry.set("playerProfile", {
+        ...p, bag: { stacks: { ...this.stacks }, equipped: { ...this.equipped }, enchants: { ...this.enchants } }
+      });
+    }
   }
 
   save() {

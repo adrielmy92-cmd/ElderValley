@@ -45,6 +45,12 @@ export default class Leveling {
     this.xpNext = typeof d.xpNext === "number"
       ? d.xpNext
       : (this.level >= MAX_LEVEL ? 0 : xpForLevel(this.level));
+    // Keep registry.playerProfile fresh so the NEXT scene hydrates the right level
+    // (otherwise a scene change re-reads the stale login-time profile and shows Lv 1).
+    const p = this.scene.registry?.get("playerProfile");
+    if (p) this.scene.registry.set("playerProfile", {
+      ...p, level: this.level, xp: this.xp, unspent: this.unspent, attr: { ...this.attr }, xpNext: this.xpNext
+    });
   }
 
   // Apply an authoritative leveling payload (WS `xp` push or allocate reply) and
