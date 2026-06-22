@@ -2127,7 +2127,13 @@ const server = createServer(async (req, res) => {
         } catch {
           // Primeiro save desse arquivo, sem backup anterior.
         }
-        if (isOlderClientWrite(req, previousMtimeMs) || (!req.headers["x-eldervalley-client-mtime"] && isProbablyStaleCreativeWrite(previousData, payload))) {
+        // A trusted writer (dev wallet session / admin token / local / explicitly
+        // allowed) is doing an intentional save — it must always win. The stale-write
+        // guard below only protects against accidental clobbers from untrusted/
+        // background writes, and was wrongly blocking legitimate dev "Save World"
+        // when the server already had an older record with a newer-looking mtime.
+        const trustedWrite = isLocalRequest(req) || allowRemoteCreativeWrites || hasAdminStorageToken(req) || hasDeveloperSession(req);
+        if (!trustedWrite && (isOlderClientWrite(req, previousMtimeMs) || (!req.headers["x-eldervalley-client-mtime"] && isProbablyStaleCreativeWrite(previousData, payload)))) {
           sendJson(res, 409, { ok: false, key, ignored: true, reason: "stale creative save" });
           return;
         }
