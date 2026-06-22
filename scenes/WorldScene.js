@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=239";
+import BaseGameScene from "./BaseGameScene.js?v=240";
 import MarketSystem from "../systems/MarketSystem.js?v=3";
 
 const TILE = 32;

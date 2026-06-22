@@ -15,8 +15,8 @@ export default class TitleScene extends Phaser.Scene {
     this.scrollOffsets = { houses: 0, characters: 0 };
     this.activeScrollArea = null;
     this.walletSystem = new WalletSystem(this);
-    // Only the Mage is available right now — coerce any other saved choice.
-    if (this.selectedCharacter !== "mage-1") {
+    // Playable characters; coerce any other saved choice to the Mage.
+    if (!TitleScene.SELECTABLE_CHARACTERS.includes(this.selectedCharacter)) {
       this.selectedCharacter = "mage-1";
       localStorage.setItem("eldervalley-selected-character", this.selectedCharacter);
     }
@@ -312,6 +312,7 @@ export default class TitleScene extends Phaser.Scene {
 
   // $ELDER Solana mint (Pump.fun). Fill in after the launch — leave empty and the
   // CA badge/chip stay hidden until then (no dead Base address shown).
+  static SELECTABLE_CHARACTERS = ["mage-1", "warrior"];
   static ELDER_CA = "";
   // Pump.fun coin page. Until the mint is known, link to pump.fun home.
   static PUMPFUN_URL = "https://pump.fun";
@@ -541,8 +542,7 @@ export default class TitleScene extends Phaser.Scene {
       }
       this.loginMode = "wallet";
       localStorage.setItem("eldervalley-login-mode", "wallet");
-      // Only the Mage is available; ignore any other saved character.
-      this.selectedCharacter = "mage-1";
+      if (!TitleScene.SELECTABLE_CHARACTERS.includes(this.selectedCharacter)) this.selectedCharacter = "mage-1";
     } catch (error) {
       this.walletSystem.status = error?.message ?? "Could not connect.";
     }
@@ -761,9 +761,9 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   getCharacterCatalog() {
-    // Only the Mage is available to play right now.
     return [
-      { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 }
+      { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
+      { id: "warrior", name: "Guerreiro", key: "warrior-walk-sheet", frame: 0, scale: 0.62 }
     ];
   }
 
@@ -916,7 +916,7 @@ export default class TitleScene extends Phaser.Scene {
     const cardH = 118;
     const contentH = chars.length * cardH + Math.max(0, chars.length - 1) * gap;
     const scroller = this.createScrollArea("characters", listX, listY, listW, listH, contentH);
-    const BASE_CHARACTERS = ["mage-1", "adventurer", "dark-wanderer"];
+    const BASE_CHARACTERS = ["mage-1", "warrior", "adventurer", "dark-wanderer"];
     const charOwnedMap = chars.map((character) => ({
       character,
       owned: this.loginMode !== "wallet"
@@ -1551,8 +1551,8 @@ export default class TitleScene extends Phaser.Scene {
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
       this.registry.set("coinsProfileId", profileId);
-      // Only the Mage is available right now.
-      this.selectedCharacter = "mage-1";
+      const saved = profile.selectedCharacter ?? this.selectedCharacter;
+      this.selectedCharacter = TitleScene.SELECTABLE_CHARACTERS.includes(saved) ? saved : "mage-1";
     } catch {
       // If the server does not respond, fall back to the local cache.
     }

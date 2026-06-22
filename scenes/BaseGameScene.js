@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=186";
+import Player from "../player/Player.js?v=187";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=222";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=223";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=5";
 import InventoryUI from "../systems/InventoryUI.js?v=8";

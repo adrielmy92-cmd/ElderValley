@@ -11,3 +11,8 @@ cache/
 Thumbs.db
 .codex-tools/
 .distribution-logs/
+
+# SpriteCook API key (never commit)
+.spritecook-key
+.mcp.json
+.sc_work/

@@ -20,6 +20,23 @@ const PLAYER_CHARACTERS = {
     speed: 145,
     depthBias: 120
   },
+  warrior: {
+    id: "warrior",
+    label: "Guerreiro",
+    walkTexture: "warrior-walk-sheet",
+    idleTexture: "warrior-walk-sheet",
+    animatedIdle: false,
+    attackTexture: "warrior-attack-sheet",
+    attackFrames: 8,
+    directionalAttack: true,
+    frameWidth: 100,
+    frameHeight: 102,
+    framesPerDirection: 8,
+    walkFrameRate: 10,
+    body: { width: 24, height: 14, offsetX: 38, offsetY: 84 },
+    speed: 140,
+    depthBias: 120
+  },
   adventurer: {
     id: "adventurer",
     label: "Adventurer",
@@ -121,8 +138,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       }
     };
 
-    makeAttackAnimation(`${prefix}-attack-front`, profile.attackTexture, profile.attackFrames);
-    makeAttackAnimation(`${prefix}-attack-side`, profile.sideAttackTexture, profile.sideAttackFrames);
+    if (profile.directionalAttack && profile.attackTexture && scene.textures.exists(profile.attackTexture)) {
+      // 4-row attack sheet (down/left/right/up), same layout as the walk sheet.
+      const af = profile.attackFrames ?? profile.framesPerDirection;
+      ["down", "left", "right", "up"].forEach((dir, row) => {
+        const key = `${prefix}-attack-${dir}`;
+        if (scene.anims.exists(key)) return;
+        scene.anims.create({
+          key,
+          frames: Array.from({ length: af }, (_, i) => ({ key: profile.attackTexture, frame: row * af + i })),
+          frameRate: 16,
+          repeat: 0
+        });
+      });
+    } else {
+      makeAttackAnimation(`${prefix}-attack-front`, profile.attackTexture, profile.attackFrames);
+      makeAttackAnimation(`${prefix}-attack-side`, profile.sideAttackTexture, profile.sideAttackFrames);
+    }
   }
 
   update(cursors, wasd, frozen = false) {
@@ -172,11 +204,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   attack(spellType = "fire") {
     const profile = this.profile;
-    const useSideAttack = (this.facing === "left" || this.facing === "right")
-      && profile.sideAttackTexture
-      && this.scene.textures.exists(profile.sideAttackTexture);
-    const textureKey = useSideAttack ? profile.sideAttackTexture : profile.attackTexture;
-    const animationKey = useSideAttack ? `${this.animPrefix}-attack-side` : `${this.animPrefix}-attack-front`;
+    let textureKey, animationKey, flip;
+    if (profile.directionalAttack) {
+      // One attack animation per facing (down/left/right/up), no mirroring.
+      textureKey = profile.attackTexture;
+      animationKey = `${this.animPrefix}-attack-${this.facing}`;
+      flip = false;
+    } else {
+      const useSideAttack = (this.facing === "left" || this.facing === "right")
+        && profile.sideAttackTexture
+        && this.scene.textures.exists(profile.sideAttackTexture);
+      textureKey = useSideAttack ? profile.sideAttackTexture : profile.attackTexture;
+      animationKey = useSideAttack ? `${this.animPrefix}-attack-side` : `${this.animPrefix}-attack-front`;
+      flip = useSideAttack && this.facing === "left";
+    }
 
     if (this.isAttacking || !textureKey || !this.scene.textures.exists(textureKey)) {
       return false;
@@ -186,7 +227,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this._currentSpellType = spellType;
     this.setVelocity(0, 0);
     this.setTexture(textureKey, 0);
-    this.setFlipX(useSideAttack && this.facing === "left");
+    this.setFlipX(flip);
     this.setScale(1);
     this.setDepth(this.y + this.depthBias + 4);
     this.play(animationKey, true);
