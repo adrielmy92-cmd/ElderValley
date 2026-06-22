@@ -2,10 +2,11 @@ import Player from "../player/Player.js?v=186";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=221";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=4";
-import InventoryUI from "../systems/InventoryUI.js?v=6";
+import InventoryUI from "../systems/InventoryUI.js?v=7";
+import Leveling from "../systems/Leveling.js?v=1";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -93,7 +94,9 @@ export default class BaseGameScene extends Phaser.Scene {
     this.dialog = new DialogSystem(this);
     this.interactions = new InteractionSystem(this, this.player, this.dialog);
     this.bag = new Inventory(this);
+    this.leveling = new Leveling(this);
     this.inventoryUI = new InventoryUI(this);
+    this.applyMoveSpeed();
     this._potCooldownUntil = { hp: 0, mp: 0 };
     this.shotsEnabled = this.shotsEnabled ?? true;
     this._castMult = 1;
@@ -711,7 +714,7 @@ export default class BaseGameScene extends Phaser.Scene {
 
   createPlayerHpBar() {
     const b = this.bag?.bonuses() ?? {};
-    this.playerMaxHp = 100 + (b.maxHp ?? 0);
+    this.playerMaxHp = 100 + (b.maxHp ?? 0) + (this.leveling?.bonusHp() ?? 0);
     this.playerHp = this.playerHp ?? this.playerMaxHp;
     this.playerMaxMp = 50 + (b.maxMp ?? 0);
     this.playerMp = this.playerMp ?? this.playerMaxMp;
@@ -765,9 +768,50 @@ export default class BaseGameScene extends Phaser.Scene {
       color: "#bfe0ff", stroke: "#1a202b", strokeThickness: 3
     }).setScrollFactor(0).setDepth(DEPTH);
 
+    // Level badge + thin XP bar, below the spiritshot indicator.
+    const XY = MY + 42;
+    this.levelText = this.add.text(X, XY - 2, "", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#ffe08a", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+    this.xpBarBg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH);
+    this.xpBarFg = this.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    this.xpBarBg.fillStyle(0x1c1500, 0.85);
+    this.xpBarBg.fillRoundedRect(X + 38, XY, BAR_W, 8, 3);
+    this._xpBarX = X + 38;
+    this._xpBarY = XY;
+    this._xpBarW = BAR_W;
+    this.pointsText = this.add.text(X + 38 + BAR_W + 6, XY - 3, "", {
+      fontFamily: "monospace", fontSize: "12px",
+      color: "#7fe6a0", stroke: "#1a202b", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH);
+
     this.updatePlayerHpBar();
     this.updatePlayerMpBar();
     this.updateShotHud();
+    this.updateXpHud();
+  }
+
+  updateXpHud() {
+    if (!this.levelText) return;
+    const lv = this.leveling;
+    this.levelText.setText(`⭑ Lv ${lv?.level ?? 1}`);
+    const pct = lv?.progress?.() ?? 0;
+    this.xpBarFg?.clear();
+    this.xpBarFg?.fillStyle(0xffc24a, 1);
+    this.xpBarFg?.fillRoundedRect(this._xpBarX, this._xpBarY, Math.max(0, this._xpBarW * pct), 8, 3);
+    const pts = lv?.unspent ?? 0;
+    this.pointsText?.setText(pts > 0 ? `+${pts} pts (I)` : "");
+    this.pointsText?.setColor(pts > 0 ? "#7fe6a0" : "#7fe6a0");
+  }
+
+  // Small floating "+N XP" near the player when XP is gained without a level-up.
+  showXpPopup(amount) {
+    if (!this.player) return;
+    const t = this.add.text(this.player.x, this.player.y - 46, `+${amount} XP`, {
+      fontFamily: "monospace", fontSize: "13px", color: "#ffe08a", stroke: "#1a1304", strokeThickness: 4
+    }).setOrigin(0.5).setDepth(9000);
+    this.tweens.add({ targets: t, y: t.y - 28, alpha: 0, duration: 1100, ease: "Cubic.Out", onComplete: () => t.destroy() });
   }
 
   updateShotHud() {
@@ -787,7 +831,7 @@ export default class BaseGameScene extends Phaser.Scene {
   // Call once per spell cast: burns a shot (if enabled & available) and snapshots
   // the attack bonus, so spellDamage() can be read for every enemy the cast hits.
   beginCast() {
-    this._castAtk = this.bag?.bonuses?.().attack ?? 0;
+    this._castAtk = (this.bag?.bonuses?.().attack ?? 0) + (this.leveling?.bonusAttack() ?? 0);
     this._castMult = 1;
     if (this.shotsEnabled && this.bag) {
       const shot = this.bag.firstShot?.();
@@ -871,12 +915,47 @@ export default class BaseGameScene extends Phaser.Scene {
   // Recompute max HP/MP from equipped gear, keep current values in range, refresh bars.
   recomputeStats() {
     const b = this.bag?.bonuses() ?? {};
-    this.playerMaxHp = 100 + (b.maxHp ?? 0);
+    this.playerMaxHp = 100 + (b.maxHp ?? 0) + (this.leveling?.bonusHp() ?? 0);
     this.playerMaxMp = 50 + (b.maxMp ?? 0);
     this.playerHp = Math.min(this.playerHp ?? this.playerMaxHp, this.playerMaxHp);
     this.playerMp = Math.min(this.playerMp ?? this.playerMaxMp, this.playerMaxMp);
     this.updatePlayerHpBar?.();
     this.updatePlayerMpBar?.();
+  }
+
+  // Move speed = the character's base speed + Agility bonus (captured once).
+  applyMoveSpeed() {
+    if (!this.player) return;
+    if (this._baseMoveSpeed == null) this._baseMoveSpeed = this.player.speed ?? 145;
+    this.player.speed = this._baseMoveSpeed + (this.leveling?.bonusSpeed() ?? 0);
+  }
+
+  // Out-of-combat-ish HP regen: Vitality regen + any gear hpRegen. Ticked from updateBase.
+  tickRegen() {
+    if (!this.player || (this.playerHp ?? 0) <= 0) return;
+    const now = this.time?.now ?? Date.now();
+    const last = this._lastRegenAt ?? now;
+    const dt = Math.min(1, (now - last) / 1000);
+    if (dt < 0.25) return; // throttle to ~4Hz
+    this._lastRegenAt = now;
+    const perSec = (this.leveling?.regenPerSec() ?? 0) + (this.bag?.bonuses?.().hpRegen ?? 0);
+    if (perSec <= 0) return;
+    if (this.playerHp >= this.playerMaxHp) return;
+    this.playerHp = Math.min(this.playerMaxHp, this.playerHp + perSec * dt);
+    this.updatePlayerHpBar?.();
+  }
+
+  // Authoritative XP update pushed from the server (kill / work).
+  onXpGained(payload) {
+    const before = this.leveling?.level ?? 1;
+    this.leveling?.applyServer(payload);
+    const leveled = (payload?.leveledUp ?? 0) > 0 || (this.leveling?.level ?? 1) > before;
+    if (leveled) {
+      this.flashHudMessage?.(`LEVEL UP!  Lv ${this.leveling.level}  ·  +${(payload?.leveledUp ?? 1) * 5} points`);
+    } else if ((payload?.gained ?? 0) > 0) {
+      this.showXpPopup?.(payload.gained);
+    }
+    this.updateXpHud?.();
   }
 
   // Drink a potion from the bag: restore HP/MP (fraction of max), cooldown-gated.
@@ -2246,6 +2325,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateCollisionDebugControls();
     this.updateManualCollisionEditorControls();
     this.updateWorldClock();
+    this.tickRegen();
     this.chat?.update();
     this.multiplayer?.update(this.time.now);
 

@@ -67,6 +67,7 @@ export default class MultiplayerSystem {
       walletAddress: this.getWalletAddress(),
       walletProvider: this.getWalletProvider(),
       sessionToken: this.getSessionToken(),
+      profileId: this.scene.getPlayerProfileId?.() ?? "",
       moving: Boolean(player?.body && (Math.abs(player.body.velocity.x) > 1 || Math.abs(player.body.velocity.y) > 1))
     };
   }
@@ -262,6 +263,10 @@ export default class MultiplayerSystem {
     }
     if (payload.type === "beeSoldierDied") {
       this.scene.onBeeSoldierDied?.(payload.i);
+      return;
+    }
+    if (payload.type === "xp") {
+      this.scene.onXpGained?.(payload);
       return;
     }
     if (payload.type === "beeSoldierSpawn") {

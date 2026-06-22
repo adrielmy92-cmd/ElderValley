@@ -115,19 +115,75 @@ export default class InventoryUI {
     this._equipSlot("armor",  "Armor",  mcx + colX,     mcy,        SLOT, true);
     this._equipSlot("boots",  "Boots",  mcx,            mcy + 150,  SLOT, true);
 
-    // stats strip at the bottom
+    // stats strip (HP/MP + gear bonuses)
     const b = s.bag.bonuses();
-    const statLines = [`HP ${s.playerHp ?? 0}/${s.playerMaxHp ?? 0}    MP ${Math.round(s.playerMp ?? 0)}/${s.playerMaxMp ?? 0}`];
+    const statLines = [`HP ${Math.round(s.playerHp ?? 0)}/${s.playerMaxHp ?? 0}    MP ${Math.round(s.playerMp ?? 0)}/${s.playerMaxMp ?? 0}`];
     const extras = [];
     for (const [k, v] of Object.entries(b)) {
       if (k === "maxHp" || k === "maxMp") continue;
       extras.push(PCT_STATS.has(k) ? `${STAT_LABELS[k] ?? k} +${Math.round(v * 100)}%` : `${STAT_LABELS[k] ?? k} +${v}`);
     }
     if (extras.length) statLines.push(extras.join("   "));
-    this._t(s.add.text(mcx, y + h - 14, statLines.join("\n"), {
+    this._t(s.add.text(mcx, y + h - 92, statLines.join("\n"), {
       fontFamily: "monospace", fontSize: "12px", color: "#d9e2ee", align: "center",
       lineSpacing: 5, wordWrap: { width: w - 24 }
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(DEPTH + 3));
+
+    this._renderAttributes(x, y + h - 84, w, 84);
+  }
+
+  // Level + XP + the 3 allocatable attributes (with + buttons while points remain).
+  _renderAttributes(x, y, w, h) {
+    const s = this.scene;
+    const lv = s.leveling;
+    if (!lv) return;
+    const cx = x + w / 2;
+
+    // panel backdrop
+    const bg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
+    bg.fillStyle(0x1a140a, 0.92); bg.fillRoundedRect(x + 8, y, w - 16, h, 8);
+    bg.lineStyle(1, 0x6e4f23, 0.9); bg.strokeRoundedRect(x + 8, y, w - 16, h, 8);
+    this._t(bg);
+
+    // level + XP bar + points
+    this._t(s.add.text(x + 18, y + 8, `⭑ Lv ${lv.level}`, {
+      fontFamily: "Georgia, serif", fontSize: "15px", color: "#ffe08a", stroke: "#160a04", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH + 3));
+    const barX = x + 88, barW = w - 88 - 110, barY = y + 13;
+    const xbg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+    xbg.fillStyle(0x0c0900, 1); xbg.fillRoundedRect(barX, barY, barW, 8, 3);
+    xbg.fillStyle(0xffc24a, 1); xbg.fillRoundedRect(barX, barY, Math.max(0, barW * lv.progress()), 8, 3);
+    this._t(xbg);
+    this._t(s.add.text(x + w - 18, y + 8, lv.unspent > 0 ? `Points: ${lv.unspent}` : `XP ${lv.xp}/${lv.xpNext || "—"}`, {
+      fontFamily: "monospace", fontSize: "12px", color: lv.unspent > 0 ? "#7fe6a0" : "#9fb0c4"
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH + 3));
+
+    // three attribute chips
+    const attrs = [["vit", "VIT", lv.attr.vit, "+HP"], ["str", "STR", lv.attr.str, "+DMG"], ["agi", "AGI", lv.attr.agi, "+SPD"]];
+    const cw = (w - 24) / 3;
+    attrs.forEach(([key, label, val, hint], i) => {
+      const ax = x + 12 + i * cw;
+      this._t(s.add.text(ax + cw / 2 - 14, y + 44, `${label} ${val}`, {
+        fontFamily: "monospace", fontSize: "13px", color: "#e6dcc4"
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH + 3));
+      this._t(s.add.text(ax + cw / 2 - 14, y + 62, hint, {
+        fontFamily: "monospace", fontSize: "9px", color: "#8a7f6a"
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH + 3));
+      const canSpend = lv.unspent > 0;
+      const bx = ax + cw - 30, by = y + 50;
+      const pg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+      pg.fillStyle(canSpend ? 0x1f6d34 : 0x2a2622, 1); pg.fillCircle(bx, by, 12);
+      pg.lineStyle(1.5, canSpend ? 0x57d36f : 0x55504a, 1); pg.strokeCircle(bx, by, 12);
+      this._t(pg);
+      this._t(s.add.text(bx, by, "+", {
+        fontFamily: "monospace", fontSize: "16px", color: canSpend ? "#eafff0" : "#6a655e"
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
+      if (canSpend) {
+        const z = s.add.zone(bx, by, 28, 28).setScrollFactor(0).setDepth(DEPTH + 5).setInteractive({ useHandCursor: true });
+        z.on("pointerdown", () => { Promise.resolve(s.leveling.allocate(key)).then(() => this._refresh()).catch(() => {}); });
+        this._t(z);
+      }
+    });
   }
 
   _equipSlot(slotKey, label, cx, cy, size, locked) {
