@@ -1570,6 +1570,15 @@ export default class WorldScene extends BaseGameScene {
       stoneDirt: { key: "creative-floor-19", label: "Stone Dirt" }
     };
     this.structurePieces = {
+      marketplace: {
+        key: "creative-structure-general-store",
+        label: "Marketplace",
+        scale: 0.42,
+        colliders: [[0, -52, 330, 104]],
+        depthOffset: 8,
+        snap: 16,
+        interaction: "marketplace"
+      },
       fruitStall: {
         key: "creative-structure-fruit-stall",
         label: "Fruit Stall",
@@ -2788,11 +2797,37 @@ export default class WorldScene extends BaseGameScene {
       depth: light.depth
     }));
 
-    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders, glows });
+    // Structures flagged with an interaction (e.g. the Marketplace building) carry a
+    // live E-prompt that follows wherever they're placed — works for every player
+    // once the placement is loaded from the server.
+    let interaction = null;
+    if (piece.interaction === "marketplace") {
+      interaction = {
+        id: `market_structure_${x}_${y}`,
+        x,
+        y: y + 6,
+        promptY: y - 40,
+        promptText: "E Marketplace",
+        radius: 110,
+        enabled: () => !this.market?.isOpen?.(),
+        onInteract: () => this.openMarketplace()
+      };
+      this.interactions.add(interaction);
+    }
+
+    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders, glows, interaction });
     this.updateDayNightCycle(0);
     if (shouldSave) {
       this.saveManualStructures();
     }
+  }
+
+  // Lazily create the marketplace overlay and open it (wallet-only, like the stall).
+  openMarketplace() {
+    if (!this.market) this.market = new MarketSystem(this);
+    const wallet = String(this.getPlayerProfileId?.() ?? "").toLowerCase().startsWith("wallet:");
+    if (wallet) this.market.open();
+    else this.dialog.show("Marketplace", "Trading is for wallet adventurers. Connect your wallet to buy and sell with other players.");
   }
 
   removeNearestManualStructure(x, y) {
@@ -2971,6 +3006,7 @@ export default class WorldScene extends BaseGameScene {
 
   destroyManualStructure(structure) {
     structure.image?.destroy();
+    if (structure.interaction) this.interactions?.remove(structure.interaction);
     structure.colliders?.forEach((collider) => collider.destroy());
     const glows = structure.glows ?? [];
     if (glows.length) {

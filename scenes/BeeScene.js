@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=249";
+import WorldScene from "./WorldScene.js?v=250";
 
 const BEE_W = 2752;
 const BEE_H = 1536;

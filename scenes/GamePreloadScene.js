@@ -45,6 +45,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadImage("creative-structure-lamp-hanging", "./assets/sprites/creative-structure-lamp-hanging.png?v=207");
     this.loadImage("creative-structure-lamp-monk", "./assets/sprites/creative-structure-lamp-monk.png?v=207");
     this.loadImage("creative-structure-lamp-vine", "./assets/sprites/creative-structure-lamp-vine.png?v=207");
+    this.loadImage("creative-structure-general-store", "./assets/sprites/creative-structure-general-store.png?v=1");
     this.loadSheet("creative-structure-campfire", "./assets/sprites/creative-structure-campfire-sheet.png?v=204", 384, 352);
     this.loadSheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=176", 96, 96);
     this.loadSheet("creative-animal-bull", "./assets/sprites/creative-animal-bull-sheet.png?v=176", 96, 96);

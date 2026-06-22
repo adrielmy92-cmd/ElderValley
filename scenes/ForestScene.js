@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=249";
+import WorldScene from "./WorldScene.js?v=250";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
