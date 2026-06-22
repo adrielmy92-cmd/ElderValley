@@ -99,7 +99,6 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadAudio("sfx-sell",             "./assets/audio/sfx-sell.mp3");
     this.loadAudio("sfx-enchant-success",  "./assets/audio/sfx-enchant-success.mp3");
     this.loadAudio("sfx-enchant-shatter",  "./assets/audio/sfx-enchant-shatter.mp3");
-    this.loadAudio("village-calm",         "./assets/audio/village-calm.mp3");
     // Seamless animated village water (6 frames)
     this.loadSheet("village-water", "./assets/sprites/village-water-sheet.png?v=1", 142, 142);
     this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=2", 200, 200);
