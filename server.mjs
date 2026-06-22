@@ -1411,12 +1411,23 @@ function publicLeveling(profile) {
 async function grantXpToProfileId(profileId, amount) {
   const gain = Math.max(0, Math.floor(Number(amount) || 0));
   if (!profileId || gain <= 0) return null;
-  return withProfileLock(profileId, async () => {
+  const result = await withProfileLock(profileId, async () => {
     const profile = await loadProfileForMutation(profileId);
     const levels = addXp(profile, gain);
     const saved = (await writeProfile(profileId, profile)).profile;
     return { ...publicLeveling(saved), gained: gain, leveledUp: levels };
   });
+  // Push the new authoritative leveling state to that player's live socket(s).
+  for (const c of clients.values()) {
+    if (c.profileId && c.profileId === profileId) sendWs(c.socket, { type: "xp", ...result });
+  }
+  return result;
+}
+// Fire-and-forget XP award to every player currently in a boss arena.
+function awardArenaXp(players, amount) {
+  for (const c of players) {
+    if (c.profileId) grantXpToProfileId(c.profileId, amount).catch(() => {});
+  }
 }
 
 // ── Player marketplace (Phase 4) ─────────────────────────────────────────────
@@ -1815,11 +1826,14 @@ const server = createServer(async (req, res) => {
         session.finished = true;
         workSessions.delete(session.sessionId);
         const profile = await awardWorkCoins(profileId, state.earnedCoins);
+        const leveling = await grantXpToProfileId(profileId, Math.round(state.earnedCoins * 0.5));
         sendJson(res, 200, {
           ok: true,
           cancelled: Boolean(payload.cancelled) && !state.completed,
           completed: state.completed,
           earnedCoins: state.earnedCoins,
+          earnedXp: leveling?.gained ?? 0,
+          leveling,
           profile,
           work: {
             ...publicWorkState({
@@ -2481,6 +2495,7 @@ function applyBossDamage(amount) {
     bossState.respawnAt = Date.now() + BOSS_RESPAWN_MS;
     sendToArena({ type: "bossSync", hp: 0, maxHp: BOSS_MAX_HP, phase: bossState.phase, x: Math.round(bossState.x), y: Math.round(bossState.y), flipX: bossState.flipX, anim: "golem-walk", dead: true });
     sendToArena({ type: "bossAttack", event: "died" });
+    awardArenaXp(getArenaPlayers(), XP_REWARDS.golem);
     console.log("[boss] Golem derrotado! Renascendo em 60s.");
   }
 }
@@ -2741,6 +2756,7 @@ function applyTrollDamage(idx, damage) {
     troll.dead = true;
     troll.respawnAt = Date.now() + TROLL_RESPAWN_MS;
     sendToSwamp({ type: "trollDied", i: idx });
+    awardArenaXp(getSwampPlayers(), XP_REWARDS.troll);
   }
   sendToSwamp({ type: "trollSync", trolls: swampTrolls.map(serializeTroll) });
 }
@@ -2901,6 +2917,7 @@ function applyBeeDamage(amount) {
     sendToBee({ type: "beeSync", ...serializeBee(), dead: true });
     sendToBee({ type: "beeAttack", event: "died" });
     sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
+    awardArenaXp(getBeePlayers(), XP_REWARDS.beeQueen);
     console.log("[bee] Rainha derrotada! Renascendo em 28s.");
     return;
   }
@@ -2923,6 +2940,7 @@ function applyBeeSoldierDamage(idx, amount) {
     s.dead = true;
     s.diedAt = Date.now();
     sendToBee({ type: "beeSoldierDied", i: idx });
+    awardArenaXp(getBeePlayers(), XP_REWARDS.beeSoldier);
   }
   sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
 }
