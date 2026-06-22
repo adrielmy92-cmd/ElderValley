@@ -269,6 +269,10 @@ export default class MultiplayerSystem {
       this.scene.onXpGained?.(payload);
       return;
     }
+    if (payload.type === "marketUpdate") {
+      this.scene.onMarketUpdate?.();
+      return;
+    }
     if (payload.type === "beeSoldierSpawn") {
       this.scene.onBeeSoldierSpawn?.(payload);
       return;

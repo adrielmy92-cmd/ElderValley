@@ -89,6 +89,14 @@ export default class MarketSystem {
     if (this.tab === "mine") this._refresh();
   }
 
+  // Pushed from the server when any player lists/buys/cancels: reload the live data
+  // for the tab being viewed so sold listings disappear without reopening.
+  refreshLive() {
+    if (!this.open_) return;
+    if (this.tab === "browse") this._loadBrowse();
+    else if (this.tab === "mine") this._loadMine();
+  }
+
   // ── layout ─────────────────────────────────────────────────────────────────
   _build() {
     const s = this.scene;

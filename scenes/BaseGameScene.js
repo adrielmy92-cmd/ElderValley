@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=186";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=221";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=222";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=5";
 import InventoryUI from "../systems/InventoryUI.js?v=8";
@@ -946,6 +946,12 @@ export default class BaseGameScene extends Phaser.Scene {
     if (this.playerHp >= this.playerMaxHp) return;
     this.playerHp = Math.min(this.playerMaxHp, this.playerHp + perSec * dt);
     this.updatePlayerHpBar?.();
+  }
+
+  // A market transaction happened somewhere — refresh an open marketplace so sold
+  // items vanish live for everyone.
+  onMarketUpdate() {
+    this.market?.refreshLive?.();
   }
 
   // Play a one-shot sound effect if it was preloaded.

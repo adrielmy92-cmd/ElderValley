@@ -1,5 +1,5 @@
-import BaseGameScene from "./BaseGameScene.js?v=238";
-import MarketSystem from "../systems/MarketSystem.js?v=2";
+import BaseGameScene from "./BaseGameScene.js?v=239";
+import MarketSystem from "../systems/MarketSystem.js?v=3";
 
 const TILE = 32;
 const RIVER_TOP = 832;
@@ -572,7 +572,6 @@ export default class WorldScene extends BaseGameScene {
     this.addNpc();
     this.addCityTransition();
     this.addWestForestGate();
-    this.addMarketplace();
     this.buildGates();
     this.addWorldBounds();
   }
@@ -3333,39 +3332,6 @@ export default class WorldScene extends BaseGameScene {
   }
 
   // Market stall on the main village road — opens the player marketplace overlay.
-  addMarketplace() {
-    this.market = new MarketSystem(this);
-    const x = 2000, y = 660;
-    const d = y;
-    // counter + posts + striped awning + sign (non-colliding, like the forest sign)
-    this.add.rectangle(x, y - 8, 136, 40, 0x6b4a2a, 1).setDepth(d - 2).setStrokeStyle(2, 0x3c2a17, 1);
-    this.add.rectangle(x, y - 8, 136, 8, 0x86603a, 1).setDepth(d - 1);
-    this.add.rectangle(x - 62, y - 64, 8, 74, 0x4a3420, 1).setOrigin(0.5, 1).setDepth(d - 2);
-    this.add.rectangle(x + 62, y - 64, 8, 74, 0x4a3420, 1).setOrigin(0.5, 1).setDepth(d - 2);
-    for (let i = 0; i < 5; i++) {
-      this.add.rectangle(x - 72 + i * 29, y - 96, 29, 24, i % 2 ? 0xcf4b3a : 0xf3efe6, 1)
-        .setOrigin(0, 0).setDepth(d - 1).setStrokeStyle(1, 0x3c2a17, 0.4);
-    }
-    this.add.text(x, y - 122, "Marketplace", {
-      fontFamily: "monospace", fontSize: "14px", color: "#ffe1a4", stroke: "#160a04", strokeThickness: 3
-    }).setOrigin(0.5).setDepth(d);
-
-    this.interactions.add({
-      id: "market_stall",
-      x,
-      y: y + 22,
-      promptY: y - 146,
-      promptText: "E Marketplace",
-      radius: 98,
-      enabled: () => !this.market?.isOpen(),
-      onInteract: () => {
-        const wallet = String(this.getPlayerProfileId?.() ?? "").toLowerCase().startsWith("wallet:");
-        if (wallet) this.market.open();
-        else this.dialog.show("Marketplace", "Trading is for wallet adventurers. Connect your wallet to buy and sell with other players.");
-      }
-    });
-  }
-
   loadGatePositions() {
     try {
       return JSON.parse(localStorage.getItem(GATE_STORAGE_KEY) ?? "{}");

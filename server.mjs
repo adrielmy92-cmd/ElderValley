@@ -2023,6 +2023,13 @@ const server = createServer(async (req, res) => {
         const sellerName = sanitizeText(payload.sellerName ?? "", 40);
         try {
           const result = await withMarketLock(() => runMarketAction(sub, profileId, payload, sellerName));
+          // A successful list/buy/cancel changes the shared catalog — tell every
+          // connected client so any open marketplace refreshes (sold items vanish live).
+          if (result.body?.ok) {
+            for (const c of clients.values()) {
+              if (c.ready) sendWs(c.socket, { type: "marketUpdate", action: sub });
+            }
+          }
           sendJson(res, result.status, result.body);
         } catch {
           sendJson(res, 500, { ok: false, error: "Market action failed" });
