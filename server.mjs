@@ -1354,6 +1354,149 @@ async function runEconomyAction(action, profileId, payload) {
   return fail("Unknown economy action", 404);
 }
 
+// ── Player marketplace (Phase 4) ─────────────────────────────────────────────
+// Asynchronous listings: the item is escrowed out of the seller's bag the moment
+// it's listed, so it can be bought any time even while the seller is offline. A 5%
+// fee is a coin sink (removed from circulation). Listings persist via the shared
+// game-storage store (Postgres jsonb or JSON file fallback).
+const MARKET_KEY = "market:listings";
+const MARKET_FEE = 0.05;
+const MARKET_MAX_PRICE = 100000000;
+const MARKET_MAX_ACTIVE_PER_SELLER = 30;
+
+// All market mutations run one-at-a-time so a buy can't double-spend a listing.
+let marketChain = Promise.resolve();
+function withMarketLock(fn) {
+  const run = marketChain.then(fn, fn);
+  marketChain = run.catch(() => {});
+  return run;
+}
+
+async function readListings() {
+  try {
+    const { data } = await readGameStorage(MARKET_KEY);
+    return Array.isArray(data) ? data : [];
+  } catch { return []; }
+}
+async function writeListings(list) {
+  await writeGameStorage(MARKET_KEY, list);
+}
+
+function publicListing(l) {
+  const item = ITEMS_BY_KEY[l.itemKey];
+  return {
+    id: l.id,
+    sellerProfileId: l.sellerProfileId,
+    sellerName: l.sellerName || "Seller",
+    itemKey: l.itemKey,
+    enchantLevel: l.enchantLevel ?? 0,
+    price: l.price,
+    createdAt: l.createdAt,
+    status: l.status,
+    name: item?.name ?? l.itemKey,
+    rarity: item?.rarity ?? "common",
+    slot: item?.slot ?? null,
+    effect: item?.effect ?? ""
+  };
+}
+
+// Run one marketplace action. Wrapped in withMarketLock by the caller. Profile
+// mutations additionally take the per-profile lock so concurrent economy ops are safe.
+async function runMarketAction(action, profileId, payload, sellerName) {
+  const fail = (error, status = 400) => ({ status, body: { ok: false, error } });
+
+  if (action === "list") {
+    const itemKey = sanitizeText(payload.itemKey, 80);
+    const item = ITEMS_BY_KEY[itemKey];
+    if (!item) return fail("Unknown item");
+    const price = Math.floor(Number(payload.price) || 0);
+    if (price <= 0 || price > MARKET_MAX_PRICE) return fail("Invalid price");
+    return withProfileLock(profileId, async () => {
+      const profile = await loadProfileForMutation(profileId);
+      const bag = profile.bag;
+      if (bagCount(bag, itemKey) <= 0) return fail("That item isn't in your bag (unequip it first)");
+      const list = await readListings();
+      const activeMine = list.filter((l) => l.status === "active" && l.sellerProfileId === profileId).length;
+      if (activeMine >= MARKET_MAX_ACTIVE_PER_SELLER) return fail("Too many active listings");
+      // Escrow: pull one copy out of the bag, carrying its enchant level if it was
+      // the last copy and isn't equipped (gear is effectively one instance per key).
+      const enchantLevel = bag.enchants[itemKey] ?? 0;
+      bagRemove(bag, itemKey, 1);
+      let carried = 0;
+      if (bagCount(bag, itemKey) <= 0 && !bagIsEquipped(bag, itemKey)) {
+        carried = enchantLevel;
+        delete bag.enchants[itemKey];
+      }
+      await writeProfile(profileId, profile);
+      const listing = {
+        id: crypto.randomUUID(),
+        sellerProfileId: profileId,
+        sellerName: sellerName || "Seller",
+        itemKey,
+        enchantLevel: carried,
+        price,
+        createdAt: Date.now(),
+        status: "active"
+      };
+      list.push(listing);
+      await writeListings(list);
+      return { status: 200, body: { ok: true, coins: profile.coins, bag, listing: publicListing(listing) } };
+    });
+  }
+
+  if (action === "buy") {
+    const listingId = sanitizeText(payload.listingId, 80);
+    const list = await readListings();
+    const listing = list.find((l) => l.id === listingId && l.status === "active");
+    if (!listing) return fail("Listing no longer available", 404);
+    if (listing.sellerProfileId === profileId) return fail("You can't buy your own listing");
+    return withProfileLock(profileId, async () => {
+      const buyer = await loadProfileForMutation(profileId);
+      if (buyer.coins < listing.price) return fail("Not enough coins");
+      buyer.coins -= listing.price;
+      bagAdd(buyer.bag, listing.itemKey, 1);
+      if (listing.enchantLevel > 0) {
+        buyer.bag.enchants[listing.itemKey] = Math.max(buyer.bag.enchants[listing.itemKey] ?? 0, listing.enchantLevel);
+      }
+      await writeProfile(profileId, buyer);
+      // Pay the seller (price minus the 5% sink) under their own lock.
+      const payout = Math.floor(listing.price * (1 - MARKET_FEE));
+      await withProfileLock(listing.sellerProfileId, async () => {
+        const seller = await loadProfileForMutation(listing.sellerProfileId);
+        seller.coins += payout;
+        await writeProfile(listing.sellerProfileId, seller);
+      });
+      listing.status = "sold";
+      listing.soldAt = Date.now();
+      listing.buyerProfileId = profileId;
+      await writeListings(list);
+      return { status: 200, body: { ok: true, coins: buyer.coins, bag: buyer.bag, item: publicListing(listing) } };
+    });
+  }
+
+  if (action === "cancel") {
+    const listingId = sanitizeText(payload.listingId, 80);
+    const list = await readListings();
+    const listing = list.find((l) => l.id === listingId && l.status === "active");
+    if (!listing) return fail("Listing no longer available", 404);
+    if (listing.sellerProfileId !== profileId) return fail("Not your listing", 403);
+    return withProfileLock(profileId, async () => {
+      const seller = await loadProfileForMutation(profileId);
+      bagAdd(seller.bag, listing.itemKey, 1);
+      if (listing.enchantLevel > 0) {
+        seller.bag.enchants[listing.itemKey] = Math.max(seller.bag.enchants[listing.itemKey] ?? 0, listing.enchantLevel);
+      }
+      await writeProfile(profileId, seller);
+      listing.status = "cancelled";
+      listing.cancelledAt = Date.now();
+      await writeListings(list);
+      return { status: 200, body: { ok: true, coins: seller.coins, bag: seller.bag } };
+    });
+  }
+
+  return fail("Unknown market action", 404);
+}
+
 function normalizeProfile(profileId, data = {}) {
   const now = new Date().toISOString();
   const walletAddress = sanitizeText(data.walletAddress, 90);
@@ -1743,6 +1886,45 @@ const server = createServer(async (req, res) => {
       } catch {
         sendJson(res, 500, { ok: false, error: "Economy action failed" });
       }
+      return;
+    }
+
+    if (url.pathname === "/api/market" || url.pathname.startsWith("/api/market/")) {
+      const sub = url.pathname === "/api/market" ? "" : url.pathname.slice("/api/market/".length);
+
+      if (req.method === "GET") {
+        const active = (await readListings()).filter((l) => l.status === "active");
+        if (sub === "mine") {
+          const profileId = sanitizeText(url.searchParams.get("profileId"), 140);
+          const auth = requireProfileSession(req, profileId);
+          if (!auth.ok) { sendJson(res, 401, { ok: false, error: "Wallet session required" }); return; }
+          sendJson(res, 200, { ok: true, listings: active.filter((l) => l.sellerProfileId === profileId).map(publicListing) });
+          return;
+        }
+        // Open browse catalog (read-only); newest first.
+        sendJson(res, 200, { ok: true, listings: active.sort((a, b) => b.createdAt - a.createdAt).map(publicListing) });
+        return;
+      }
+
+      if (req.method === "POST") {
+        let payload;
+        try { payload = JSON.parse((await readBody(req)) || "{}"); } catch { sendJson(res, 400, { ok: false, error: "Invalid JSON" }); return; }
+        const profileId = sanitizeText(payload.profileId, 140);
+        if (!profileId) { sendJson(res, 400, { ok: false, error: "Missing profile id" }); return; }
+        if (!isWalletProfile(profileId)) { sendJson(res, 403, { ok: false, error: "The marketplace is for wallet players" }); return; }
+        const auth = requireProfileSession(req, profileId);
+        if (!auth.ok) { sendJson(res, 401, { ok: false, error: "Wallet session required" }); return; }
+        const sellerName = sanitizeText(payload.sellerName ?? "", 40);
+        try {
+          const result = await withMarketLock(() => runMarketAction(sub, profileId, payload, sellerName));
+          sendJson(res, result.status, result.body);
+        } catch {
+          sendJson(res, 500, { ok: false, error: "Market action failed" });
+        }
+        return;
+      }
+
+      sendJson(res, 405, { ok: false, error: "Method not allowed" });
       return;
     }
 
