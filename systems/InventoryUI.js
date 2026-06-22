@@ -9,8 +9,9 @@ const STAT_LABELS = {
 };
 const PCT_STATS = new Set(["crit", "dodge", "lifesteal", "attackSpeed", "xpBonus"]);
 
-// Bag + equipment screen (toggle with I). Same self-contained object-tracking
-// approach as the shop, so it never gets caught in masked-container input bugs.
+// Themed RPG paper-doll: the mage in the center with equipment slots around the
+// body (helmet top, jewelry left, armor right, boots bottom) + a bag on the right.
+// Self-contained object tracking (no masked containers → input always works).
 export default class InventoryUI {
   constructor(scene) {
     this.scene = scene;
@@ -38,145 +39,208 @@ export default class InventoryUI {
   }
 
   _t(o) { this.objs.push(o); return o; }
+  _refresh() { this.objs.forEach((o) => o.destroy()); this.objs = []; this._build(); }
 
   _build() {
     const s = this.scene;
     const cam = s.cameras.main;
     const W = cam.width, H = cam.height;
-    const panelW = Math.min(900, W - 48);
-    const panelH = Math.min(600, H - 48);
+    const panelW = Math.min(940, W - 40);
+    const panelH = Math.min(600, H - 40);
     const px = Math.round((W - panelW) / 2);
     const py = Math.round((H - panelH) / 2);
-    this._panel = { px, py, panelW, panelH };
 
-    this._t(s.add.rectangle(W / 2, H / 2, W, H, 0x05070c, 0.74).setScrollFactor(0).setDepth(DEPTH).setInteractive());
+    // dim
+    this._t(s.add.rectangle(W / 2, H / 2, W, H, 0x04060a, 0.78).setScrollFactor(0).setDepth(DEPTH).setInteractive());
 
+    // ornate parchment-dark frame
     const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
-    g.fillStyle(0x0c1320, 0.99); g.fillRoundedRect(px, py, panelW, panelH, 12);
-    g.lineStyle(4, 0x05080f, 1); g.strokeRoundedRect(px, py, panelW, panelH, 12);
-    g.lineStyle(2, 0x6f86a8, 1); g.strokeRoundedRect(px + 8, py + 8, panelW - 16, panelH - 16, 8);
-    g.fillStyle(0x161f30, 1); g.fillRoundedRect(px + 14, py + 14, panelW - 28, 50, 6);
+    g.fillStyle(0x140f0a, 0.99); g.fillRoundedRect(px, py, panelW, panelH, 14);
+    g.lineStyle(5, 0x070504, 1); g.strokeRoundedRect(px, py, panelW, panelH, 14);
+    g.lineStyle(2, 0xc9963f, 1); g.strokeRoundedRect(px + 9, py + 9, panelW - 18, panelH - 18, 10);
+    g.lineStyle(1, 0x6e4f23, 1); g.strokeRoundedRect(px + 14, py + 14, panelW - 28, panelH - 28, 8);
+    // header band
+    g.fillStyle(0x241a0f, 1); g.fillRoundedRect(px + 16, py + 16, panelW - 32, 50, 6);
     this._t(g);
 
-    this._t(s.add.text(px + 30, py + 24, "Inventory", {
-      fontFamily: "Georgia, serif", fontSize: "24px", color: "#dfeaf6", stroke: "#0a0f18", strokeThickness: 4
+    this._t(s.add.text(px + 32, py + 26, "Character & Inventory", {
+      fontFamily: "Georgia, 'Times New Roman', serif", fontSize: "23px",
+      color: "#ffe1a4", stroke: "#160a04", strokeThickness: 4
     }).setScrollFactor(0).setDepth(DEPTH + 2));
-    this._closeBtn(px + panelW - 30, py + 30);
+    this._closeBtn(px + panelW - 32, py + 32);
 
-    const top = py + 76;
-    const leftW = Math.round((panelW - 28) * 0.42);
-    this._left = { x: px + 18, y: top, w: leftW - 8, h: panelH - 76 - 18 };
-    this._right = { x: px + 18 + leftW + 8, y: top, w: panelW - 36 - leftW - 8, h: panelH - 76 - 18 };
+    const top = py + 78;
+    const leftW = Math.round((panelW - 32) * 0.56);
+    this._dollArea = { x: px + 16, y: top, w: leftW, h: panelH - 78 - 16 };
+    this._bagArea = { x: px + 16 + leftW + 8, y: top, w: panelW - 32 - leftW - 8, h: panelH - 78 - 16 };
 
-    const rg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
-    rg.fillStyle(0x0a1018, 0.96); rg.fillRoundedRect(this._right.x, this._right.y, this._right.w, this._right.h, 8);
-    rg.lineStyle(1, 0x2a3850, 1); rg.strokeRoundedRect(this._right.x, this._right.y, this._right.w, this._right.h, 8);
-    this._t(rg);
-
-    this._renderEquipped();
-    this._renderStats();
+    this._renderDoll();
     this._renderBag();
   }
 
-  _refresh() {
-    this.objs.forEach((o) => o.destroy());
-    this.objs = [];
-    this._build();
-  }
-
-  _renderEquipped() {
+  // ── paper-doll ──────────────────────────────────────────────────────────────
+  _renderDoll() {
     const s = this.scene;
-    const { x, y, w } = this._left;
-    this._t(s.add.text(x + 2, y, "Equipped", { fontFamily: "monospace", fontSize: "14px", color: "#9fb0c4" })
-      .setScrollFactor(0).setDepth(DEPTH + 2));
-    const slots = [["ring1", "Ring I"], ["ring2", "Ring II"], ["amulet", "Amulet"]];
-    const cell = Math.min(86, Math.floor((w - 24) / 3));
-    slots.forEach(([slot, label], i) => {
-      const sx = x + i * (cell + 10);
-      const sy = y + 24;
-      const key = s.bag.equipped[slot];
-      const item = key && itemData(key);
-      const rar = item ? (RARITY[item.rarity] ?? RARITY.common) : null;
-      const gg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
-      gg.fillStyle(0x101827, 1); gg.fillRoundedRect(sx, sy, cell, cell, 7);
-      gg.lineStyle(2, rar ? rar.color : 0x33415c, rar ? 1 : 0.7); gg.strokeRoundedRect(sx, sy, cell, cell, 7);
-      this._t(gg);
-      this._t(s.add.text(sx + cell / 2, sy + cell + 10, label, { fontFamily: "monospace", fontSize: "11px", color: "#8aa0b8" })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
-      if (item) {
-        const icon = s.add.image(sx + cell / 2, sy + cell / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
-        icon.setScale((cell - 16) / 256);
-        this._t(icon);
-        const z = s.add.zone(sx, sy, cell, cell).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 4)
-          .setInteractive({ useHandCursor: true });
-        z.on("pointerdown", () => { s.bag.unequip(slot); s.recomputeStats?.(); this._refresh(); });
-        this._t(z);
-      }
-    });
-    this._t(s.add.text(x + 2, y + 24 + cell + 26, "click an equipped item to unequip", {
-      fontFamily: "monospace", fontSize: "10px", color: "#5f7388"
-    }).setScrollFactor(0).setDepth(DEPTH + 2));
-  }
+    const { x, y, w, h } = this._dollArea;
 
-  _renderStats() {
-    const s = this.scene;
-    const { x, y, w, h } = this._left;
-    const sy = y + 200;
-    this._t(s.add.text(x + 2, sy, "Stats", { fontFamily: "monospace", fontSize: "14px", color: "#9fb0c4" })
-      .setScrollFactor(0).setDepth(DEPTH + 2));
+    // backdrop
+    const bg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    bg.fillStyle(0x0d1b14, 0.55); bg.fillRoundedRect(x, y, w, h, 10);
+    bg.lineStyle(1, 0x3a4a3a, 0.8); bg.strokeRoundedRect(x, y, w, h, 10);
+    this._t(bg);
+
+    const mcx = x + Math.round(w * 0.5);
+    const mcy = y + Math.round(h * 0.46);
+    const SLOT = 60;
+    const colX = 132; // horizontal offset of the side columns from center
+    const rowY = 76;  // vertical step between left slots
+
+    // platform shadow + mage in the center
+    this._t(s.add.ellipse(mcx, mcy + 118, 120, 26, 0x000000, 0.35).setScrollFactor(0).setDepth(DEPTH + 2));
+    if (s.textures.exists("mage-1-idle-sheet")) {
+      const mage = s.add.sprite(mcx, mcy + 10, "mage-1-idle-sheet", 0).setScrollFactor(0).setDepth(DEPTH + 3);
+      mage.setScale(2.7);
+      if (s.anims.exists("mage-1-idle")) mage.play("mage-1-idle");
+      this._t(mage);
+    }
+
+    // equipment slots positioned around the body
+    this._equipSlot("helmet", "Helmet", mcx,            mcy - 150, SLOT, true);
+    this._equipSlot("amulet", "Amulet", mcx - colX,     mcy - rowY, SLOT, false);
+    this._equipSlot("ring1",  "Ring I", mcx - colX,     mcy,        SLOT, false);
+    this._equipSlot("ring2",  "Ring II",mcx - colX,     mcy + rowY, SLOT, false);
+    this._equipSlot("armor",  "Armor",  mcx + colX,     mcy,        SLOT, true);
+    this._equipSlot("boots",  "Boots",  mcx,            mcy + 150,  SLOT, true);
+
+    // stats strip at the bottom
     const b = s.bag.bonuses();
-    const lines = [
-      `HP   ${s.playerHp ?? 0} / ${s.playerMaxHp ?? 0}`,
-      `MP   ${s.playerMp ?? 0} / ${s.playerMaxMp ?? 0}`
-    ];
+    const statLines = [`HP ${s.playerHp ?? 0}/${s.playerMaxHp ?? 0}    MP ${Math.round(s.playerMp ?? 0)}/${s.playerMaxMp ?? 0}`];
+    const extras = [];
     for (const [k, v] of Object.entries(b)) {
       if (k === "maxHp" || k === "maxMp") continue;
-      const label = STAT_LABELS[k] ?? k;
-      lines.push(PCT_STATS.has(k) ? `${label}  +${Math.round(v * 100)}%` : `${label}  +${v}`);
+      extras.push(PCT_STATS.has(k) ? `${STAT_LABELS[k] ?? k} +${Math.round(v * 100)}%` : `${STAT_LABELS[k] ?? k} +${v}`);
     }
-    this._t(s.add.text(x + 2, sy + 22, lines.join("\n"), {
-      fontFamily: "monospace", fontSize: "13px", color: "#d9e2ee", lineSpacing: 6, wordWrap: { width: w - 4 }
-    }).setScrollFactor(0).setDepth(DEPTH + 2));
+    if (extras.length) statLines.push(extras.join("   "));
+    this._t(s.add.text(mcx, y + h - 14, statLines.join("\n"), {
+      fontFamily: "monospace", fontSize: "12px", color: "#d9e2ee", align: "center",
+      lineSpacing: 5, wordWrap: { width: w - 24 }
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(DEPTH + 3));
   }
 
+  _equipSlot(slotKey, label, cx, cy, size, locked) {
+    const s = this.scene;
+    const key = s.bag.equipped[slotKey];
+    const item = key && itemData(key);
+    const rar = item ? (RARITY[item.rarity] ?? RARITY.common) : null;
+    const half = size / 2;
+
+    const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
+    g.fillStyle(locked && !item ? 0x161310 : 0x1b1712, 0.96);
+    g.fillRoundedRect(cx - half, cy - half, size, size, 8);
+    g.lineStyle(2, item ? rar.color : (locked ? 0x4a4036 : 0x8a6a3a), item ? 1 : 0.9);
+    g.strokeRoundedRect(cx - half, cy - half, size, size, 8);
+    // inner gold corner ticks for a jeweled-frame feel
+    g.lineStyle(1, item ? rar.color : 0x6e4f23, 0.7);
+    g.strokeRoundedRect(cx - half + 3, cy - half + 3, size - 6, size - 6, 6);
+    this._t(g);
+
+    this._t(s.add.text(cx, cy + half + 9, label, {
+      fontFamily: "monospace", fontSize: "10px", color: locked && !item ? "#7a6a52" : "#c9b48a"
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
+
+    if (item) {
+      const icon = s.add.image(cx, cy, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
+      icon.setScale((size - 14) / 256);
+      this._t(icon);
+      const z = s.add.zone(cx - half, cy - half, size, size).setOrigin(0)
+        .setScrollFactor(0).setDepth(DEPTH + 4).setInteractive({ useHandCursor: true });
+      z.on("pointerdown", () => { s.bag.unequip(slotKey); s.recomputeStats?.(); this._refresh(); });
+      this._t(z);
+    } else {
+      // faint slot-type glyph so empty slots read as "what goes here"
+      const gl = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+      this._slotGlyph(gl, slotKey, cx, cy, locked ? 0x4a4236 : 0x6c5a3c);
+      this._t(gl);
+      if (locked) {
+        this._t(s.add.text(cx, cy, "🔒", { fontFamily: "monospace", fontSize: "13px", color: "#6a5c44" })
+          .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
+      }
+    }
+  }
+
+  // simple silhouettes drawn with graphics (no extra assets)
+  _slotGlyph(g, slotKey, cx, cy, color) {
+    g.lineStyle(2, color, 0.9);
+    g.fillStyle(color, 0.18);
+    if (slotKey === "helmet") {
+      g.beginPath(); g.arc(cx, cy + 4, 12, Math.PI, 0); g.lineTo(cx + 12, cy + 9); g.lineTo(cx - 12, cy + 9); g.closePath(); g.strokePath(); g.fillPath();
+    } else if (slotKey === "armor") {
+      g.strokeRoundedRect(cx - 11, cy - 11, 22, 22, 4);
+      g.lineBetween(cx, cy - 11, cx, cy + 11);
+    } else if (slotKey === "boots") {
+      g.strokeRoundedRect(cx - 11, cy - 10, 9, 20, 2);
+      g.strokeRoundedRect(cx + 2, cy - 10, 9, 20, 2);
+    } else if (slotKey === "amulet") {
+      g.strokeCircle(cx, cy - 7, 8);
+      g.fillStyle(color, 0.25); g.fillTriangle(cx - 6, cy + 2, cx + 6, cy + 2, cx, cy + 12);
+    } else { // rings
+      g.strokeCircle(cx, cy + 2, 9);
+      g.fillStyle(color, 0.3); g.fillCircle(cx, cy - 8, 3);
+    }
+  }
+
+  // ── bag ─────────────────────────────────────────────────────────────────────
   _renderBag() {
     const s = this.scene;
-    const { x, y, w, h } = this._right;
-    this._t(s.add.text(x + 14, y + 10, "Bag", { fontFamily: "monospace", fontSize: "14px", color: "#9fb0c4" })
-      .setScrollFactor(0).setDepth(DEPTH + 2));
+    const { x, y, w, h } = this._bagArea;
+    const bg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    bg.fillStyle(0x0a1018, 0.96); bg.fillRoundedRect(x, y, w, h, 10);
+    bg.lineStyle(2, 0x6e4f23, 1); bg.strokeRoundedRect(x, y, w, h, 10);
+    this._t(bg);
+
+    this._t(s.add.text(x + 14, y + 10, "Bag", {
+      fontFamily: "Georgia, serif", fontSize: "16px", color: "#e7cf9c", stroke: "#160a04", strokeThickness: 3
+    }).setScrollFactor(0).setDepth(DEPTH + 2));
+
     const entries = s.bag.ownedStacks();
     if (entries.length === 0) {
-      this._t(s.add.text(x + w / 2, y + h / 2, "Empty — buy items at the Alchemist shop", {
-        fontFamily: "monospace", fontSize: "13px", color: "#7488a0", align: "center", wordWrap: { width: w - 30 }
+      this._t(s.add.text(x + w / 2, y + h / 2, "Empty\nBuy gear & potions at the\nAlchemist shop", {
+        fontFamily: "monospace", fontSize: "13px", color: "#7488a0", align: "center", lineSpacing: 6,
+        wordWrap: { width: w - 30 }
       }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
       return;
     }
-    const rowH = 46;
-    const maxRows = Math.floor((h - 40) / rowH);
+
+    const rowH = 50;
+    const maxRows = Math.floor((h - 44) / rowH);
     entries.slice(0, maxRows).forEach((entry, i) => {
       const { item, count } = entry;
-      const ry = y + 38 + i * rowH;
+      const ry = y + 40 + i * rowH;
       const rar = RARITY[item.rarity] ?? RARITY.common;
       const rg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
-      rg.fillStyle(0x101827, 0.9); rg.fillRoundedRect(x + 10, ry, w - 20, rowH - 6, 6);
-      rg.lineStyle(1, rar.color, 0.8); rg.strokeRoundedRect(x + 10, ry, w - 20, rowH - 6, 6);
+      rg.fillStyle(0x12100b, 0.92); rg.fillRoundedRect(x + 10, ry, w - 20, rowH - 7, 7);
+      rg.lineStyle(1, rar.color, 0.85); rg.strokeRoundedRect(x + 10, ry, w - 20, rowH - 7, 7);
       this._t(rg);
-      const icon = s.add.image(x + 30, ry + (rowH - 6) / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
-      icon.setScale(34 / 256);
+
+      const icon = s.add.image(x + 32, ry + (rowH - 7) / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
+      icon.setScale(36 / 256);
       this._t(icon);
-      this._t(s.add.text(x + 54, ry + 7, item.name, { fontFamily: "monospace", fontSize: "13px", color: rar.text })
+      this._t(s.add.text(x + 58, ry + 8, item.name, { fontFamily: "monospace", fontSize: "13px", color: rar.text })
         .setScrollFactor(0).setDepth(DEPTH + 3));
-      this._t(s.add.text(x + 54, ry + 24, isConsumable(item) ? `${item.effect}  ·  x${count}` : item.effect, {
-        fontFamily: "monospace", fontSize: "10px", color: "#8aa0b8"
+      this._t(s.add.text(x + 58, ry + 26, isConsumable(item) ? `${item.effect}  ·  x${count}` : item.effect, {
+        fontFamily: "monospace", fontSize: "10px", color: "#9aa8bc"
       }).setScrollFactor(0).setDepth(DEPTH + 3));
 
       const consumable = isConsumable(item);
-      const label = consumable ? "Use" : "Equip";
-      const bw = 64, bx = x + w - 20 - bw, by = ry + (rowH - 6) / 2;
-      const bg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
-      bg.fillStyle(consumable ? 0x1f6d34 : 0x274a8c, 1); bg.fillRoundedRect(bx, by - 13, bw, 26, 6);
-      bg.lineStyle(1, consumable ? 0x57d36f : 0x6f9bff, 1); bg.strokeRoundedRect(bx, by - 13, bw, 26, 6);
-      this._t(bg);
+      const equipped = !consumable && s.bag.isEquipped(item.key);
+      const label = consumable ? "Use" : (equipped ? "On" : "Equip");
+      const bw = 62, bx = x + w - 18 - bw, by = ry + (rowH - 7) / 2;
+      const bgc = consumable ? 0x1f6d34 : (equipped ? 0x3a3326 : 0x274a8c);
+      const bdc = consumable ? 0x57d36f : (equipped ? 0x8a7a52 : 0x6f9bff);
+      const btn = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+      btn.fillStyle(bgc, 1); btn.fillRoundedRect(bx, by - 13, bw, 26, 6);
+      btn.lineStyle(1, bdc, 1); btn.strokeRoundedRect(bx, by - 13, bw, 26, 6);
+      this._t(btn);
       this._t(s.add.text(bx + bw / 2, by, label, { fontFamily: "Georgia, serif", fontSize: "13px", color: "#eafff0" })
         .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
       const z = s.add.zone(bx, by - 13, bw, 26).setOrigin(0).setScrollFactor(0).setDepth(DEPTH + 5)
@@ -194,11 +258,11 @@ export default class InventoryUI {
     const s = this.scene;
     const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
     const paint = (fill) => { g.clear(); g.fillStyle(fill, 1); g.fillCircle(x, y, 15); g.lineStyle(2, 0x000000, 0.5); g.strokeCircle(x, y, 15); };
-    paint(0x42506a); this._t(g);
-    this._t(s.add.text(x, y, "✕", { fontFamily: "monospace", fontSize: "16px", color: "#dfe7f2" })
+    paint(0x7a2630); this._t(g);
+    this._t(s.add.text(x, y, "✕", { fontFamily: "monospace", fontSize: "16px", color: "#ffd9d9" })
       .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
     const z = s.add.zone(x, y, 34, 34).setScrollFactor(0).setDepth(DEPTH + 5).setInteractive({ useHandCursor: true });
-    z.on("pointerover", () => paint(0x586786)); z.on("pointerout", () => paint(0x42506a));
+    z.on("pointerover", () => paint(0xa33240)); z.on("pointerout", () => paint(0x7a2630));
     z.on("pointerdown", () => this.close());
     this._t(z);
   }
