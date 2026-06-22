@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Contract, JsonRpcProvider, verifyMessage } from "ethers";
 import pg from "pg";
+import { ALCHEMIST_ITEMS } from "./data/alchemist-items.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 5188);
@@ -1180,6 +1181,179 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+// ── Economy authority (server-owned bag + coins) ─────────────────────────────
+// The bag is the single source of truth for wallet profiles. Stored inside the
+// profile's `data` jsonb (and the JSON fallback), so no schema migration is needed.
+const ITEMS_BY_KEY = Object.fromEntries(ALCHEMIST_ITEMS.map((i) => [i.key, i]));
+const ENCHANT_MAX = 10;
+const ENCHANT_SHATTER_FROM = 4; // failing at +4 or higher can shatter (normal scroll)
+
+function enchantChanceFor(level) {
+  const table = [1, 1, 1, 0.65, 0.55, 0.45, 0.35, 0.30, 0.25, 0.20];
+  return table[level] ?? 0.15;
+}
+
+function isConsumableItem(item) {
+  return !!item && (typeof item.heal === "number" || typeof item.mana === "number");
+}
+
+// Validate/clamp an incoming bag against the catalog. Shape:
+// { stacks: {key:count}, equipped: {ring1,ring2,amulet}, enchants: {key:level} }
+function normalizeBag(raw) {
+  const out = { stacks: {}, equipped: { ring1: null, ring2: null, amulet: null }, enchants: {} };
+  if (!raw || typeof raw !== "object") return out;
+  const stacks = raw.stacks && typeof raw.stacks === "object" ? raw.stacks : {};
+  for (const [key, count] of Object.entries(stacks)) {
+    if (!ITEMS_BY_KEY[key]) continue;
+    const n = Math.floor(Number(count) || 0);
+    if (n > 0) out.stacks[key] = Math.min(n, 9999);
+  }
+  const eq = raw.equipped && typeof raw.equipped === "object" ? raw.equipped : {};
+  for (const slot of ["ring1", "ring2", "amulet"]) {
+    const key = eq[slot];
+    const item = key && ITEMS_BY_KEY[key];
+    if (!item || isConsumableItem(item)) continue;
+    const wantAmulet = item.slot === "amulet";
+    if ((slot === "amulet") === wantAmulet) out.equipped[slot] = key;
+  }
+  const en = raw.enchants && typeof raw.enchants === "object" ? raw.enchants : {};
+  for (const [key, lvl] of Object.entries(en)) {
+    if (!ITEMS_BY_KEY[key]) continue;
+    const l = Math.max(0, Math.min(ENCHANT_MAX, Math.floor(Number(lvl) || 0)));
+    if (l > 0) out.enchants[key] = l;
+  }
+  return out;
+}
+
+function bagCount(bag, key) { return bag.stacks[key] ?? 0; }
+function bagIsEquipped(bag, key) { return Object.values(bag.equipped).includes(key); }
+function bagAdd(bag, key, n = 1) { bag.stacks[key] = (bag.stacks[key] ?? 0) + n; }
+function bagRemove(bag, key, n = 1) {
+  const left = (bag.stacks[key] ?? 0) - n;
+  if (left <= 0) delete bag.stacks[key]; else bag.stacks[key] = left;
+}
+// Fully remove gear from bag, any equip slot, and the enchant map (shatter).
+function bagDestroy(bag, key) {
+  delete bag.stacks[key];
+  for (const slot of Object.keys(bag.equipped)) {
+    if (bag.equipped[slot] === key) bag.equipped[slot] = null;
+  }
+  delete bag.enchants[key];
+}
+
+// Serialize coins+item mutations per profile so a double-click / concurrent
+// request can't double-spend. Single-process Node makes this sufficient.
+const profileLocks = new Map();
+function withProfileLock(profileId, fn) {
+  const prev = profileLocks.get(profileId) ?? Promise.resolve();
+  const run = prev.then(fn, fn);
+  const tail = run.catch(() => {});
+  profileLocks.set(profileId, tail);
+  tail.then(() => { if (profileLocks.get(profileId) === tail) profileLocks.delete(profileId); });
+  return run;
+}
+
+// readProfile → mutate → writeProfile, robust to a missing profile (mirrors awardWorkCoins).
+async function loadProfileForMutation(profileId) {
+  let profile = null;
+  try { profile = (await readProfile(profileId)).profile; } catch { profile = null; }
+  return normalizeProfile(profileId, profile ?? {});
+}
+
+// Run one authoritative economy action. Returns { status, body }. Must be called
+// inside withProfileLock. All paths re-validate against the server-owned bag/coins.
+async function runEconomyAction(action, profileId, payload) {
+  const profile = await loadProfileForMutation(profileId);
+  const bag = profile.bag;
+  const fail = (error, status = 400) => ({ status, body: { ok: false, error } });
+  const commit = async (extra = {}) => {
+    profile.bag = bag;
+    const saved = (await writeProfile(profileId, profile)).profile;
+    return { status: 200, body: { ok: true, coins: saved.coins, bag: saved.bag, ...extra } };
+  };
+
+  if (action === "buy") {
+    const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
+    if (!item) return fail("Unknown item");
+    if (profile.coins < item.price) return fail("Not enough coins");
+    profile.coins -= item.price;
+    bagAdd(bag, item.key, 1);
+    return commit();
+  }
+
+  if (action === "consume") {
+    const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
+    if (!item || !isConsumableItem(item)) return fail("Not a consumable");
+    if (bagCount(bag, item.key) <= 0) return fail("None left");
+    bagRemove(bag, item.key, 1);
+    return commit();
+  }
+
+  if (action === "equip") {
+    const key = sanitizeText(payload.itemKey, 80);
+    const item = ITEMS_BY_KEY[key];
+    if (!item || isConsumableItem(item)) return fail("Cannot equip");
+    if (bagCount(bag, key) <= 0) return fail("Not owned");
+    const slot = item.slot === "amulet"
+      ? "amulet"
+      : (!bag.equipped.ring1 ? "ring1" : (!bag.equipped.ring2 ? "ring2" : "ring1"));
+    const prev = bag.equipped[slot];
+    bagRemove(bag, key, 1);
+    if (prev) bagAdd(bag, prev, 1);
+    bag.equipped[slot] = key;
+    return commit();
+  }
+
+  if (action === "unequip") {
+    const slot = sanitizeText(payload.slot, 16);
+    if (!["ring1", "ring2", "amulet"].includes(slot)) return fail("Bad slot");
+    const key = bag.equipped[slot];
+    if (!key) return fail("Empty slot");
+    bag.equipped[slot] = null;
+    bagAdd(bag, key, 1);
+    return commit();
+  }
+
+  if (action === "enchant") {
+    const itemKey = sanitizeText(payload.itemKey, 80);
+    const blessed = Boolean(payload.blessed);
+    const scrollKey = blessed ? "blessed-enchant-scroll" : "enchant-scroll";
+    const item = ITEMS_BY_KEY[itemKey];
+    if (!item || isConsumableItem(item)) return fail("Cannot enchant");
+    if (bagCount(bag, scrollKey) <= 0) return fail(`No ${blessed ? "Blessed " : ""}Enchant Scroll`);
+    if (bagCount(bag, itemKey) <= 0 && !bagIsEquipped(bag, itemKey)) return fail("Gear not owned");
+    const level = bag.enchants[itemKey] ?? 0;
+    if (level >= ENCHANT_MAX) return fail("Already at max enchant");
+    bagRemove(bag, scrollKey, 1);
+    if (Math.random() < enchantChanceFor(level)) {
+      bag.enchants[itemKey] = level + 1;
+      return commit({ success: true, level: level + 1 });
+    }
+    if (!blessed && level >= ENCHANT_SHATTER_FROM) {
+      const refund = Math.floor((item.price ?? 0) * 0.25);
+      bagDestroy(bag, itemKey);
+      profile.coins += refund;
+      return commit({ success: false, shattered: true, refund });
+    }
+    delete bag.enchants[itemKey];
+    return commit({ success: false, reset: true });
+  }
+
+  if (action === "migrate-bag") {
+    if (profile.bagMigrated) return { status: 200, body: { ok: true, coins: profile.coins, bag, migrated: false } };
+    // Only seed from the client's localStorage bag if the server bag is still empty,
+    // so we never clobber items the server already owns. Always flip the flag.
+    const serverEmpty = Object.keys(bag.stacks).length === 0
+      && Object.values(bag.equipped).every((v) => !v);
+    if (serverEmpty) profile.bag = normalizeBag(payload.bag);
+    profile.bagMigrated = true;
+    const saved = (await writeProfile(profileId, profile)).profile;
+    return { status: 200, body: { ok: true, coins: saved.coins, bag: saved.bag, migrated: serverEmpty } };
+  }
+
+  return fail("Unknown economy action", 404);
+}
+
 function normalizeProfile(profileId, data = {}) {
   const now = new Date().toISOString();
   const walletAddress = sanitizeText(data.walletAddress, 90);
@@ -1195,6 +1369,8 @@ function normalizeProfile(profileId, data = {}) {
     ownedCharacters: [...new Set(["mage-1", "adventurer", "skeleton-archer", ...(Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : [])])],
     ownedHouses: Array.isArray(data.ownedHouses) ? data.ownedHouses : [],
     items: Array.isArray(data.items) ? data.items : [],
+    bag: normalizeBag(data.bag),
+    bagMigrated: Boolean(data.bagMigrated),
     position: data.position && typeof data.position === "object" ? {
       scene: sanitizeText(data.position.scene, 48) || "WorldScene",
       x: Number(data.position.x) || 0,
@@ -1535,6 +1711,38 @@ const server = createServer(async (req, res) => {
       }
       profile = normalizeProfile(profileId, { ...profile, walletAddress: address, walletProvider: provider, isDeveloper: developer });
       sendJson(res, 200, { ok: true, token, profileId, profile, isDeveloper: developer });
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/economy/")) {
+      const action = url.pathname.slice("/api/economy/".length);
+      if (req.method !== "POST") {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      let payload;
+      try {
+        payload = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        sendJson(res, 400, { ok: false, error: "Invalid JSON" });
+        return;
+      }
+      const profileId = sanitizeText(payload.profileId, 140);
+      if (!profileId) {
+        sendJson(res, 400, { ok: false, error: "Missing profile id" });
+        return;
+      }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) {
+        sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
+      try {
+        const result = await withProfileLock(profileId, () => runEconomyAction(action, profileId, payload));
+        sendJson(res, result.status, result.body);
+      } catch {
+        sendJson(res, 500, { ok: false, error: "Economy action failed" });
+      }
       return;
     }
 
