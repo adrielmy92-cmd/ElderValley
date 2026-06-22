@@ -265,13 +265,13 @@ export default class ShopSystem {
     }
   }
 
-  _buy(item) {
+  async _buy(item) {
     const consumable = this._isConsumable(item);
     if (!consumable && this.isOwned(item.key)) return;
-    const coins = this._coins();
-    if (coins < item.price) { this._toast("Not enough coins", "#ffb4b4"); return; }
-    this.scene.setCoins(coins - item.price);
-    this.scene.bag?.add(item.key);
+    // Inventory.buy handles both guest (local coins) and wallet (authoritative server
+    // buy) and returns the outcome — never pre-deduct here.
+    const result = await (this.scene.bag?.buy(item) ?? Promise.resolve({ ok: false, error: "No bag" }));
+    if (!result.ok) { this._toast(result.error ?? "Purchase failed", "#ffb4b4"); return; }
     if (this.coinText) this.coinText.setText(String(this._coins()));
     this._toast(`Purchased ${item.name}!`, "#bff7c4");
     const slot = this.slots[this.selected];

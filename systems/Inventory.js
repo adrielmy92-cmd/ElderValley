@@ -13,23 +13,42 @@ export function isConsumable(item) {
   return !!item && (typeof item.heal === "number" || typeof item.mana === "number");
 }
 
-// Player bag + equipped jewelry. Pure logic, persisted per profile. Stacks hold
-// consumables (and not-yet-equipped gear); equipped holds one key per slot.
+// Player bag + equipped jewelry. Reads are always synchronous against an in-memory
+// cache. For WALLET profiles the server is authoritative ("server" mode): mutations
+// hit /api/economy/* and the response (authoritative coins+bag) reconciles the cache.
+// For GUEST profiles nothing changes — the bag lives in localStorage ("local" mode).
 export default class Inventory {
   constructor(scene) {
     this.scene = scene;
+    this._mode = "local";
+    this._seq = 0;        // request ordering so a stale reconcile can't clobber a newer one
+    this._appliedSeq = 0;
     this.load();
   }
 
-  _storageKey() {
-    const pid = this.scene.getPlayerProfileId?.() ?? "guest";
-    return `eldervalley-bag-${pid}`;
-  }
+  get serverMode() { return this._mode === "server"; }
+
+  _profileId() { return this.scene.getPlayerProfileId?.() ?? "guest"; }
+  _isWallet() { return String(this._profileId()).toLowerCase().startsWith("wallet:"); }
+  _storageKey() { return `eldervalley-bag-${this._profileId()}`; }
 
   load() {
     this.stacks = {};
     this.equipped = { ring1: null, ring2: null, amulet: null };
     this.enchants = {};
+    if (this._isWallet()) {
+      this._mode = "server";
+      const profile = this.scene.registry?.get("playerProfile");
+      if (profile?.bag) this._applyBag(profile.bag);
+      else this._loadLocal();          // until the server profile arrives / migrates
+      this._maybeMigrate(profile);     // async, fire-and-forget
+    } else {
+      this._mode = "local";
+      this._loadLocal();
+    }
+  }
+
+  _loadLocal() {
     try {
       const raw = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null");
       if (raw && typeof raw === "object") {
@@ -40,10 +59,80 @@ export default class Inventory {
     } catch { /* ignore */ }
   }
 
+  _applyBag(bag) {
+    this.stacks = { ...(bag?.stacks ?? {}) };
+    this.equipped = { ring1: null, ring2: null, amulet: null, ...(bag?.equipped ?? {}) };
+    this.enchants = { ...(bag?.enchants ?? {}) };
+  }
+
   save() {
+    // Always keep a local cache; in server mode the authority is the server, this is
+    // only a fallback snapshot (never re-migrated — bagMigrated guards that).
     try {
       localStorage.setItem(this._storageKey(), JSON.stringify({ stacks: this.stacks, equipped: this.equipped, enchants: this.enchants }));
     } catch { /* ignore */ }
+  }
+
+  // ── Server bridge (wallet mode) ─────────────────────────────────────────────
+  async _server(action, body) {
+    const res = await fetch(`/api/economy/${action}`, {
+      method: "POST",
+      headers: this.scene.getSessionHeaders?.({ "Content-Type": "application/json" }) ?? { "Content-Type": "application/json" },
+      body: JSON.stringify({ profileId: this._profileId(), ...body })
+    });
+    return res.json();
+  }
+
+  // Apply an authoritative {coins, bag} reply, newest-wins. Returns true on ok.
+  _reconcile(data, seq) {
+    if (typeof seq === "number") {
+      if (seq < this._appliedSeq) return false; // a newer reply already landed
+      this._appliedSeq = seq;
+    }
+    if (!data?.ok) return false;
+    if (data.bag) this._applyBag(data.bag);
+    if (typeof data.coins === "number") this.scene.setCoins?.(data.coins);
+    this.save();
+    this.scene.onBagSynced?.();
+    return true;
+  }
+
+  // Fire a deterministic mutation we already applied optimistically; reconcile later.
+  _push(action, body) {
+    if (!this.serverMode) return;
+    const seq = ++this._seq;
+    this._server(action, body)
+      .then((data) => { if (!this._reconcile(data, seq)) this._pull(); })
+      .catch(() => { /* keep optimistic state; next sync corrects it */ });
+  }
+
+  // Re-pull the authoritative bag from the profile endpoint (used on rejection).
+  async _pull() {
+    try {
+      const res = await fetch(`/api/profile/${encodeURIComponent(this._profileId())}`, {
+        cache: "no-store",
+        headers: this.scene.getSessionHeaders?.() ?? {}
+      });
+      const data = await res.json();
+      const seq = ++this._seq;
+      this._reconcile({ ok: true, bag: data?.profile?.bag, coins: data?.profile?.coins }, seq);
+    } catch { /* ignore */ }
+  }
+
+  async _maybeMigrate(profile) {
+    if (!this.serverMode || !profile || profile.bagMigrated) return;
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null"); } catch { /* ignore */ }
+    const hasLocal = local && (Object.keys(local.stacks ?? {}).length > 0 || Object.values(local.equipped ?? {}).some(Boolean));
+    try {
+      const data = await this._server("migrate-bag", { bag: hasLocal ? local : { stacks: {}, equipped: {}, enchants: {} } });
+      if (data?.ok) {
+        const seq = ++this._seq;
+        this._reconcile(data, seq);
+        const p = this.scene.registry?.get("playerProfile");
+        if (p) this.scene.registry.set("playerProfile", { ...p, bag: data.bag, bagMigrated: true });
+      }
+    } catch { /* will retry next online load */ }
   }
 
   enchantLevel(key) { return this.enchants[key] ?? 0; }
@@ -78,7 +167,38 @@ export default class Inventory {
     this.save();
   }
 
+  // Consume a stackable (potion/shot). Optimistic local decrement + server reconcile.
+  consume(key, n = 1) {
+    this.remove(key, n);
+    this._push("consume", { itemKey: key });
+  }
+
   slotTypeFor(item) { return item?.slot === "amulet" ? "amulet" : "ring"; }
+
+  // Purchase an item. Server mode: authoritative buy (no local pre-deduct). Guest:
+  // deduct coins + add locally. Returns { ok, error? }.
+  async buy(item) {
+    if (this.serverMode) {
+      try {
+        const data = await this._server("buy", { itemKey: item.key });
+        if (!this._reconcile(data, ++this._seq)) return { ok: false, error: data?.error ?? "Purchase failed" };
+        return { ok: true };
+      } catch { return { ok: false, error: "Server unreachable" }; }
+    }
+    const coins = this.scene.getCoins?.() ?? 0;
+    if (coins < item.price) return { ok: false, error: "Not enough coins" };
+    this.scene.setCoins?.(coins - item.price);
+    this.add(item.key);
+    return { ok: true };
+  }
+
+  // Server-authoritative enchant gamble. Returns the server reply (or guest result
+  // shape). Guest rolls locally via the caller (BaseGameScene.enchant).
+  async serverEnchant(itemKey, blessed) {
+    const data = await this._server("enchant", { itemKey, blessed: !!blessed });
+    this._reconcile(data, ++this._seq);
+    return data;
+  }
 
   // Equip from the bag. Rings fill ring1 then ring2; a full pair bumps ring1 back.
   equip(key) {
@@ -96,6 +216,7 @@ export default class Inventory {
     if (prev) this.add(prev, 1);
     this.equipped[slot] = key;
     this.save();
+    this._push("equip", { itemKey: key });
     return true;
   }
 
@@ -105,6 +226,7 @@ export default class Inventory {
     this.equipped[slot] = null;
     this.add(key, 1);
     this.save();
+    this._push("unequip", { slot });
     return true;
   }
 

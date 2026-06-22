@@ -4,8 +4,8 @@ import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=220";
 import MobileControls from "../systems/MobileControls.js?v=1";
-import Inventory, { itemData } from "../systems/Inventory.js?v=3";
-import InventoryUI from "../systems/InventoryUI.js?v=5";
+import Inventory, { itemData } from "../systems/Inventory.js?v=4";
+import InventoryUI from "../systems/InventoryUI.js?v=6";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -792,7 +792,7 @@ export default class BaseGameScene extends Phaser.Scene {
     if (this.shotsEnabled && this.bag) {
       const shot = this.bag.firstShot?.();
       if (shot) {
-        this.bag.remove(shot.key, 1);
+        this.bag.consume(shot.key, 1);
         this._castMult = shot.shot;
         this.updateShotHud();
       }
@@ -815,7 +815,18 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   // Try to enchant an owned gear item. `blessed` scrolls never shatter (reset to +0).
-  enchant(itemKey, blessed = false) {
+  // Wallet profiles roll on the server (authoritative); guests roll locally. Always
+  // returns a Promise so callers can `.then(refresh)` uniformly.
+  async enchant(itemKey, blessed = false) {
+    if (this.bag?.serverMode) {
+      const data = await this.bag.serverEnchant(itemKey, blessed);
+      if (!data?.ok) { this.flashHudMessage?.(data?.error ?? "Enchant failed"); return data ?? { ok: false }; }
+      this.recomputeStats?.();
+      if (data.success) this.flashHudMessage?.(`Enchant success! +${data.level}`);
+      else if (data.shattered) this.flashHudMessage?.(`Shattered! Crystallized for ${data.refund} coins`);
+      else this.flashHudMessage?.("Enchant failed — reset to +0");
+      return data;
+    }
     const scrollKey = blessed ? "blessed-enchant-scroll" : "enchant-scroll";
     if (!this.bag || this.bag.count(scrollKey) <= 0) {
       this.flashHudMessage?.(`No ${blessed ? "Blessed " : ""}Enchant Scroll`);
@@ -890,8 +901,17 @@ export default class BaseGameScene extends Phaser.Scene {
       this.updatePlayerMpBar?.();
     }
     this._potCooldownUntil[kind] = now + (item.cooldownMs ?? 8000);
-    this.bag.remove(item.key, 1);
+    this.bag.consume(item.key, 1);
     return true;
+  }
+
+  // Refresh UI bits after the server reconciles the bag/coins (wallet mode).
+  onBagSynced() {
+    this.recomputeStats?.();
+    this.updateShotHud?.();
+    this.updateInventoryHud?.();
+    if (this.inventoryUI?.isOpen?.()) this.inventoryUI._refresh?.();
+    if (this.shop?.isOpen?.()) this.shop._renderDetail?.();
   }
 
   flashHudMessage(msg) {

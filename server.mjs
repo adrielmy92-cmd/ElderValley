@@ -1771,7 +1771,17 @@ const server = createServer(async (req, res) => {
       if (req.method === "POST") {
         const body = await readBody(req);
         const payload = JSON.parse(body || "null");
-        const result = await writeProfile(profileId, payload);
+        // Coins + bag are server-owned for wallet profiles: the only writers are the
+        // /api/economy/* and /api/market/* endpoints. Ignore whatever the client's
+        // periodic full-profile autosave reports for those fields (anti-cheat + stops
+        // the 2.8s autosave from clobbering authoritative changes).
+        const result = isWalletProfile(profileId)
+          ? await withProfileLock(profileId, async () => {
+              const existing = await loadProfileForMutation(profileId);
+              const merged = { ...(payload ?? {}), coins: existing.coins, bag: existing.bag, bagMigrated: existing.bagMigrated };
+              return writeProfile(profileId, merged);
+            })
+          : await writeProfile(profileId, payload);
         sendJson(res, 200, { ok: true, profile: result.profile, mtimeMs: result.mtimeMs, source: result.source });
         return;
       }

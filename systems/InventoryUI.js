@@ -1,5 +1,5 @@
 import { RARITY } from "../data/alchemist-items.js?v=6";
-import { itemData, isConsumable } from "./Inventory.js?v=3";
+import { itemData, isConsumable } from "./Inventory.js?v=4";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -317,7 +317,7 @@ export default class InventoryUI {
       wordWrap: { width: pw - 36 }
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH + 21));
 
-    const doEnchant = (blessed) => { s.enchant(itemKey, blessed); this._refresh(); };
+    const doEnchant = (blessed) => { Promise.resolve(s.enchant(itemKey, blessed)).then(() => this._refresh()).catch(() => {}); };
     const by = py + ph - 54;
     const mk = (bx, bw, label, sub, fill, stroke, enabled, cb) => {
       const gg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 21);
