@@ -618,7 +618,7 @@ export default class BaseGameScene extends Phaser.Scene {
       }
     });
     this.createPlayerHpBar();
-    this.createSpellBar();
+    if (!this.player?.profile?.melee) this.createSpellBar(); // mage spells only
     this.updateInventoryHud();
     this.updateClockHud();
     this.updateCurrencyHud();

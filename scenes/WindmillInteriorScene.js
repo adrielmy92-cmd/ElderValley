@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=227";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=228";
 
 const ART_SCALE = 1.05;
 const SOURCE_SCALE = ART_SCALE / 0.5;
