@@ -786,9 +786,16 @@ export default class BaseGameScene extends Phaser.Scene {
       color: "#7fe6a0", stroke: "#1a202b", strokeThickness: 3
     }).setScrollFactor(0).setDepth(DEPTH);
 
+    // Melee characters (warrior) don't use mana or spiritshots — hide that mage UI.
+    if (this.player?.profile?.melee) {
+      [this.mpLabel, this.mpBarBg, this.mpBarFg, this.mpValueText, this.shotText].forEach((o) => o?.setVisible(false));
+    }
+
     this.updatePlayerHpBar();
-    this.updatePlayerMpBar();
-    this.updateShotHud();
+    if (!this.player?.profile?.melee) {
+      this.updatePlayerMpBar();
+      this.updateShotHud();
+    }
     this.updateXpHud();
   }
 
@@ -2363,7 +2370,7 @@ export default class BaseGameScene extends Phaser.Scene {
       this.player.update(this.cursors, this.wasd, true);
       return;
     }
-    if (!this.dialog.active && !this.chat?.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.shots)) {
+    if (!this.dialog.active && !this.chat?.active && !this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.shots)) {
       this.toggleShots();
     }
 
@@ -2400,7 +2407,7 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.dialog.active && Phaser.Input.Keyboard.JustDown(this.interactKeys.spell2)) {
+    if (!this.dialog.active && !this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.spell2)) {
       if (this._lightningTargeting) {
         this.exitLightningTargetMode();
       } else {
