@@ -541,6 +541,9 @@ function handleWsPayload(client, payload) {
     client.characterId = sanitizeText(payload.characterId, 24) || "mage-1";
     client.loginMode = walletAuth.loginMode;
     client.walletProfileId = walletAuth.profileId;
+    // profileId used for server-authoritative XP awards: validated wallet id, or
+    // the guest id the client reports (guests can only level their own profile).
+    client.profileId = walletAuth.profileId || sanitizeText(payload.profileId, 140);
     client.walletAddress = walletAuth.walletAddress ?? "";
     client.walletProvider = walletAuth.walletProvider ?? "";
     client.moving = false;
@@ -1356,6 +1359,66 @@ async function runEconomyAction(action, profileId, payload) {
   return fail("Unknown economy action", 404);
 }
 
+// ── Leveling (XP + free attribute points) ────────────────────────────────────
+// Server-authoritative: XP is granted on enemy death (to arena players) and on
+// work shifts; points are spent via /api/xp/allocate. Stored in the profile data
+// jsonb like `bag` (no schema migration). Per-point effects live on the client.
+const XP_POINTS_PER_LEVEL = 5;
+const XP_MAX_LEVEL = 99;
+const XP_REWARDS = { golem: 500, beeQueen: 600, troll: 80, beeSoldier: 25 };
+function xpForLevel(level) {
+  // XP needed to go from `level` to `level+1`.
+  return Math.floor(80 * Math.pow(Math.max(1, level), 1.35));
+}
+function normalizeLeveling(data) {
+  const level = Math.max(1, Math.min(XP_MAX_LEVEL, Math.floor(Number(data?.level) || 1)));
+  const xp = Math.max(0, Math.floor(Number(data?.xp) || 0));
+  const unspent = Math.max(0, Math.floor(Number(data?.unspent) || 0));
+  const a = data?.attr ?? {};
+  const attr = {
+    vit: Math.max(0, Math.floor(Number(a.vit) || 0)),
+    str: Math.max(0, Math.floor(Number(a.str) || 0)),
+    agi: Math.max(0, Math.floor(Number(a.agi) || 0))
+  };
+  return { level, xp, unspent, attr };
+}
+// Mutates the profile's leveling fields in place; returns the gained levels.
+function addXp(profile, amount) {
+  const gain = Math.max(0, Math.floor(Number(amount) || 0));
+  if (gain <= 0) return 0;
+  profile.xp = Math.max(0, Math.floor(Number(profile.xp) || 0)) + gain;
+  let gained = 0;
+  while (profile.level < XP_MAX_LEVEL && profile.xp >= xpForLevel(profile.level)) {
+    profile.xp -= xpForLevel(profile.level);
+    profile.level += 1;
+    profile.unspent += XP_POINTS_PER_LEVEL;
+    gained += 1;
+  }
+  if (profile.level >= XP_MAX_LEVEL) profile.xp = 0;
+  return gained;
+}
+function publicLeveling(profile) {
+  return {
+    level: profile.level,
+    xp: profile.xp,
+    xpNext: profile.level >= XP_MAX_LEVEL ? 0 : xpForLevel(profile.level),
+    unspent: profile.unspent,
+    attr: profile.attr
+  };
+}
+// readProfile → addXp → writeProfile (under the profile lock); returns the new
+// public leveling state, or null if nothing was granted / profile unknown.
+async function grantXpToProfileId(profileId, amount) {
+  const gain = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!profileId || gain <= 0) return null;
+  return withProfileLock(profileId, async () => {
+    const profile = await loadProfileForMutation(profileId);
+    const levels = addXp(profile, gain);
+    const saved = (await writeProfile(profileId, profile)).profile;
+    return { ...publicLeveling(saved), gained: gain, leveledUp: levels };
+  });
+}
+
 // ── Player marketplace (Phase 4) ─────────────────────────────────────────────
 // Asynchronous listings: the item is escrowed out of the seller's bag the moment
 // it's listed, so it can be bought any time even while the seller is offline. A 5%
@@ -1516,6 +1579,7 @@ function normalizeProfile(profileId, data = {}) {
     items: Array.isArray(data.items) ? data.items : [],
     bag: normalizeBag(data.bag),
     bagMigrated: Boolean(data.bagMigrated),
+    ...normalizeLeveling(data),
     position: data.position && typeof data.position === "object" ? {
       scene: sanitizeText(data.position.scene, 48) || "WorldScene",
       x: Number(data.position.x) || 0,
@@ -1891,6 +1955,32 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/xp/allocate") {
+      if (req.method !== "POST") { sendJson(res, 405, { ok: false, error: "Method not allowed" }); return; }
+      let payload;
+      try { payload = JSON.parse((await readBody(req)) || "{}"); } catch { sendJson(res, 400, { ok: false, error: "Invalid JSON" }); return; }
+      const profileId = sanitizeText(payload.profileId, 140);
+      if (!profileId) { sendJson(res, 400, { ok: false, error: "Missing profile id" }); return; }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) { sendJson(res, 401, { ok: false, error: "Wallet session required" }); return; }
+      const attr = sanitizeText(payload.attribute, 8);
+      if (!["vit", "str", "agi"].includes(attr)) { sendJson(res, 400, { ok: false, error: "Bad attribute" }); return; }
+      try {
+        const result = await withProfileLock(profileId, async () => {
+          const profile = await loadProfileForMutation(profileId);
+          if (profile.unspent <= 0) return { ok: false, error: "No points to spend" };
+          profile.unspent -= 1;
+          profile.attr[attr] += 1;
+          const saved = (await writeProfile(profileId, profile)).profile;
+          return { ok: true, ...publicLeveling(saved) };
+        });
+        sendJson(res, result.ok ? 200 : 400, result);
+      } catch {
+        sendJson(res, 500, { ok: false, error: "Allocate failed" });
+      }
+      return;
+    }
+
     if (url.pathname === "/api/market" || url.pathname.startsWith("/api/market/")) {
       const sub = url.pathname === "/api/market" ? "" : url.pathname.slice("/api/market/".length);
 
@@ -1962,7 +2052,11 @@ const server = createServer(async (req, res) => {
         const result = isWalletProfile(profileId)
           ? await withProfileLock(profileId, async () => {
               const existing = await loadProfileForMutation(profileId);
-              const merged = { ...(payload ?? {}), coins: existing.coins, bag: existing.bag, bagMigrated: existing.bagMigrated };
+              const merged = {
+                ...(payload ?? {}),
+                coins: existing.coins, bag: existing.bag, bagMigrated: existing.bagMigrated,
+                level: existing.level, xp: existing.xp, unspent: existing.unspent, attr: existing.attr
+              };
               return writeProfile(profileId, merged);
             })
           : await writeProfile(profileId, payload);
