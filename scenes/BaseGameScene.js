@@ -6,7 +6,7 @@ import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=221";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=5";
 import InventoryUI from "../systems/InventoryUI.js?v=8";
-import Leveling from "../systems/Leveling.js?v=2";
+import Leveling from "../systems/Leveling.js?v=3";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -951,7 +951,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.leveling?.applyServer(payload);
     const leveled = (payload?.leveledUp ?? 0) > 0 || (this.leveling?.level ?? 1) > before;
     if (leveled) {
-      this.flashHudMessage?.(`LEVEL UP!  Lv ${this.leveling.level}  ·  +${(payload?.leveledUp ?? 1) * 5} points`);
+      this.flashHudMessage?.(`LEVEL UP!  Lv ${this.leveling.level}  ·  +${payload?.leveledUp ?? 1} point${(payload?.leveledUp ?? 1) > 1 ? "s" : ""}`);
     } else if ((payload?.gained ?? 0) > 0) {
       this.showXpPopup?.(payload.gained);
     }

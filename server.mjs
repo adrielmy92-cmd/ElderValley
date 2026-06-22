@@ -1363,7 +1363,7 @@ async function runEconomyAction(action, profileId, payload) {
 // Server-authoritative: XP is granted on enemy death (to arena players) and on
 // work shifts; points are spent via /api/xp/allocate. Stored in the profile data
 // jsonb like `bag` (no schema migration). Per-point effects live on the client.
-const XP_POINTS_PER_LEVEL = 5;
+const XP_POINTS_PER_LEVEL = 1;
 const XP_MAX_LEVEL = 99;
 const XP_REWARDS = { golem: 500, beeQueen: 600, troll: 80, beeSoldier: 25 };
 function xpForLevel(level) {

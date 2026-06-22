@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=219";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=220";
 import ShopSystem from "../systems/ShopSystem.js?v=4";
 
 const WIDTH = 1254;

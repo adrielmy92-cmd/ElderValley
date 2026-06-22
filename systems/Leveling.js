@@ -2,7 +2,7 @@
 // server on enemy death / work and pushed over the WS `xp` message; points are
 // spent through /api/xp/allocate. This client object is a cache + the place that
 // maps attribute points to concrete gameplay bonuses (HP / attack / speed / regen).
-const POINTS_PER_LEVEL = 5;
+const POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 99;
 const VIT_HP = 10;       // +Max HP per Vitality point
 const VIT_REGEN = 0.2;   // +HP/sec per Vitality point
