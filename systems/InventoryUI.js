@@ -95,12 +95,15 @@ export default class InventoryUI {
     const colX = 132; // horizontal offset of the side columns from center
     const rowY = 76;  // vertical step between left slots
 
-    // platform shadow + mage in the center
-    this._t(s.add.ellipse(mcx, mcy + 118, 120, 26, 0x000000, 0.35).setScrollFactor(0).setDepth(DEPTH + 2));
-    if (s.textures.exists("mage-1-idle-sheet")) {
-      const mage = s.add.sprite(mcx, mcy + 10, "mage-1-idle-sheet", 0).setScrollFactor(0).setDepth(DEPTH + 3);
-      mage.setScale(2.7);
-      if (s.anims.exists("mage-1-idle")) mage.play("mage-1-idle");
+    // platform shadow + mage in the center (walking in place, facing the camera)
+    this._t(s.add.ellipse(mcx, mcy + 90, 116, 24, 0x000000, 0.35).setScrollFactor(0).setDepth(DEPTH + 2));
+    const prefix = s.player?.animPrefix ?? "mage-1";
+    const walkKey = `${prefix}-walk-down`;
+    const walkTex = s.anims.get(walkKey)?.frames?.[0]?.textureKey ?? "mage-1-sheet";
+    if (s.textures.exists(walkTex)) {
+      const mage = s.add.sprite(mcx, mcy - 20, walkTex, 0).setScrollFactor(0).setDepth(DEPTH + 3);
+      mage.setScale(2.6);
+      if (s.anims.exists(walkKey)) mage.play(walkKey);
       this._t(mage);
     }
 

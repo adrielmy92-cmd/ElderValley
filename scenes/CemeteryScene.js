@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=238";
+import WorldScene from "./WorldScene.js?v=239";
 
 // Cemitério — mapa SEPARADO, continuação da Floresta Antiga (depois da parte de
 // terra morta). É o sprite/mapa animado do cemitério (GIF → vídeo) usado como
