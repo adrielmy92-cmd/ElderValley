@@ -29,6 +29,10 @@ const PLAYER_CHARACTERS = {
     attackTexture: "warrior-attack-sheet",
     attackFrames: 8,
     directionalAttack: true,
+    melee: true,
+    meleeReach: 54,
+    meleeRadius: 60,
+    meleeHitDelay: 190,
     frameWidth: 100,
     frameHeight: 102,
     framesPerDirection: 8,
@@ -232,10 +236,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(this.y + this.depthBias + 4);
     this.play(animationKey, true);
 
-    this.scene.time.delayedCall(170, () => {
-      if (this.active && this.isAttacking) {
+    this.scene.time.delayedCall(profile.melee ? (profile.meleeHitDelay ?? 180) : 170, () => {
+      if (!(this.active && this.isAttacking)) return;
+      if (profile.melee) {
+        // Melee: area-of-effect sword hit just in front of the warrior (no projectile).
+        const reach = profile.meleeReach ?? 52;
+        const off = { down: [0, reach], up: [0, -reach], left: [-reach, 0], right: [reach, 0] }[this.facing] ?? [0, reach];
+        this.scene.applyMeleeDamage?.(this.x + off[0], this.y + off[1], profile.meleeRadius ?? 56);
+      } else {
         const spellMap = { fire: "spawnFireball", lightning: "spawnLightningBolt" };
-        const spawnMethod = spellMap[this._currentSpellType] ?? this.profile.projectileSpawn ?? "spawnFireball";
+        const spawnMethod = spellMap[this._currentSpellType] ?? profile.projectileSpawn ?? "spawnFireball";
         this.scene[spawnMethod]?.(this.x, this.y, this.facing);
       }
     });

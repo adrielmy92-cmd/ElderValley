@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=187";
+import Player from "../player/Player.js?v=188";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=223";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=224";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=5";
 import InventoryUI from "../systems/InventoryUI.js?v=8";
@@ -846,6 +846,15 @@ export default class BaseGameScene extends Phaser.Scene {
   // Final damage for the current cast = (base + attack bonus) * shot multiplier.
   spellDamage(base) {
     return Math.max(1, Math.round((base + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
+  }
+
+  // Melee sword strike: area-of-effect damage in front of the warrior. Reuses each
+  // combat scene's applyLightningDamage (boss/trolls/bees) so damage + hit sparks +
+  // damage numbers all work per scene. Uses the attack bonus, never burns a spiritshot.
+  applyMeleeDamage(x, y, radius) {
+    this._castAtk = (this.bag?.bonuses?.().attack ?? 0) + (this.leveling?.bonusAttack() ?? 0);
+    this._castMult = 1;
+    this.applyLightningDamage?.(x, y, radius);
   }
 
   // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────
