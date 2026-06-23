@@ -35,6 +35,7 @@ const PLAYER_CHARACTERS = {
     meleeReach: 46,
     meleeRadius: 52,
     meleeHitDelay: 190,
+    spinRadius: 82,
     frameWidth: 82,
     frameHeight: 84,
     framesPerDirection: 8,
@@ -272,6 +273,29 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       finishAttack();
     });
 
+    return true;
+  }
+
+  // Spin attack animation: show the side-attack pose (sword extended) and whirl the
+  // sprite a full turn. Damage is applied by the scene (warriorSpin). Reuses sprites.
+  spin() {
+    if (this.isAttacking) return false;
+    const profile = this.profile;
+    if (!profile.attackTexture || !this.scene.textures.exists(profile.attackTexture)) return false;
+    this.isAttacking = true;
+    this.setVelocity(0, 0);
+    this.setFlipX(false);
+    const af = profile.attackFrames ?? profile.framesPerDirection ?? 8;
+    this.setTexture(profile.attackTexture, 2 * af); // right-attack row, first frame
+    this.play(`${this.animPrefix}-attack-right`, true);
+    const finish = () => {
+      if (!this.active) return;
+      this.angle = 0;
+      this.isAttacking = false;
+      this.playIdle();
+    };
+    this.scene.tweens.add({ targets: this, angle: 360, duration: 520, ease: "Sine.easeInOut", onComplete: finish });
+    this.scene.time.delayedCall(720, () => { if (this.isAttacking) finish(); });
     return true;
   }
 }

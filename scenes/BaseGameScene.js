@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=190";
+import Player from "../player/Player.js?v=191";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=226";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=227";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -84,6 +84,7 @@ export default class BaseGameScene extends Phaser.Scene {
       attack: Phaser.Input.Keyboard.KeyCodes.Q,
       spell1: Phaser.Input.Keyboard.KeyCodes.ONE,
       spell2: Phaser.Input.Keyboard.KeyCodes.TWO,
+      ability3: Phaser.Input.Keyboard.KeyCodes.THREE,
       inventory: Phaser.Input.Keyboard.KeyCodes.I,
       shots: Phaser.Input.Keyboard.KeyCodes.G
     });
@@ -870,6 +871,45 @@ export default class BaseGameScene extends Phaser.Scene {
     this.applyLightningDamage?.(x, y, radius);
   }
 
+  // [2] Spin attack — the warrior whirls 360° dealing area damage all around. Reuses
+  // the existing attack sprites (rotated). Short cooldown so it can't be spammed.
+  warriorSpin() {
+    if (!this.player?.profile?.melee) return;
+    const now = this.time?.now ?? Date.now();
+    if (now < (this._spinCooldownUntil ?? 0)) return;
+    if (this.player.spin?.()) {
+      this._spinCooldownUntil = now + 1500;
+      this.time.delayedCall(180, () => {
+        if (this.player?.active) this.applyMeleeDamage(this.player.x, this.player.y, this.player.profile.spinRadius ?? 82);
+      });
+    }
+  }
+
+  // [3] Defend — rooted block stance: invincible for ~2.5s, then a 10s cooldown.
+  defend() {
+    if (!this.player?.profile?.melee || this._defending) return;
+    const now = this.time?.now ?? Date.now();
+    if (now < (this._defendCooldownUntil ?? 0)) {
+      this.flashHudMessage?.(`Defesa recarregando (${Math.ceil((this._defendCooldownUntil - now) / 1000)}s)`);
+      return;
+    }
+    this._defending = true;
+    this._defendCooldownUntil = now + 10000;
+    this.player.setVelocity(0, 0);
+    this.player.setTint(0x9fd8ff);
+    this.flashHudMessage?.("Defesa!");
+    this._shieldFx?.destroy();
+    this._shieldFx = this.add.ellipse(this.player.x, this.player.y, 70, 70, 0x6fd0ff, 0.16)
+      .setStrokeStyle(3, 0x6fd0ff, 0.9).setDepth((this.player.depth ?? 0) + 1);
+    this._shieldTween = this.tweens.add({ targets: this._shieldFx, scaleX: 1.12, scaleY: 1.12, alpha: 0.45, duration: 480, yoyo: true, repeat: -1 });
+    this.time.delayedCall(2500, () => {
+      this._defending = false;
+      this.player?.clearTint();
+      this._shieldTween?.remove(); this._shieldTween = null;
+      this._shieldFx?.destroy(); this._shieldFx = null;
+    });
+  }
+
   // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────
   ENCHANT_MAX = 10;
   ENCHANT_SHATTER_FROM = 4; // failing at +4 or higher can shatter (normal scroll)
@@ -1050,7 +1090,7 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   takeDamage(amount) {
-    if (this.playerInvincible || this.playerHp <= 0) return;
+    if (this.playerInvincible || this._defending || this.playerHp <= 0) return;
     this.playerHp = Math.max(0, this.playerHp - amount);
     this.updatePlayerHpBar();
     // Flash vermelho no player
@@ -2363,6 +2403,15 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateManualCollisionEditorControls();
     this.updateWorldClock();
     this.tickRegen();
+
+    // Rooted defend stance: keep the shield on the player and block movement/input.
+    if (this._defending) {
+      this.player.update(this.cursors, this.wasd, true);
+      this._shieldFx?.setPosition(this.player.x, this.player.y);
+      this.interactions.prompt?.setVisible(false);
+      return;
+    }
+
     this.chat?.update();
     this.multiplayer?.update(this.time.now);
 
@@ -2409,6 +2458,18 @@ export default class BaseGameScene extends Phaser.Scene {
 
     if (!this.dialog.active && (Phaser.Input.Keyboard.JustDown(this.interactKeys.attack) || Phaser.Input.Keyboard.JustDown(this.interactKeys.spell1))) {
       this.player.attack?.("fire");
+      this.player.update(this.cursors, this.wasd, true);
+      return;
+    }
+
+    // Warrior abilities on the top-row number keys (melee only): 2 = Spin, 3 = Defend.
+    if (!this.dialog.active && this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.spell2)) {
+      this.warriorSpin();
+      this.player.update(this.cursors, this.wasd, true);
+      return;
+    }
+    if (!this.dialog.active && this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.ability3)) {
+      this.defend();
       this.player.update(this.cursors, this.wasd, true);
       return;
     }
