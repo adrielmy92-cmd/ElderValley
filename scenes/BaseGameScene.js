@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=207";
-import DialogSystem from "../systems/DialogSystem.js?v=143";
-import InteractionSystem from "../systems/InteractionSystem.js?v=143";
-import ChatSystem from "../systems/ChatSystem.js?v=219";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=243";
-import MobileControls from "../systems/MobileControls.js?v=11";
-import Inventory, { itemData } from "../systems/Inventory.js?v=16";
-import InventoryUI from "../systems/InventoryUI.js?v=19";
-import Leveling from "../systems/Leveling.js?v=13";
+import Player from "../player/Player.js?v=208";
+import DialogSystem from "../systems/DialogSystem.js?v=144";
+import InteractionSystem from "../systems/InteractionSystem.js?v=144";
+import ChatSystem from "../systems/ChatSystem.js?v=220";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=244";
+import MobileControls from "../systems/MobileControls.js?v=12";
+import Inventory, { itemData } from "../systems/Inventory.js?v=17";
+import InventoryUI from "../systems/InventoryUI.js?v=20";
+import Leveling from "../systems/Leveling.js?v=14";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -982,20 +982,24 @@ export default class BaseGameScene extends Phaser.Scene {
   applyDot(enemy, dealDamage, proc) {
     if (enemy._dotActive) return; // no stacking — let the current one burn out
     enemy._dotActive = true;
-    const style = this.DOT_STYLE[proc.type] ?? this.DOT_STYLE.burn;
-    this._ensureDotTexture(style.tex, proc.type);
-    const flame = this.add.image(enemy.x, enemy.y, style.tex)
-      .setDepth(9400).setBlendMode(Phaser.BlendModes.ADD);
-    const off = (enemy.displayHeight ?? 64) * 0.32;
-    const rec = { enemy, flame, off };
+    const poison = proc.type === "poison";
+    const texKey = poison ? "dot-poison" : "dot-burn";
+    this._ensureDotTexture(texKey, proc.type);
+    // Bright flame following the enemy (NORMAL blend so it pops on any background,
+    // incl. the lava arena where an additive glow vanished).
+    const flame = this.add.image(enemy.x, enemy.y, texKey).setDepth(9300);
+    const off = (enemy.displayHeight ?? 64) * 0.30;
+    const rec = { enemy, flame, off, poison };
     (this._dots ??= []).push(rec);
     const ticks = proc.ticks ?? 4, interval = proc.interval ?? 500;
+    const color = poison ? "#9cff5a" : "#ff8a1e";
     let n = 0;
     const tick = () => {
       if (!enemy.active || n >= ticks) { this._endDot(rec); return; }
       n++;
       dealDamage(proc.dmg);
-      this.showDotNumber(enemy.x, enemy.y - off - 26, proc.dmg, style.color);
+      this.showDotNumber(enemy.x, enemy.y - off - 24, proc.dmg, color);
+      for (let i = 0; i < 4; i++) this._dotEmber(enemy.x, enemy.y - off * 0.4, poison);
       rec.timer = this.time.delayedCall(interval, tick);
     };
     tick(); // first tick is immediate for instant feedback
@@ -1005,41 +1009,63 @@ export default class BaseGameScene extends Phaser.Scene {
     if (!rec) return;
     rec.timer?.remove(false);
     rec.flame?.destroy();
-    if (rec.enemy) rec.enemy._dotActive = false;
+    if (rec.enemy) { rec.enemy.clearTint?.(); rec.enemy._dotActive = false; }
     this._dots = (this._dots ?? []).filter((r) => r !== rec);
   }
 
-  // Per-frame: flames follow the burning/poisoned enemy and flicker. From updateBase.
+  // Per-frame: the enemy itself flickers fire/venom colored, the flame follows it,
+  // and embers drift up. From updateBase — so it works in every combat scene.
   _tickDotVisuals() {
     if (!this._dots?.length) return;
     const t = this.time.now;
     for (const rec of [...this._dots]) {
-      if (!rec.enemy?.active) { this._endDot(rec); continue; }
-      rec.flame.setPosition(rec.enemy.x, rec.enemy.y - rec.off);
-      rec.flame.setScale(0.9 + 0.22 * Math.sin(t / 55) + Math.random() * 0.12);
-      rec.flame.setAlpha(0.6 + Math.random() * 0.4);
+      const e = rec.enemy;
+      if (!e?.active) { this._endDot(rec); continue; }
+      rec.flame.setPosition(e.x, e.y - rec.off)
+        .setScale(0.95 + 0.35 * Math.abs(Math.sin(t / 70)) + Math.random() * 0.12)
+        .setAlpha(0.82 + Math.random() * 0.18);
+      // the enemy sprite glows the element's color (clearly "on fire" / "poisoned")
+      const tint = rec.poison
+        ? (Math.sin(t / 80) > 0 ? 0x86ff4a : 0x37b021)
+        : (Math.sin(t / 55) > 0 ? 0xff6a14 : 0xffb24a);
+      e.setTint?.(tint);
+      if (Math.random() < 0.5) this._dotEmber(e.x, e.y - rec.off * 0.5, rec.poison);
     }
+  }
+
+  // A small rising ember/spore particle (no asset).
+  _dotEmber(x, y, poison) {
+    const g = this.add.graphics().setDepth(9310);
+    g.fillStyle(poison ? 0x9cff5a : 0xffb02a, 1);
+    g.fillCircle(0, 0, 2 + Math.random() * 3);
+    g.setPosition(x + (Math.random() * 34 - 17), y + (Math.random() * 18 - 9));
+    this.tweens.add({
+      targets: g, y: g.y - 28 - Math.random() * 24, alpha: 0,
+      duration: 360 + Math.random() * 240, ease: "Cubic.Out", onComplete: () => g.destroy()
+    });
   }
 
   showDotNumber(x, y, dmg, color) {
     const t = this.add.text(x + (Math.random() * 16 - 8), y, `-${dmg}`, {
-      fontFamily: "monospace", fontSize: "17px", color,
+      fontFamily: "monospace", fontSize: "19px", color,
       stroke: "#180800", strokeThickness: 4, fontStyle: "bold"
     }).setOrigin(0.5).setDepth(9450);
-    this.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 640, ease: "Power2", onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: y - 36, alpha: 0, duration: 660, ease: "Power2", onComplete: () => t.destroy() });
   }
 
-  // Procedural flame/venom puff (no asset). ADD blend makes it glow.
+  // Procedural flame/venom plume (no asset) — bright core + dark outline so it reads
+  // on any background.
   _ensureDotTexture(key, type) {
     if (this.textures.exists(key)) return;
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     const cols = type === "poison"
-      ? [0x2f7a18, 0x6fe04a, 0xd8ffa0]
-      : [0x8a2300, 0xff7a18, 0xffd24a];
-    g.fillStyle(cols[0], 0.85); g.fillEllipse(24, 40, 36, 48);
-    g.fillStyle(cols[1], 0.95); g.fillEllipse(24, 38, 24, 38);
-    g.fillStyle(cols[2], 1);    g.fillEllipse(24, 35, 12, 24);
-    g.generateTexture(key, 48, 64);
+      ? [0x0c2a08, 0x2f7a18, 0x6fe04a, 0xe6ffb0]
+      : [0x1a0600, 0x9a2a00, 0xff7a18, 0xffe07a];
+    g.fillStyle(cols[0], 0.55); g.fillEllipse(28, 46, 46, 60); // dark outline
+    g.fillStyle(cols[1], 0.95); g.fillEllipse(28, 46, 38, 50);
+    g.fillStyle(cols[2], 1);    g.fillEllipse(28, 43, 26, 40);
+    g.fillStyle(cols[3], 1);    g.fillEllipse(28, 40, 12, 26); // hot core
+    g.generateTexture(key, 56, 74);
     g.destroy();
   }
 

@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=17";
-import { itemData, isConsumable } from "./Inventory.js?v=16";
+import { RARITY } from "../data/alchemist-items.js?v=18";
+import { itemData, isConsumable } from "./Inventory.js?v=17";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -45,8 +45,8 @@ export default class InventoryUI {
     const s = this.scene;
     const cam = s.cameras.main;
     const W = cam.width, H = cam.height;
-    const panelW = Math.min(940, W - 40);
-    const panelH = Math.min(600, H - 40);
+    const panelW = Math.min(1040, W - 32);
+    const panelH = Math.min(688, H - 32);
     const px = Math.round((W - panelW) / 2);
     const py = Math.round((H - panelH) / 2);
 
@@ -70,7 +70,7 @@ export default class InventoryUI {
     this._closeBtn(px + panelW - 32, py + 32);
 
     const top = py + 78;
-    const leftW = Math.round((panelW - 32) * 0.56);
+    const leftW = Math.round((panelW - 32) * 0.54);
     this._dollArea = { x: px + 16, y: top, w: leftW, h: panelH - 78 - 16 };
     this._bagArea = { x: px + 16 + leftW + 8, y: top, w: panelW - 32 - leftW - 8, h: panelH - 78 - 16 };
 
@@ -78,58 +78,73 @@ export default class InventoryUI {
     this._renderBag();
   }
 
-  // ── paper-doll ──────────────────────────────────────────────────────────────
+  // ── paper-doll (3 stacked zones: equipment / stats / level+attributes) ───────
   _renderDoll() {
     const s = this.scene;
     const { x, y, w, h } = this._dollArea;
+    const gap = 8;
+    const attrH = 100;
+    const statsH = 96;
+    const equipH = h - attrH - statsH - gap * 2;
 
-    // backdrop
-    const bg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
-    bg.fillStyle(0x0d1b14, 0.55); bg.fillRoundedRect(x, y, w, h, 10);
-    bg.lineStyle(1, 0x3a4a3a, 0.8); bg.strokeRoundedRect(x, y, w, h, 10);
-    this._t(bg);
+    // ── equipment / paper-doll zone ──
+    const dbg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    dbg.fillStyle(0x0d1b14, 0.55); dbg.fillRoundedRect(x, y, w, equipH, 10);
+    dbg.lineStyle(1, 0x3a4a3a, 0.8); dbg.strokeRoundedRect(x, y, w, equipH, 10);
+    this._t(dbg);
 
     const mcx = x + Math.round(w * 0.5);
-    const mcy = y + Math.round(h * 0.46);
-    const SLOT = 60;
-    const colX = 132; // horizontal offset of the side columns from center
-    const rowY = 76;  // vertical step between left slots
+    const mcy = y + Math.round(equipH * 0.5);
+    const SLOT = 62;
+    const colX = Math.min(155, Math.round(w * 0.32)); // side columns clear of the body
+    const rowY = 48;   // vertical gap between the two side slots
+    const capY = 132;  // helmet (top) / boots (bottom)
 
-    // platform shadow + mage in the center (walking in place, facing the camera)
-    this._t(s.add.ellipse(mcx, mcy + 90, 116, 24, 0x000000, 0.35).setScrollFactor(0).setDepth(DEPTH + 2));
+    this._t(s.add.ellipse(mcx, mcy + 80, 108, 22, 0x000000, 0.32).setScrollFactor(0).setDepth(DEPTH + 2));
     const prefix = s.player?.animPrefix ?? "mage-1";
     const walkKey = `${prefix}-walk-down`;
     const walkTex = s.anims.get(walkKey)?.frames?.[0]?.textureKey ?? "mage-1-sheet";
     if (s.textures.exists(walkTex)) {
-      const mage = s.add.sprite(mcx, mcy - 20, walkTex, 0).setScrollFactor(0).setDepth(DEPTH + 3);
-      mage.setScale(2.6);
+      const mage = s.add.sprite(mcx, mcy - 8, walkTex, 0).setScrollFactor(0).setDepth(DEPTH + 3).setScale(2.2);
       if (s.anims.exists(walkKey)) mage.play(walkKey);
       this._t(mage);
     }
 
-    // equipment slots positioned around the body
-    this._equipSlot("helmet", "Helmet", mcx,            mcy - 150, SLOT, true);
-    this._equipSlot("amulet", "Amulet", mcx - colX,     mcy - rowY, SLOT, false);
-    this._equipSlot("ring1",  "Ring I", mcx - colX,     mcy,        SLOT, false);
-    this._equipSlot("ring2",  "Ring II",mcx - colX,     mcy + rowY, SLOT, false);
-    this._equipSlot("weapon", "Weapon", mcx + colX,     mcy,        SLOT, false);
-    this._equipSlot("boots",  "Boots",  mcx,            mcy + 150,  SLOT, true);
+    // symmetric: helmet top + boots bottom (locked); jewelry left, weapon + ring right
+    this._equipSlot("helmet", "Helmet",  mcx,        mcy - capY, SLOT, true);
+    this._equipSlot("amulet", "Amulet",  mcx - colX, mcy - rowY, SLOT, false);
+    this._equipSlot("ring1",  "Ring I",  mcx - colX, mcy + rowY, SLOT, false);
+    this._equipSlot("weapon", "Weapon",  mcx + colX, mcy - rowY, SLOT, false);
+    this._equipSlot("ring2",  "Ring II", mcx + colX, mcy + rowY, SLOT, false);
+    this._equipSlot("boots",  "Boots",   mcx,        mcy + capY, SLOT, true);
 
-    // stats strip (HP/MP + gear bonuses)
+    // ── stats zone ──
+    const sy = y + equipH + gap;
+    const sbg = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 1);
+    sbg.fillStyle(0x0a1414, 0.92); sbg.fillRoundedRect(x, sy, w, statsH, 9);
+    sbg.lineStyle(1, 0x3a4a3a, 0.8); sbg.strokeRoundedRect(x, sy, w, statsH, 9);
+    this._t(sbg);
+    this._t(s.add.text(x + 12, sy + 7, "Stats", {
+      fontFamily: "Georgia, serif", fontSize: "13px", color: "#9fe6c0"
+    }).setScrollFactor(0).setDepth(DEPTH + 2));
+    this._t(s.add.text(x + w - 12, sy + 8,
+      `HP ${Math.round(s.playerHp ?? 0)}/${s.playerMaxHp ?? 0}   MP ${Math.round(s.playerMp ?? 0)}/${s.playerMaxMp ?? 0}`, {
+      fontFamily: "monospace", fontSize: "12px", color: "#d9e2ee"
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH + 2));
+
     const b = s.bag.bonuses();
-    const statLines = [`HP ${Math.round(s.playerHp ?? 0)}/${s.playerMaxHp ?? 0}    MP ${Math.round(s.playerMp ?? 0)}/${s.playerMaxMp ?? 0}`];
     const extras = [];
     for (const [k, v] of Object.entries(b)) {
       if (k === "maxHp" || k === "maxMp") continue;
       extras.push(PCT_STATS.has(k) ? `${STAT_LABELS[k] ?? k} +${Math.round(v * 100)}%` : `${STAT_LABELS[k] ?? k} +${v}`);
     }
-    if (extras.length) statLines.push(extras.join("   "));
-    this._t(s.add.text(mcx, y + h - 92, statLines.join("\n"), {
-      fontFamily: "monospace", fontSize: "12px", color: "#d9e2ee", align: "center",
-      lineSpacing: 5, wordWrap: { width: w - 24 }
-    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(DEPTH + 3));
+    this._t(s.add.text(x + 12, sy + 30, extras.length ? extras.join("     ") : "No equipment bonuses", {
+      fontFamily: "monospace", fontSize: "12px", color: extras.length ? "#cbe0ff" : "#6f7d8c",
+      lineSpacing: 6, wordWrap: { width: w - 24 }
+    }).setScrollFactor(0).setDepth(DEPTH + 2));
 
-    this._renderAttributes(x, y + h - 84, w, 84);
+    // ── level + attributes zone ──
+    this._renderAttributes(x, sy + statsH + gap, w, attrH);
   }
 
   // Level + XP + the 3 allocatable attributes (with + buttons while points remain).
