@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=267";
+import WorldScene from "./WorldScene.js?v=268";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
@@ -445,10 +445,14 @@ export default class ForestScene extends WorldScene {
   // ─── ATAQUES VISUAIS ────────────────────────────────────────────────────────
 
   showDamageNumber(x, y, amount) {
-    const txt = this.add.text(x, y, `-${amount}`, {
-      fontFamily:"monospace", fontSize:"22px", color:"#ffff44", stroke:"#000000", strokeThickness:4
+    const crit = !!this._lastCritHit;
+    this._lastCritHit = false; // consume: only the enemy hit that critted is styled
+    const txt = this.add.text(x, y, crit ? `${amount} CRIT!` : `-${amount}`, {
+      fontFamily:"monospace", fontSize: crit ? "30px" : "22px",
+      color: crit ? "#ff8a1e" : "#ffff44", stroke:"#000000", strokeThickness: crit ? 6 : 4,
+      fontStyle: crit ? "bold" : "normal"
     }).setOrigin(0.5).setDepth(9000);
-    this.tweens.add({ targets:txt, y:y-70, alpha:0, scaleX:1.3, scaleY:1.3, duration:850, ease:"Power2", onComplete:()=>txt.destroy() });
+    this.tweens.add({ targets:txt, y:y-70, alpha:0, scaleX: crit?1.6:1.3, scaleY: crit?1.6:1.3, duration: crit?950:850, ease:"Power2", onComplete:()=>txt.destroy() });
   }
 
   showHitSparks(x, y) {

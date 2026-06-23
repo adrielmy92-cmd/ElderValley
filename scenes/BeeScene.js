@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=267";
+import WorldScene from "./WorldScene.js?v=268";
 
 const BEE_W = 2752;
 const BEE_H = 1536;
@@ -882,7 +882,7 @@ export default class BeeScene extends WorldScene {
 
     this._sfx("bee-hit", 0.55);
     this._showBossHitEffect(boss.x, boss.y);
-    this._showBossDmgNumber(boss.x, boss.y - 70, finalAmount, boss.state === "vulnerable");
+    this._showBossDmgNumber(boss.x, boss.y - 70, finalAmount, boss.state === "vulnerable" || !!this._lastCritHit);
 
     // Servidor é a autoridade — apenas envia o dano
     this.multiplayer?.sendHitBeeQueen(finalAmount);

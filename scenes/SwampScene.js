@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=267";
+import WorldScene from "./WorldScene.js?v=268";
 
 const SWAMP_W = 1920;
 const SWAMP_H = 1920;
@@ -325,13 +325,16 @@ export default class SwampScene extends WorldScene {
   }
 
   showTrollDamageNumber(x, y, amount) {
-    const txt = this.add.text(x, y, `-${amount}`, {
-      fontFamily: "monospace", fontSize: "18px",
-      color: "#ffff44", stroke: "#000000", strokeThickness: 3
+    const crit = !!this._lastCritHit;
+    this._lastCritHit = false; // consume: only the enemy hit that critted is styled
+    const txt = this.add.text(x, y, crit ? `${amount} CRIT!` : `-${amount}`, {
+      fontFamily: "monospace", fontSize: crit ? "26px" : "18px",
+      color: crit ? "#ff8a1e" : "#ffff44", stroke: "#000000", strokeThickness: crit ? 5 : 3,
+      fontStyle: crit ? "bold" : "normal"
     }).setOrigin(0.5).setDepth(9500);
     this.tweens.add({
-      targets: txt, y: y - 55, alpha: 0, scaleX: 1.2, scaleY: 1.2,
-      duration: 750, ease: "Power2", onComplete: () => txt.destroy()
+      targets: txt, y: y - 55, alpha: 0, scaleX: crit ? 1.5 : 1.2, scaleY: crit ? 1.5 : 1.2,
+      duration: crit ? 900 : 750, ease: "Power2", onComplete: () => txt.destroy()
     });
   }
 

@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=8";
-import { itemData, isConsumable } from "./Inventory.js?v=7";
+import { RARITY } from "../data/alchemist-items.js?v=9";
+import { itemData, isConsumable } from "./Inventory.js?v=8";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -299,8 +299,11 @@ export default class InventoryUI {
       const dispName = lvl > 0 ? `${item.name} +${lvl}` : item.name;
       this._t(s.add.text(x + 58, ry + 8, dispName, { fontFamily: "monospace", fontSize: "13px", color: lvl > 0 ? "#ffe08a" : rar.text })
         .setScrollFactor(0).setDepth(DEPTH + 3));
-      this._t(s.add.text(x + 58, ry + 26, (consumable || isShot || isScroll) ? `${item.effect}  ·  x${count}` : item.effect, {
-        fontFamily: "monospace", fontSize: "10px", color: "#9aa8bc"
+      const descText = (consumable || isShot || isScroll)
+        ? `${item.effect}  ·  x${count}`
+        : (isGear ? this._gearStatLine(item, lvl) : item.effect);
+      this._t(s.add.text(x + 58, ry + 26, descText, {
+        fontFamily: "monospace", fontSize: "10px", color: (isGear && lvl > 0) ? "#ffe08a" : "#9aa8bc"
       }).setScrollFactor(0).setDepth(DEPTH + 3));
 
       const by = ry + (rowH - 7) / 2;
@@ -338,6 +341,27 @@ export default class InventoryUI {
           () => this._enchantPopup(item.key));
       }
     });
+  }
+
+  // Human-readable stat line for a gear item that reflects its enchant level, so the
+  // upgrade is visible right in the bag (not only after equipping). Mirrors the exact
+  // scaling used by Inventory.bonuses(): +12%/level, integers rounded.
+  _gearStatLine(item, lvl) {
+    if (!item.stats) return item.effect;
+    const mult = 1 + lvl * 0.12;
+    const parts = [];
+    for (const [k, v] of Object.entries(item.stats)) {
+      const label = STAT_LABELS[k] ?? k;
+      const pct = PCT_STATS.has(k);
+      const fmt = (val) => pct ? `${Math.round(val * 100)}%` : `${Math.round(val)}`;
+      if (lvl > 0) {
+        const scaled = pct ? v * mult : Math.round(v * mult);
+        parts.push(`+${fmt(v)}→+${fmt(scaled)} ${label}`);
+      } else {
+        parts.push(`+${fmt(v)} ${label}`);
+      }
+    }
+    return parts.join("  ·  ");
   }
 
   // Small modal over the inventory: the enchant gamble for one gear item.

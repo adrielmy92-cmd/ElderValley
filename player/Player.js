@@ -268,8 +268,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setScale(1);
     this.setDepth(this.y + this.depthBias + 4);
     this.play(animationKey, true);
+    // Attack speed (gear): speed up the swing animation + shorten its timings.
+    const aspd = this.scene.attackSpeedMult?.() ?? 1;
+    if (this.anims && aspd !== 1) this.anims.timeScale = aspd;
 
-    this.scene.time.delayedCall(profile.melee ? (profile.meleeHitDelay ?? 180) : 170, () => {
+    this.scene.time.delayedCall((profile.melee ? (profile.meleeHitDelay ?? 180) : 170) / aspd, () => {
       if (!(this.active && this.isAttacking)) return;
       if (profile.melee) {
         // Melee: area-of-effect sword hit just in front of the warrior (no projectile).
@@ -288,6 +291,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         return;
       }
       this.isAttacking = false;
+      if (this.anims) this.anims.timeScale = 1; // restore normal speed for idle/walk
       this.setFlipX(false);
       this.setScale(1);
       this.playIdle();
@@ -295,7 +299,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, finishAttack);
 
-    this.scene.time.delayedCall(720, () => {
+    this.scene.time.delayedCall(720 / aspd, () => {
       if (!this.isAttacking) {
         return;
       }

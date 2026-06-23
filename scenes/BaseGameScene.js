@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=198";
-import DialogSystem from "../systems/DialogSystem.js?v=134";
-import InteractionSystem from "../systems/InteractionSystem.js?v=134";
-import ChatSystem from "../systems/ChatSystem.js?v=210";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=234";
-import MobileControls from "../systems/MobileControls.js?v=2";
-import Inventory, { itemData } from "../systems/Inventory.js?v=7";
-import InventoryUI from "../systems/InventoryUI.js?v=10";
-import Leveling from "../systems/Leveling.js?v=4";
+import Player from "../player/Player.js?v=199";
+import DialogSystem from "../systems/DialogSystem.js?v=135";
+import InteractionSystem from "../systems/InteractionSystem.js?v=135";
+import ChatSystem from "../systems/ChatSystem.js?v=211";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=235";
+import MobileControls from "../systems/MobileControls.js?v=3";
+import Inventory, { itemData } from "../systems/Inventory.js?v=8";
+import InventoryUI from "../systems/InventoryUI.js?v=11";
+import Leveling from "../systems/Leveling.js?v=5";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -935,7 +935,33 @@ export default class BaseGameScene extends Phaser.Scene {
   spellDamage(base) {
     if (this._meleeBase != null) this._meleeHits = (this._meleeHits ?? 0) + 1; // count enemies struck
     const b = this._meleeBase != null ? this._meleeBase : base;
-    return Math.max(1, Math.round((b + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
+    let dmg = Math.max(1, Math.round((b + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
+    const gear = this.bag?.bonuses?.() ?? {};
+    // Critical hit: rolled per enemy struck. Chance comes from gear (crit stat); a crit
+    // deals CRIT_MULT× damage. _lastCritHit lets each scene style the damage number.
+    const critChance = (gear.crit ?? 0) + (this.leveling?.bonusCrit?.() ?? 0);
+    this._lastCritHit = critChance > 0 && Math.random() < critChance;
+    if (this._lastCritHit) dmg = Math.round(dmg * (this.CRIT_MULT ?? 2));
+    // Lifesteal: heal a fraction of the damage dealt back to the player.
+    const ls = gear.lifesteal ?? 0;
+    if (ls > 0 && this.playerHp != null && this.playerHp < this.playerMaxHp) {
+      const heal = Math.max(1, Math.round(dmg * ls));
+      this.playerHp = Math.min(this.playerMaxHp, this.playerHp + heal);
+      this.updatePlayerHpBar?.();
+      this.showLifestealText?.(heal);
+    }
+    return Math.max(1, dmg);
+  }
+
+  // Small green heal number floating off the player (lifesteal feedback), throttled.
+  showLifestealText(amount) {
+    if (!this.player) return;
+    if (this._lastLifestealAt && this.time.now - this._lastLifestealAt < 220) return;
+    this._lastLifestealAt = this.time.now;
+    const t = this.add.text(this.player.x + 14, this.player.y - 30, `+${amount}`, {
+      fontFamily: "monospace", fontSize: "13px", color: "#5dffa0", stroke: "#04220f", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(9000);
+    this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 620, ease: "Power2", onComplete: () => t.destroy() });
   }
 
   // Melee sword strike: area-of-effect damage via each combat scene's applyLightningDamage
@@ -1136,6 +1162,7 @@ export default class BaseGameScene extends Phaser.Scene {
   // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────
   ENCHANT_MAX = 10;
   ENCHANT_SHATTER_FROM = 4; // failing at +4 or higher can shatter (normal scroll)
+  CRIT_MULT = 2;            // critical hits deal this multiple of normal damage
 
   // Success chance for the attempt that takes gear from `level` to `level+1`.
   enchantChance(level) {
@@ -1216,6 +1243,13 @@ export default class BaseGameScene extends Phaser.Scene {
     if (!this.player) return;
     if (this._baseMoveSpeed == null) this._baseMoveSpeed = this.player.speed ?? 145;
     this.player.speed = this._baseMoveSpeed + (this.leveling?.bonusSpeed() ?? 0);
+  }
+
+  // Attack-speed multiplier from gear (e.g. +10% → 1.10). Used by Player.attack() to
+  // speed up the swing/cast animation and shorten its lockout.
+  attackSpeedMult() {
+    const as = (this.bag?.bonuses?.().attackSpeed ?? 0) + (this.leveling?.bonusAttackSpeed?.() ?? 0);
+    return 1 + Math.max(0, as);
   }
 
   // Out-of-combat-ish HP regen: Vitality regen + any gear hpRegen. Ticked from updateBase.
@@ -1317,6 +1351,13 @@ export default class BaseGameScene extends Phaser.Scene {
   takeDamage(amount) {
     if (this._defending) { this.showBlockSpark?.(); return false; }
     if (this.playerInvincible || this.playerHp <= 0) return false;
+    const gear = this.bag?.bonuses?.() ?? {};
+    // Dodge: chance to avoid the hit entirely (no damage, no i-frames consumed).
+    const dodge = (gear.dodge ?? 0) + (this.leveling?.bonusDodge?.() ?? 0);
+    if (dodge > 0 && Math.random() < dodge) { this.showDodgeText?.(); return false; }
+    // Defense: flat damage reduction (at least 1 still lands).
+    const defense = gear.defense ?? 0;
+    amount = Math.max(1, Math.round(amount - defense));
     this.playerHp = Math.max(0, this.playerHp - amount);
     this.updatePlayerHpBar();
     // Flash vermelho no player
@@ -1331,6 +1372,15 @@ export default class BaseGameScene extends Phaser.Scene {
       this.onPlayerDeath();
     }
     return true;
+  }
+
+  // "DODGE" pop when gear dodge avoids a hit.
+  showDodgeText() {
+    if (!this.player) return;
+    const t = this.add.text(this.player.x, this.player.y - 44, "DODGE", {
+      fontFamily: "monospace", fontSize: "14px", color: "#9be8ff", stroke: "#04121f", strokeThickness: 4
+    }).setOrigin(0.5).setDepth(9000);
+    this.tweens.add({ targets: t, y: t.y - 22, alpha: 0, duration: 560, ease: "Power2", onComplete: () => t.destroy() });
   }
 
   // Small "blocked" flash on the shield when an attack is defended.

@@ -1408,13 +1408,31 @@ function publicLeveling(profile) {
     attr: profile.attr
   };
 }
+// XP-gain bonus from a profile's equipped jewelry (xpBonus stat, scaled by enchant
+// level the same way the client's Inventory.bonuses() does: +12%/level). Wallet
+// profiles carry the authoritative bag on the server; guests have an empty bag → 0.
+function gearXpBonus(profile) {
+  const bag = profile?.bag;
+  if (!bag || !bag.equipped) return 0;
+  let bonus = 0;
+  for (const key of Object.values(bag.equipped)) {
+    const xp = ALCHEMIST_ITEMS.find((i) => i.key === key)?.stats?.xpBonus;
+    if (!xp) continue;
+    const lvl = Number(bag.enchants?.[key] ?? 0) || 0;
+    bonus += xp * (1 + lvl * 0.12);
+  }
+  return bonus;
+}
+
 // readProfile → addXp → writeProfile (under the profile lock); returns the new
 // public leveling state, or null if nothing was granted / profile unknown.
 async function grantXpToProfileId(profileId, amount) {
-  const gain = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!profileId || gain <= 0) return null;
+  const base = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!profileId || base <= 0) return null;
   const result = await withProfileLock(profileId, async () => {
     const profile = await loadProfileForMutation(profileId);
+    // Apply the equipped-gear XP bonus (authoritative; computed from the server bag).
+    const gain = Math.max(base, Math.round(base * (1 + gearXpBonus(profile))));
     const levels = addXp(profile, gain);
     const saved = (await writeProfile(profileId, profile)).profile;
     return { ...publicLeveling(saved), gained: gain, leveledUp: levels };
