@@ -2,9 +2,10 @@
 // Prices are in coins (the in-game currency earned from work shifts).
 //
 // Potions: `heal`/`mana` = fraction of max HP/MP restored; `cooldownMs` gates use.
-// Gear: `slot` ("ring" | "amulet") + `stats` (applied when equipped). Applied stats
-// today: maxHp, maxMp (the HP/MP bars react immediately). Others (attack, defense,
-// crit, lifesteal, hpRegen, etc.) are stored now and wired into combat in later phases.
+// Gear: `slot` ("ring" | "amulet" | "weapon") + `stats` (applied when equipped).
+// All combat stats are wired: maxHp/maxMp (bars), attack, defense, dodge, crit,
+// lifesteal, attackSpeed, hpRegen, xpBonus. `procIcon` items draw their bag icon in
+// code (no PNG under assets/items/).
 
 export const RARITY = {
   common:    { label: "Common",    color: 0x9aa4b2, text: "#c7d0db", glow: 0x9aa4b2 },
@@ -53,5 +54,14 @@ export const ALCHEMIST_ITEMS = [
   { key: "crimson-vow",          name: "Crimson Vow",         rarity: "rare",      price: 400, effect: "+10 Attack · 3% Lifesteal",        slot: "ring",   stats: { attack: 10, lifesteal: 0.03 } },
   { key: "frostvein-ring",       name: "Frostvein Ring",      rarity: "uncommon",  price: 150, effect: "+8 Frost Resist",                  slot: "ring",   stats: { defense: 8 } },
   { key: "grovewarden-talisman", name: "Grovewarden Talisman",rarity: "legendary", price: 850, effect: "+30 Max HP · +2 HP/s Regen",       slot: "amulet", stats: { maxHp: 30, hpRegen: 2 } },
-  { key: "wraithbone-charm",     name: "Wraithbone Charm",    rarity: "epic",      price: 600, effect: "+12 Shadow Damage · +5% Lifesteal",slot: "amulet", stats: { attack: 12, lifesteal: 0.05 } }
+  { key: "wraithbone-charm",     name: "Wraithbone Charm",    rarity: "epic",      price: 600, effect: "+12 Shadow Damage · +5% Lifesteal",slot: "amulet", stats: { attack: 12, lifesteal: 0.05 } },
+
+  // Weapons (equippable, slot: "weapon"). Stat-only — no on-character visual.
+  // `procIcon` → inventory icon is drawn procedurally (no PNG / no SpriteCook cost).
+  // Weapons are the main Attack source (bigger than rings) + a signature stat.
+  { key: "iron-sword",        name: "Iron Sword",          rarity: "common",    price: 120,  effect: "+14 Attack",                       slot: "weapon", procIcon: true, stats: { attack: 14 } },
+  { key: "steel-longsword",   name: "Steel Longsword",     rarity: "uncommon",  price: 280,  effect: "+22 Attack",                       slot: "weapon", procIcon: true, stats: { attack: 22 } },
+  { key: "emberbrand",        name: "Emberbrand",          rarity: "rare",      price: 520,  effect: "+30 Attack · +6% Crit",            slot: "weapon", procIcon: true, stats: { attack: 30, crit: 0.06 } },
+  { key: "tempest-edge",      name: "Tempest Edge",        rarity: "epic",      price: 780,  effect: "+38 Attack · +12% Attack Speed",   slot: "weapon", procIcon: true, stats: { attack: 38, attackSpeed: 0.12 } },
+  { key: "dragonfang",        name: "Dragonfang Greatsword",rarity: "legendary",price: 1200, effect: "+50 Attack · +10% Crit · 4% Lifesteal", slot: "weapon", procIcon: true, stats: { attack: 50, crit: 0.10, lifesteal: 0.04 } }
 ];

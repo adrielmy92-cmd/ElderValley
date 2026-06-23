@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=12";
-import { itemData, isConsumable } from "./Inventory.js?v=11";
+import { RARITY } from "../data/alchemist-items.js?v=13";
+import { itemData, isConsumable } from "./Inventory.js?v=12";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -112,7 +112,7 @@ export default class InventoryUI {
     this._equipSlot("amulet", "Amulet", mcx - colX,     mcy - rowY, SLOT, false);
     this._equipSlot("ring1",  "Ring I", mcx - colX,     mcy,        SLOT, false);
     this._equipSlot("ring2",  "Ring II",mcx - colX,     mcy + rowY, SLOT, false);
-    this._equipSlot("armor",  "Armor",  mcx + colX,     mcy,        SLOT, true);
+    this._equipSlot("weapon", "Weapon", mcx + colX,     mcy,        SLOT, false);
     this._equipSlot("boots",  "Boots",  mcx,            mcy + 150,  SLOT, true);
 
     // stats strip (HP/MP + gear bonuses)
@@ -239,6 +239,10 @@ export default class InventoryUI {
     g.fillStyle(color, 0.18);
     if (slotKey === "helmet") {
       g.beginPath(); g.arc(cx, cy + 4, 12, Math.PI, 0); g.lineTo(cx + 12, cy + 9); g.lineTo(cx - 12, cy + 9); g.closePath(); g.strokePath(); g.fillPath();
+    } else if (slotKey === "weapon") {
+      g.lineBetween(cx - 9, cy + 11, cx + 8, cy - 10); // blade
+      g.lineBetween(cx + 3, cy - 11, cx + 11, cy - 3); // guard
+      g.lineBetween(cx - 11, cy + 7, cx - 6, cy + 12); // pommel
     } else if (slotKey === "armor") {
       g.strokeRoundedRect(cx - 11, cy - 11, 22, 22, 4);
       g.lineBetween(cx, cy - 11, cx, cy + 11);

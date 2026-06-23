@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=12";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=13";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -34,7 +34,7 @@ export default class Inventory {
 
   load() {
     this.stacks = {};
-    this.equipped = { ring1: null, ring2: null, amulet: null };
+    this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null };
     this.enchants = {};
     if (this._isWallet()) {
       this._mode = "server";
@@ -53,7 +53,7 @@ export default class Inventory {
       const raw = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null");
       if (raw && typeof raw === "object") {
         this.stacks = raw.stacks ?? {};
-        this.equipped = { ring1: null, ring2: null, amulet: null, ...(raw.equipped ?? {}) };
+        this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null, ...(raw.equipped ?? {}) };
         this.enchants = raw.enchants ?? {};
       }
     } catch { /* ignore */ }
@@ -61,7 +61,7 @@ export default class Inventory {
 
   _applyBag(bag) {
     this.stacks = { ...(bag?.stacks ?? {}) };
-    this.equipped = { ring1: null, ring2: null, amulet: null, ...(bag?.equipped ?? {}) };
+    this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null, ...(bag?.equipped ?? {}) };
     this.enchants = { ...(bag?.enchants ?? {}) };
     // Keep registry.playerProfile fresh so a scene change re-hydrates the current
     // bag (not the stale login-time one).
@@ -181,7 +181,11 @@ export default class Inventory {
     this._push("consume", { itemKey: key });
   }
 
-  slotTypeFor(item) { return item?.slot === "amulet" ? "amulet" : "ring"; }
+  slotTypeFor(item) {
+    if (item?.slot === "amulet") return "amulet";
+    if (item?.slot === "weapon") return "weapon";
+    return "ring";
+  }
 
   // Purchase an item. Server mode: authoritative buy (no local pre-deduct). Guest:
   // deduct coins + add locally. Returns { ok, error? }.
@@ -214,11 +218,10 @@ export default class Inventory {
     if (!item || isConsumable(item)) return false;
     if (this.count(key) <= 0) return false;
     let slot;
-    if (this.slotTypeFor(item) === "amulet") {
-      slot = "amulet";
-    } else {
-      slot = !this.equipped.ring1 ? "ring1" : (!this.equipped.ring2 ? "ring2" : "ring1");
-    }
+    const t = this.slotTypeFor(item);
+    if (t === "amulet") slot = "amulet";
+    else if (t === "weapon") slot = "weapon";
+    else slot = !this.equipped.ring1 ? "ring1" : (!this.equipped.ring2 ? "ring2" : "ring1");
     const prev = this.equipped[slot];
     this.remove(key, 1);
     if (prev) this.add(prev, 1);

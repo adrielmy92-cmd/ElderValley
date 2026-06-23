@@ -1203,7 +1203,7 @@ function isConsumableItem(item) {
 // Validate/clamp an incoming bag against the catalog. Shape:
 // { stacks: {key:count}, equipped: {ring1,ring2,amulet}, enchants: {key:level} }
 function normalizeBag(raw) {
-  const out = { stacks: {}, equipped: { ring1: null, ring2: null, amulet: null }, enchants: {} };
+  const out = { stacks: {}, equipped: { weapon: null, ring1: null, ring2: null, amulet: null }, enchants: {} };
   if (!raw || typeof raw !== "object") return out;
   const stacks = raw.stacks && typeof raw.stacks === "object" ? raw.stacks : {};
   for (const [key, count] of Object.entries(stacks)) {
@@ -1211,13 +1211,14 @@ function normalizeBag(raw) {
     const n = Math.floor(Number(count) || 0);
     if (n > 0) out.stacks[key] = Math.min(n, 9999);
   }
+  const slotTypeOf = (item) => item.slot === "amulet" ? "amulet" : item.slot === "weapon" ? "weapon" : "ring";
   const eq = raw.equipped && typeof raw.equipped === "object" ? raw.equipped : {};
-  for (const slot of ["ring1", "ring2", "amulet"]) {
+  for (const slot of ["weapon", "ring1", "ring2", "amulet"]) {
     const key = eq[slot];
     const item = key && ITEMS_BY_KEY[key];
     if (!item || isConsumableItem(item)) continue;
-    const wantAmulet = item.slot === "amulet";
-    if ((slot === "amulet") === wantAmulet) out.equipped[slot] = key;
+    const slotType = slot === "amulet" ? "amulet" : slot === "weapon" ? "weapon" : "ring";
+    if (slotTypeOf(item) === slotType) out.equipped[slot] = key;
   }
   const en = raw.enchants && typeof raw.enchants === "object" ? raw.enchants : {};
   for (const [key, lvl] of Object.entries(en)) {
@@ -1301,8 +1302,8 @@ async function runEconomyAction(action, profileId, payload) {
     const item = ITEMS_BY_KEY[key];
     if (!item || isConsumableItem(item)) return fail("Cannot equip");
     if (bagCount(bag, key) <= 0) return fail("Not owned");
-    const slot = item.slot === "amulet"
-      ? "amulet"
+    const slot = item.slot === "amulet" ? "amulet"
+      : item.slot === "weapon" ? "weapon"
       : (!bag.equipped.ring1 ? "ring1" : (!bag.equipped.ring2 ? "ring2" : "ring1"));
     const prev = bag.equipped[slot];
     bagRemove(bag, key, 1);
@@ -1313,7 +1314,7 @@ async function runEconomyAction(action, profileId, payload) {
 
   if (action === "unequip") {
     const slot = sanitizeText(payload.slot, 16);
-    if (!["ring1", "ring2", "amulet"].includes(slot)) return fail("Bad slot");
+    if (!["weapon", "ring1", "ring2", "amulet"].includes(slot)) return fail("Bad slot");
     const key = bag.equipped[slot];
     if (!key) return fail("Empty slot");
     bag.equipped[slot] = null;

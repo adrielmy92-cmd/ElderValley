@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=12";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=13";
 
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {
@@ -111,7 +111,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=2", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=146");
     this.loadSheet("alchemy-vendor", "./assets/sprites/alchemy-vendor-sheet.png?v=1", 108, 108);
-    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=1`));
+    ALCHEMIST_ITEMS.forEach((it) => { if (!it.procIcon) this.loadImage(it.key, `./assets/items/${it.key}.png?v=1`); });
     this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=2");
     this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=2");
     this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=2");
@@ -135,10 +135,34 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.applyChromaKey("volcano-gate-raw", "volcano-gate", 255, 0, 255);
     this.applyChromaKey("swamp-gate-raw",   "swamp-gate",   255, 0, 255);
     this.applyChromaKey("hive-gate-raw",    "hive-gate",    255, 0, 255);
+    // Procedural bag icons for weapons (no PNG, no SpriteCook cost) — blade tinted by rarity.
+    ALCHEMIST_ITEMS.forEach((it) => { if (it.procIcon) this.makeSwordIcon(it.key, RARITY[it.rarity]?.color ?? 0xc7d0db); });
     this.scene.start(this.targetScene, {
       ...this.entryData,
       spawnKey: this.spawnKey
     });
+  }
+
+  // Draws a 256×256 sword icon (blade in `color`, gold guard/pommel) under `key`.
+  makeSwordIcon(key, color) {
+    if (this.textures.exists(key)) return;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    const cx = 128, top = 30, bot = 150, hw = 16;
+    // blade
+    g.fillStyle(color, 1);
+    g.fillPoints([
+      new Phaser.Geom.Point(cx, top),
+      new Phaser.Geom.Point(cx + hw, top + 34),
+      new Phaser.Geom.Point(cx + hw, bot),
+      new Phaser.Geom.Point(cx - hw, bot),
+      new Phaser.Geom.Point(cx - hw, top + 34)
+    ], true);
+    g.fillStyle(0xffffff, 0.55); g.fillRect(cx - 5, top + 18, 7, bot - top - 24); // highlight
+    g.fillStyle(0xc9a24a, 1); g.fillRoundedRect(cx - 50, bot, 100, 18, 5);        // crossguard
+    g.fillStyle(0x6b4a2a, 1); g.fillRoundedRect(cx - 11, bot + 18, 22, 56, 5);    // grip
+    g.fillStyle(0xe8c14a, 1); g.fillCircle(cx, bot + 82, 14);                     // pommel
+    g.generateTexture(key, 256, 256);
+    g.destroy();
   }
 
   applyChromaKey(sourceKey, destKey, r, g, b) {
