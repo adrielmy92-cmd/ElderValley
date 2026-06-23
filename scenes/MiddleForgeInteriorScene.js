@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=235";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=236";
 
 export default class MiddleForgeInteriorScene extends InteriorBaseScene {
   constructor() {

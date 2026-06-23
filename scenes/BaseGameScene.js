@@ -948,8 +948,31 @@ export default class BaseGameScene extends Phaser.Scene {
     this._meleeHits = 0;
     this.applyLightningDamage?.(x, y, radius);
     this._meleeBase = null;
-    // Sword clash sound only when the strike actually connects with an enemy.
-    if (this._meleeHits > 0) this.playSfx(Math.random() < 0.5 ? "sword-hit-1" : "sword-hit-2", 0.5);
+    // Sword clash sound + slash effect only when the strike actually connects.
+    if (this._meleeHits > 0) {
+      this.playSfx(Math.random() < 0.5 ? "sword-hit-1" : "sword-hit-2", 0.5);
+      this.showSlashFx(x, y, Math.min(radius, 70));
+    }
+  }
+
+  // Quick white crescent slash drawn at an impact (no asset).
+  showSlashFx(x, y, size = 60) {
+    const g = this.add.graphics().setDepth(9000);
+    const startA = Math.random() * Math.PI * 2;
+    const sweep = Math.PI * 1.15;
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: 200, ease: "Cubic.easeOut",
+      onUpdate: (tw) => {
+        const p = tw.getValue();
+        const r = size * (0.55 + 0.7 * p);
+        g.clear();
+        g.lineStyle(7 * (1 - p) + 1, 0xffffff, 0.9 * (1 - p));
+        g.beginPath(); g.arc(x, y, r, startA, startA + sweep); g.strokePath();
+        g.lineStyle(3 * (1 - p) + 1, 0xbfe6ff, 0.8 * (1 - p));
+        g.beginPath(); g.arc(x, y, r - 5, startA + 0.1, startA + sweep - 0.1); g.strokePath();
+      },
+      onComplete: () => g.destroy()
+    });
   }
 
   // [2] Spin attack — the warrior whirls 360° dealing area damage all around. Reuses
