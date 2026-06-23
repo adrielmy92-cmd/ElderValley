@@ -1,5 +1,5 @@
-import BaseGameScene from "./BaseGameScene.js?v=254";
-import MarketSystem from "../systems/MarketSystem.js?v=4";
+import BaseGameScene from "./BaseGameScene.js?v=255";
+import MarketSystem from "../systems/MarketSystem.js?v=5";
 
 const TILE = 32;
 const RIVER_TOP = 832;

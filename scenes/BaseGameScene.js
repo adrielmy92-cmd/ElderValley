@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=197";
-import DialogSystem from "../systems/DialogSystem.js?v=133";
-import InteractionSystem from "../systems/InteractionSystem.js?v=133";
-import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=233";
-import MobileControls from "../systems/MobileControls.js?v=1";
-import Inventory, { itemData } from "../systems/Inventory.js?v=6";
-import InventoryUI from "../systems/InventoryUI.js?v=9";
-import Leveling from "../systems/Leveling.js?v=3";
+import Player from "../player/Player.js?v=198";
+import DialogSystem from "../systems/DialogSystem.js?v=134";
+import InteractionSystem from "../systems/InteractionSystem.js?v=134";
+import ChatSystem from "../systems/ChatSystem.js?v=210";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=234";
+import MobileControls from "../systems/MobileControls.js?v=2";
+import Inventory, { itemData } from "../systems/Inventory.js?v=7";
+import InventoryUI from "../systems/InventoryUI.js?v=10";
+import Leveling from "../systems/Leveling.js?v=4";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1052,12 +1052,49 @@ export default class BaseGameScene extends Phaser.Scene {
     // Visible golden shield barrier around the warrior (drawn each frame in updateBase).
     this._defendBarrier?.destroy();
     this._defendBarrier = this.add.graphics().setDepth((this.player.depth ?? 0) + 2);
+    // Floating shield emblem above the head — the clearest "I'm defending" signal.
+    this._ensureDefendShieldTexture();
+    this._defendEmblem?.destroy();
+    this._defendEmblem = this.add.image(this.player.x, this.player.y, "defend-shield")
+      .setDepth((this.player.depth ?? 0) + 3);
+    // Burst ring when the guard snaps up, so the activation reads instantly.
+    const ring = this.add.graphics().setDepth((this.player.depth ?? 0) + 1);
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: 380, ease: "Cubic.Out",
+      onUpdate: (tw) => {
+        const p = tw.getValue(); if (!this.player) return;
+        const R = 20 + 50 * p;
+        ring.clear();
+        ring.lineStyle(4 * (1 - p) + 1, 0xffe7a0, 0.9 * (1 - p));
+        ring.strokeCircle(this.player.x, this.player.y - 8, R);
+      },
+      onComplete: () => ring.destroy()
+    });
     this.time.delayedCall(5000, () => {
       this._defending = false;
       this.playerInvincible = false;
       if (this.player) { this.player.defending = false; this.player.clearTint(); }
       this._defendBarrier?.destroy(); this._defendBarrier = null;
+      this._defendEmblem?.destroy(); this._defendEmblem = null;
     });
+  }
+
+  // Procedural golden shield emblem (no asset) shown bobbing above the warrior's head.
+  _ensureDefendShieldTexture() {
+    if (this.textures.exists("defend-shield")) return;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    // soft glow backdrop
+    g.fillStyle(0xffcf57, 0.22); g.fillCircle(16, 16, 15);
+    g.fillStyle(0xffe7a0, 0.30); g.fillCircle(16, 16, 11);
+    // shield body
+    g.fillStyle(0xffd86b, 1); g.fillRoundedRect(7, 5, 18, 16, 4);
+    g.fillTriangle(7, 19, 25, 19, 16, 28);
+    // bright rim
+    g.lineStyle(2, 0xfff6cf, 1); g.strokeRoundedRect(7, 5, 18, 16, 4);
+    // cross emblem
+    g.fillStyle(0xffffff, 0.95); g.fillRect(15, 8, 3, 14); g.fillRect(10, 12, 13, 3);
+    g.generateTexture("defend-shield", 32, 32);
+    g.destroy();
   }
 
   // Rotating, pulsing golden hexagonal shield barrier shown while defending.
@@ -1068,16 +1105,32 @@ export default class BaseGameScene extends Phaser.Scene {
     const t = this.time.now;
     const pulse = 0.5 + 0.5 * Math.sin(t / 140);
     const rot = t / 700;
-    const R = 42 + 4 * pulse;
+    const R = 44 + 5 * pulse;
     g.clear();
-    const pts = [];
-    for (let i = 0; i < 6; i++) {
-      const a = rot + i * Math.PI / 3;
-      pts.push(new Phaser.Geom.Point(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.85));
+    const hex = (radius) => {
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = rot + i * Math.PI / 3;
+        pts.push(new Phaser.Geom.Point(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius * 0.85));
+      }
+      return pts;
+    };
+    const pts = hex(R);
+    // outer glow ring (soft, larger) so the dome reads from far away
+    g.lineStyle(8, 0xffcf57, 0.18 + 0.12 * pulse); g.strokePoints(hex(R + 6), true);
+    // solid translucent dome — much more opaque than before
+    g.fillStyle(0xffd86b, 0.22 + 0.12 * pulse); g.fillPoints(pts, true);
+    // bright bold rim
+    g.lineStyle(4, 0xffe7a0, 0.80 + 0.20 * pulse); g.strokePoints(pts, true);
+    // inner shimmer
+    g.lineStyle(2, 0xffffff, 0.45 + 0.25 * pulse); g.strokeEllipse(cx, cy, (R - 8) * 2, (R - 8) * 1.7);
+
+    // Bobbing, glowing shield emblem above the head.
+    if (this._defendEmblem) {
+      this._defendEmblem.setPosition(cx, this.player.y - (this.player.displayHeight ?? 80) * 0.72 + Math.sin(t / 220) * 3);
+      this._defendEmblem.setScale(1.0 + 0.12 * pulse);
+      this._defendEmblem.setAlpha(0.85 + 0.15 * pulse);
     }
-    g.fillStyle(0xffcf57, 0.10 + 0.07 * pulse); g.fillPoints(pts, true);
-    g.lineStyle(3, 0xffe7a0, 0.55 + 0.35 * pulse); g.strokePoints(pts, true);
-    g.lineStyle(1.5, 0xffffff, 0.25 * pulse); g.strokeEllipse(cx, cy, (R - 6) * 2, (R - 6) * 1.7);
   }
 
   // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────

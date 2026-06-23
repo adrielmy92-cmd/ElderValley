@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=266";
+import WorldScene from "./WorldScene.js?v=267";
 
 const SWAMP_W = 1920;
 const SWAMP_H = 1920;

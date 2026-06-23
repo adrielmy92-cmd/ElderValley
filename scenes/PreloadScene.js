@@ -1,4 +1,4 @@
-import { createPixelArtTextures } from "../systems/PixelArtFactory.js?v=132";
+import { createPixelArtTextures } from "../systems/PixelArtFactory.js?v=133";
 
 export default class PreloadScene extends Phaser.Scene {
   constructor() {
