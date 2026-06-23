@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=193";
+import Player from "../player/Player.js?v=194";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=229";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=230";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -994,7 +994,7 @@ export default class BaseGameScene extends Phaser.Scene {
       onUpdate: (tw) => {
         const p = tw.getValue();
         const a = p * Math.PI * 2 * turns;
-        const R = 26 + 56 * Math.sin(Math.PI * p); // grow then pull back in
+        const R = 30 + 100 * Math.sin(Math.PI * p); // grow then pull back in (matches spin range)
         const cx = this.player?.x ?? 0, cy = this.player?.y ?? 0;
         for (const sw of swords) {
           const ang = a + sw.off;
@@ -1211,8 +1211,11 @@ export default class BaseGameScene extends Phaser.Scene {
     this.hpValueText?.setText(`${Math.max(0, this.playerHp)}/${this.playerMaxHp}`);
   }
 
+  // Returns true if the hit landed, false if it was blocked (defend / i-frames / dead),
+  // so callers can skip the floating damage number when nothing was taken.
   takeDamage(amount) {
-    if (this.playerInvincible || this._defending || this.playerHp <= 0) return;
+    if (this._defending) { this.showBlockSpark?.(); return false; }
+    if (this.playerInvincible || this.playerHp <= 0) return false;
     this.playerHp = Math.max(0, this.playerHp - amount);
     this.updatePlayerHpBar();
     // Flash vermelho no player
@@ -1226,6 +1229,17 @@ export default class BaseGameScene extends Phaser.Scene {
     if (this.playerHp <= 0) {
       this.onPlayerDeath();
     }
+    return true;
+  }
+
+  // Small "blocked" flash on the shield when an attack is defended.
+  showBlockSpark() {
+    if (!this.player || (this._lastBlockSparkAt && this.time.now - this._lastBlockSparkAt < 120)) return;
+    this._lastBlockSparkAt = this.time.now;
+    const t = this.add.text(this.player.x, this.player.y - 40, "BLOCK", {
+      fontFamily: "monospace", fontSize: "12px", color: "#9fd8ff", stroke: "#0a1830", strokeThickness: 4
+    }).setOrigin(0.5).setDepth(9000);
+    this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 500, onComplete: () => t.destroy() });
   }
 
   onPlayerDeath() {

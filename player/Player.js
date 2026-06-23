@@ -36,7 +36,7 @@ const PLAYER_CHARACTERS = {
     meleeRadius: 52,
     meleeHitDelay: 190,
     meleeBase: 50,        // base sword damage; grows with weapons (Attack) + Strength/level
-    spinRadius: 82,
+    spinRadius: 130,
     spinDamageMult: 2.5,  // [2] Spin hits harder than the basic attack
     frameWidth: 82,
     frameHeight: 84,

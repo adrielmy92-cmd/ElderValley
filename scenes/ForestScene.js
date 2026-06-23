@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=260";
+import WorldScene from "./WorldScene.js?v=261";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
@@ -495,7 +495,7 @@ export default class ForestScene extends WorldScene {
     this.cameras.main.shake(220,0.009);
     if (this.player?.active) {
       const dx=this.player.x-tx, dy=this.player.y-ty;
-      if (Math.sqrt(dx*dx+dy*dy) <= radius) { this.takeDamage(40); this.showDamageNumber(this.player.x,this.player.y-50,40); }
+      if (Math.sqrt(dx*dx+dy*dy) <= radius && this.takeDamage(40)) { this.showDamageNumber(this.player.x,this.player.y-50,40); }
     }
   }
 
@@ -514,7 +514,7 @@ export default class ForestScene extends WorldScene {
       explosion.once("animationcomplete",()=>explosion.destroy());
       if (this.player?.active) {
         const dx=this.player.x-tx, dy=this.player.y-ty;
-        if (Math.sqrt(dx*dx+dy*dy) <= DAMAGE_R) { this.takeDamage(28); this.showDamageNumber(this.player.x,this.player.y-50,28); }
+        if (Math.sqrt(dx*dx+dy*dy) <= DAMAGE_R && this.takeDamage(28)) { this.showDamageNumber(this.player.x,this.player.y-50,28); }
       }
       this.showHitSparks(tx,ty-20);
       this.cameras.main.shake(140,0.006);
