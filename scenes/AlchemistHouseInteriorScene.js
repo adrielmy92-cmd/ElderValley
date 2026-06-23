@@ -1,6 +1,6 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=244";
-import ShopSystem from "../systems/ShopSystem.js?v=13";
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=14";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=245";
+import ShopSystem from "../systems/ShopSystem.js?v=14";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=15";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;

@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=14";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=15";
 
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {
@@ -18,6 +18,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadImage("blacksmith-house", "./assets/sprites/blacksmith-house.png?v=132");
     this.loadImage("card-shop-house", "./assets/sprites/card-shop-house.png?v=132");
     this.loadImage("middle-forge-house", "./assets/sprites/middle-forge-house.png?v=132");
+    this.loadImage("forge-interior", "./assets/sprites/forge-interior.png?v=1");
     this.loadImage("fence-h", "./assets/sprites/fence-pack-h.png?v=132");
     this.loadImage("fence-v", "./assets/sprites/fence-pack-v.png?v=132");
     this.loadImage("fence-post", "./assets/sprites/fence-pack-post.png?v=132");
@@ -102,6 +103,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadAudio("sfx-enchant-shatter",  "./assets/audio/sfx-enchant-shatter.mp3");
     this.loadAudio("sword-hit-1",          "./assets/audio/sword-hit-1.mp3");
     this.loadAudio("sword-hit-2",          "./assets/audio/sword-hit-2.mp3");
+    this.loadAudio("forge-fire",           "./assets/audio/forge-fire.ogg");
     // Seamless animated village water (6 frames)
     this.loadSheet("village-water", "./assets/sprites/village-water-sheet.png?v=1", 142, 142);
     this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=2", 200, 200);
