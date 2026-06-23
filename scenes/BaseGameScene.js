@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=205";
-import DialogSystem from "../systems/DialogSystem.js?v=141";
-import InteractionSystem from "../systems/InteractionSystem.js?v=141";
-import ChatSystem from "../systems/ChatSystem.js?v=217";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=241";
-import MobileControls from "../systems/MobileControls.js?v=9";
-import Inventory, { itemData } from "../systems/Inventory.js?v=14";
-import InventoryUI from "../systems/InventoryUI.js?v=17";
-import Leveling from "../systems/Leveling.js?v=11";
+import Player from "../player/Player.js?v=206";
+import DialogSystem from "../systems/DialogSystem.js?v=142";
+import InteractionSystem from "../systems/InteractionSystem.js?v=142";
+import ChatSystem from "../systems/ChatSystem.js?v=218";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=242";
+import MobileControls from "../systems/MobileControls.js?v=10";
+import Inventory, { itemData } from "../systems/Inventory.js?v=15";
+import InventoryUI from "../systems/InventoryUI.js?v=18";
+import Leveling from "../systems/Leveling.js?v=12";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -951,6 +951,96 @@ export default class BaseGameScene extends Phaser.Scene {
       this.showLifestealText?.(heal);
     }
     return Math.max(1, dmg);
+  }
+
+  // ── Weapon on-hit DoT procs (fire = burn, nature = poison) ───────────────────
+  DOT_STYLE = {
+    burn:   { tex: "dot-burn",   color: "#ff8a1e" },
+    poison: { tex: "dot-poison", color: "#9cff5a" }
+  };
+
+  // The equipped weapon's proc descriptor, or null.
+  weaponProc() {
+    const key = this.bag?.equipped?.weapon;
+    const item = key && itemData(key);
+    return item?.proc ?? null;
+  }
+
+  // After a normal hit on `enemy`, maybe ignite/poison it. dealDamage(d) must send a
+  // hit to the server for THAT enemy directly (bypassing the proc path, so DoT ticks
+  // never re-proc). Works for every enemy — the scene passes its sprite + send fn.
+  maybeProcDot(enemy, dealDamage) {
+    if (!enemy || typeof dealDamage !== "function") return;
+    const proc = this.weaponProc();
+    if (!proc || !this.DOT_STYLE[proc.type]) return;
+    if (Math.random() > (proc.chance ?? 0)) return;
+    const lvl = this.bag?.enchantLevel?.(this.bag.equipped.weapon) ?? 0;
+    const dmg = Math.max(1, Math.round((proc.dmg ?? 10) * (1 + 0.12 * lvl)));
+    this.applyDot(enemy, dealDamage, { ...proc, dmg });
+  }
+
+  applyDot(enemy, dealDamage, proc) {
+    if (enemy._dotActive) return; // no stacking — let the current one burn out
+    enemy._dotActive = true;
+    const style = this.DOT_STYLE[proc.type] ?? this.DOT_STYLE.burn;
+    this._ensureDotTexture(style.tex, proc.type);
+    const flame = this.add.image(enemy.x, enemy.y, style.tex)
+      .setDepth(9400).setBlendMode(Phaser.BlendModes.ADD);
+    const off = (enemy.displayHeight ?? 64) * 0.32;
+    const rec = { enemy, flame, off };
+    (this._dots ??= []).push(rec);
+    const ticks = proc.ticks ?? 4, interval = proc.interval ?? 500;
+    let n = 0;
+    const tick = () => {
+      if (!enemy.active || n >= ticks) { this._endDot(rec); return; }
+      n++;
+      dealDamage(proc.dmg);
+      this.showDotNumber(enemy.x, enemy.y - off - 26, proc.dmg, style.color);
+      rec.timer = this.time.delayedCall(interval, tick);
+    };
+    tick(); // first tick is immediate for instant feedback
+  }
+
+  _endDot(rec) {
+    if (!rec) return;
+    rec.timer?.remove(false);
+    rec.flame?.destroy();
+    if (rec.enemy) rec.enemy._dotActive = false;
+    this._dots = (this._dots ?? []).filter((r) => r !== rec);
+  }
+
+  // Per-frame: flames follow the burning/poisoned enemy and flicker. From updateBase.
+  _tickDotVisuals() {
+    if (!this._dots?.length) return;
+    const t = this.time.now;
+    for (const rec of [...this._dots]) {
+      if (!rec.enemy?.active) { this._endDot(rec); continue; }
+      rec.flame.setPosition(rec.enemy.x, rec.enemy.y - rec.off);
+      rec.flame.setScale(0.9 + 0.22 * Math.sin(t / 55) + Math.random() * 0.12);
+      rec.flame.setAlpha(0.6 + Math.random() * 0.4);
+    }
+  }
+
+  showDotNumber(x, y, dmg, color) {
+    const t = this.add.text(x + (Math.random() * 16 - 8), y, `-${dmg}`, {
+      fontFamily: "monospace", fontSize: "17px", color,
+      stroke: "#180800", strokeThickness: 4, fontStyle: "bold"
+    }).setOrigin(0.5).setDepth(9450);
+    this.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 640, ease: "Power2", onComplete: () => t.destroy() });
+  }
+
+  // Procedural flame/venom puff (no asset). ADD blend makes it glow.
+  _ensureDotTexture(key, type) {
+    if (this.textures.exists(key)) return;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    const cols = type === "poison"
+      ? [0x2f7a18, 0x6fe04a, 0xd8ffa0]
+      : [0x8a2300, 0xff7a18, 0xffd24a];
+    g.fillStyle(cols[0], 0.85); g.fillEllipse(24, 40, 36, 48);
+    g.fillStyle(cols[1], 0.95); g.fillEllipse(24, 38, 24, 38);
+    g.fillStyle(cols[2], 1);    g.fillEllipse(24, 35, 12, 24);
+    g.generateTexture(key, 48, 64);
+    g.destroy();
   }
 
   // Small green heal number floating off the player (lifesteal feedback), throttled.
@@ -2691,6 +2781,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateManualCollisionEditorControls();
     this.updateWorldClock();
     this.tickRegen();
+    this._tickDotVisuals();
     this.updateWarriorBar();
 
     // Defend stance: the warrior shuffles slowly in a guard pose (Player.update), can't

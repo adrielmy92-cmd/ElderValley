@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=274";
+import WorldScene from "./WorldScene.js?v=275";
 
 const SWAMP_W = 1920;
 const SWAMP_H = 1920;
@@ -225,6 +225,7 @@ export default class SwampScene extends WorldScene {
     this.showTrollDamageNumber(troll.x, troll.y - 60, amount);
     // Servidor decide dano, aggro e morte
     this.multiplayer?.sendHitTroll(troll.trollIndex, amount);
+    this.maybeProcDot(troll, (d) => this.multiplayer?.sendHitTroll(troll.trollIndex, d));
   }
 
   // ─── HANDLERS DO SERVIDOR ────────────────────────────────────────────────────

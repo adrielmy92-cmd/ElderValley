@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=274";
+import WorldScene from "./WorldScene.js?v=275";
 
 const BEE_W = 2752;
 const BEE_H = 1536;
@@ -144,6 +144,7 @@ export default class BeeScene extends WorldScene {
     this.time.delayedCall(100, () => { if (!soldier.dead) soldier.clearTint(); });
     // Envia ao servidor — ele é a autoridade
     this.multiplayer?.sendHitBeeSoldier(soldier.serverIdx, amount);
+    this.maybeProcDot(soldier, (d) => this.multiplayer?.sendHitBeeSoldier(soldier.serverIdx, d));
   }
 
   _killSoldier(soldier) {
@@ -887,6 +888,7 @@ export default class BeeScene extends WorldScene {
 
     // Servidor é a autoridade — apenas envia o dano
     this.multiplayer?.sendHitBeeQueen(finalAmount);
+    this.maybeProcDot(this.beeBoss, (d) => this.multiplayer?.sendHitBeeQueen(d));
   }
 
   _restorePhaseTint(boss) {

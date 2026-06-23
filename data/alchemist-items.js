@@ -59,19 +59,19 @@ export const ALCHEMIST_ITEMS = [
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack
   // source (bigger than rings) + a signature stat. Sorted roughly by tier.
-  { key: "rusted-shortsword",   name: "Rusted Shortsword",   rarity: "common",    price: 100,  effect: "+12 Attack",                          slot: "weapon", stats: { attack: 12 } },
-  { key: "steel-longsword",     name: "Steel Longsword",     rarity: "common",    price: 200,  effect: "+20 Attack",                          slot: "weapon", stats: { attack: 20 } },
-  { key: "bonereaver",          name: "Bonereaver",          rarity: "uncommon",  price: 300,  effect: "+24 Attack · 3% Lifesteal",           slot: "weapon", stats: { attack: 24, lifesteal: 0.03 } },
-  { key: "cogforged-saber",     name: "Cogforged Saber",     rarity: "uncommon",  price: 340,  effect: "+22 Attack · +10% Attack Speed",      slot: "weapon", stats: { attack: 22, attackSpeed: 0.10 } },
-  { key: "leafsong-blade",      name: "Leafsong Blade",      rarity: "rare",      price: 460,  effect: "+26 Attack · +2 HP/s Regen",          slot: "weapon", stats: { attack: 26, hpRegen: 2 } },
-  { key: "emerald-edge",        name: "Emerald Edge",        rarity: "rare",      price: 480,  effect: "+28 Attack · +6% Crit",               slot: "weapon", stats: { attack: 28, crit: 0.06 } },
-  { key: "thornvine-blade",     name: "Thornvine Blade",     rarity: "rare",      price: 500,  effect: "+30 Attack · 4% Lifesteal",           slot: "weapon", stats: { attack: 30, lifesteal: 0.04 } },
-  { key: "frostrune-blade",     name: "Frostrune Blade",     rarity: "rare",      price: 520,  effect: "+30 Attack · +8% Crit",               slot: "weapon", stats: { attack: 30, crit: 0.08 } },
-  { key: "tideblade",           name: "Tideblade",           rarity: "epic",      price: 680,  effect: "+34 Attack · +12 Mana · +6% Crit",    slot: "weapon", stats: { attack: 34, maxMp: 12, crit: 0.06 } },
-  { key: "voidcaller-blade",    name: "Voidcaller Blade",    rarity: "epic",      price: 720,  effect: "+36 Attack · +10% Crit",              slot: "weapon", stats: { attack: 36, crit: 0.10 } },
-  { key: "runic-claymore",      name: "Runic Claymore",      rarity: "epic",      price: 760,  effect: "+38 Attack · +10% XP Gain",           slot: "weapon", stats: { attack: 38, xpBonus: 0.10 } },
-  { key: "stormfang",           name: "Stormfang",           rarity: "epic",      price: 800,  effect: "+38 Attack · +12% Attack Speed",      slot: "weapon", stats: { attack: 38, attackSpeed: 0.12 } },
-  { key: "bone-scimitar",       name: "Bone Scimitar",       rarity: "epic",      price: 820,  effect: "+40 Attack · 5% Lifesteal",           slot: "weapon", stats: { attack: 40, lifesteal: 0.05 } },
-  { key: "infernal-edge",       name: "Infernal Edge",       rarity: "legendary", price: 1100, effect: "+46 Attack · +10% Crit · 4% Lifesteal", slot: "weapon", stats: { attack: 46, crit: 0.10, lifesteal: 0.04 } },
-  { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+52 Attack · +12% Crit · +12% Attack Speed", slot: "weapon", stats: { attack: 52, crit: 0.12, attackSpeed: 0.12 } }
+  { key: "rusted-shortsword",   name: "Rusted Shortsword",   rarity: "common",    price: 100,  effect: "+18 Attack",                          slot: "weapon", stats: { attack: 18 } },
+  { key: "steel-longsword",     name: "Steel Longsword",     rarity: "common",    price: 200,  effect: "+28 Attack",                          slot: "weapon", stats: { attack: 28 } },
+  { key: "bonereaver",          name: "Bonereaver",          rarity: "uncommon",  price: 300,  effect: "+36 Attack · 5% Lifesteal",           slot: "weapon", stats: { attack: 36, lifesteal: 0.05 } },
+  { key: "cogforged-saber",     name: "Cogforged Saber",     rarity: "uncommon",  price: 340,  effect: "+34 Attack · +14% Attack Speed",      slot: "weapon", stats: { attack: 34, attackSpeed: 0.14 } },
+  { key: "leafsong-blade",      name: "Leafsong Blade",      rarity: "rare",      price: 460,  effect: "+42 Attack · +3 HP/s Regen",          slot: "weapon", stats: { attack: 42, hpRegen: 3 } },
+  { key: "emerald-edge",        name: "Emerald Edge",        rarity: "rare",      price: 480,  effect: "+44 Attack · +10% Crit",              slot: "weapon", stats: { attack: 44, crit: 0.10 } },
+  { key: "thornvine-blade",     name: "Thornvine Blade",     rarity: "rare",      price: 520,  effect: "+44 Attack · 5% Lifesteal · Poison on hit", slot: "weapon", stats: { attack: 44, lifesteal: 0.05 }, proc: { type: "poison", chance: 0.30, dmg: 12, ticks: 5, interval: 600 } },
+  { key: "frostrune-blade",     name: "Frostrune Blade",     rarity: "rare",      price: 520,  effect: "+44 Attack · +12% Crit",              slot: "weapon", stats: { attack: 44, crit: 0.12 } },
+  { key: "tideblade",           name: "Tideblade",           rarity: "epic",      price: 680,  effect: "+52 Attack · +18 Mana · +10% Crit",   slot: "weapon", stats: { attack: 52, maxMp: 18, crit: 0.10 } },
+  { key: "voidcaller-blade",    name: "Voidcaller Blade",    rarity: "epic",      price: 720,  effect: "+54 Attack · +15% Crit",              slot: "weapon", stats: { attack: 54, crit: 0.15 } },
+  { key: "runic-claymore",      name: "Runic Claymore",      rarity: "epic",      price: 760,  effect: "+56 Attack · +15% XP Gain",           slot: "weapon", stats: { attack: 56, xpBonus: 0.15 } },
+  { key: "stormfang",           name: "Stormfang",           rarity: "epic",      price: 800,  effect: "+56 Attack · +18% Attack Speed",      slot: "weapon", stats: { attack: 56, attackSpeed: 0.18 } },
+  { key: "bone-scimitar",       name: "Bone Scimitar",       rarity: "epic",      price: 820,  effect: "+58 Attack · 7% Lifesteal",           slot: "weapon", stats: { attack: 58, lifesteal: 0.07 } },
+  { key: "infernal-edge",       name: "Infernal Edge",       rarity: "legendary", price: 1100, effect: "+68 Attack · +14% Crit · 6% Lifesteal · Burn on hit", slot: "weapon", stats: { attack: 68, crit: 0.14, lifesteal: 0.06 }, proc: { type: "burn", chance: 0.32, dmg: 16, ticks: 4, interval: 500 } },
+  { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+78 Attack · +18% Crit · +18% Attack Speed", slot: "weapon", stats: { attack: 78, crit: 0.18, attackSpeed: 0.18 } }
 ];
