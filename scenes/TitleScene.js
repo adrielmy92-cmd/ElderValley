@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=213";
+import WalletSystem from "../systems/WalletSystem.js?v=214";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {

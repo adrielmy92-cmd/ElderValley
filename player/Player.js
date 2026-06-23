@@ -82,6 +82,16 @@ export function getPlayerCharacterProfile(id) {
   return PLAYER_CHARACTERS[id] ?? PLAYER_CHARACTERS["mage-1"];
 }
 
+// Hand-anchor of the weapon overlay per facing direction (offset from the player
+// center in display px, resting angle, mirror, and whether it draws in front of the
+// body). These are tunable by eye — calibrated live against the test placeholder.
+const WEAPON_ANCHORS = {
+  down:  { x: 13,  y: 10, angle: 22,  flip: false, front: true  },
+  up:    { x: -13, y: -2, angle: -22, flip: false, front: false },
+  right: { x: 17,  y: 6,  angle: 55,  flip: false, front: true  },
+  left:  { x: -17, y: 6,  angle: -55, flip: true,  front: true  }
+};
+
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
     const characterId = scene.registry.get("playerCharacter") ?? localStorage.getItem("eldervalley-selected-character") ?? "mage-1";
@@ -169,6 +179,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   update(cursors, wasd, frozen = false) {
     this.setDepth(this.y + this.depthBias);
+    // Weapon overlay follows the hand every frame (lazy-created → only the local,
+    // updated player gets one; remote players that don't call update() stay clean).
+    this._ensureWeapon();
+    this.updateWeapon();
 
     // Defend stance: shuffle slowly. Walking animates the legs normally; standing
     // still holds a raised-sword guard pose. Either way the golden tint marks defense.
@@ -232,6 +246,66 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.playIdle();
   }
 
+  // ── Weapon overlay (held weapon shown in the hand) ──────────────────────────
+  // Procedural placeholder sword (cyan, drawn in code — ZERO SpriteCook credits).
+  // Later: replace this texture with PNGs generated per direction (down/side/up).
+  _ensureWeaponPlaceholderTexture() {
+    const key = "weapon-placeholder";
+    if (this.scene.textures.exists(key)) return key;
+    const g = this.scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0x6fc7e6, 1); g.fillTriangle(5, 2, 11, 2, 8, 0); // tip
+    g.fillStyle(0x9fefff, 1); g.fillRect(6, 2, 4, 26);           // blade
+    g.fillStyle(0xffffff, 1); g.fillRect(7, 3, 1, 24);           // shine
+    g.fillStyle(0xc9a24a, 1); g.fillRect(2, 28, 12, 4);          // crossguard
+    g.fillStyle(0x6b4a2a, 1); g.fillRect(6, 32, 4, 9);           // grip
+    g.fillStyle(0xe8c14a, 1); g.fillCircle(8, 42, 2);            // pommel
+    g.generateTexture(key, 16, 46);
+    g.destroy();
+    return key;
+  }
+
+  // Lazily create the overlay sprite (only for weapon-carrying profiles, and only
+  // once update() runs → keeps remote players from spawning stray weapons).
+  _ensureWeapon() {
+    if (this.weapon || !this.profile.melee) return;
+    const key = this._ensureWeaponPlaceholderTexture();
+    this.weapon = this.scene.add.image(this.x, this.y, key)
+      .setOrigin(0.5, 0.9); // pivot near the grip so swings rotate around the hand
+  }
+
+  updateWeapon() {
+    const w = this.weapon;
+    if (!w) return;
+    const a = WEAPON_ANCHORS[this.facing] ?? WEAPON_ANCHORS.down;
+    w.setVisible(this.visible);
+    w.setPosition(this.x + a.x, this.y + a.y);
+    w.setFlipX(a.flip);
+    w.setDepth(this.depth + (a.front ? 6 : -6));
+    if (!this._weaponSwinging) w.setAngle(a.angle);
+  }
+
+  // Quick arc swing synced with the attack (rotates around the grip). Falls back to
+  // the resting angle when done. `aspd` shortens it with attack speed.
+  swingWeapon(aspd = 1) {
+    const w = this.weapon;
+    if (!w || !this.scene?.tweens) return;
+    const a = WEAPON_ANCHORS[this.facing] ?? WEAPON_ANCHORS.down;
+    const dir = a.flip ? -1 : 1;
+    this._weaponSwinging = true;
+    this.scene.tweens.killTweensOf(w);
+    w.setAngle(a.angle - 55 * dir);
+    this.scene.tweens.add({
+      targets: w, angle: a.angle + 75 * dir, duration: 220 / aspd, ease: "Cubic.Out",
+      onComplete: () => {
+        if (!w.active) { this._weaponSwinging = false; return; }
+        this.scene.tweens.add({
+          targets: w, angle: a.angle, duration: 110 / aspd,
+          onComplete: () => { this._weaponSwinging = false; }
+        });
+      }
+    });
+  }
+
   playIdle() {
     this.play(`${this.animPrefix}-idle-${this.facing}`, true);
     if (this.profile.mirrorLeftRight) {
@@ -271,6 +345,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Attack speed (gear): speed up the swing animation + shorten its timings.
     const aspd = this.scene.attackSpeedMult?.() ?? 1;
     if (this.anims && aspd !== 1) this.anims.timeScale = aspd;
+    this.swingWeapon(aspd); // swing the held-weapon overlay along with the strike
 
     this.scene.time.delayedCall((profile.melee ? (profile.meleeHitDelay ?? 180) : 170) / aspd, () => {
       if (!(this.active && this.isAttacking)) return;
