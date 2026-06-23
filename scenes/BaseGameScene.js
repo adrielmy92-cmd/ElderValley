@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=194";
+import Player from "../player/Player.js?v=195";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=230";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=231";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -1007,7 +1007,8 @@ export default class BaseGameScene extends Phaser.Scene {
     });
   }
 
-  // [3] Defend — rooted block stance: 100% invincible for 5s, then a 12s cooldown.
+  // [3] Defend — guard stance (sword raised), 100% invincible for 5s, 12s cooldown.
+  // The warrior can still shuffle slowly while blocking.
   defend() {
     if (!this.player?.profile?.melee || this._defending) return;
     const now = this.time?.now ?? Date.now();
@@ -1016,19 +1017,15 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
     this._defending = true;
+    this.playerInvincible = true; // belt-and-suspenders: block during the whole stance
+    this.player.defending = true; // slow guard movement + raised-sword pose (Player.update)
     this._defendCooldownUntil = now + 12000;
-    this.player.setVelocity(0, 0);
-    this.player.setTint(0x9fd8ff);
+    this.player.setTint(0xffe7a0); // warm golden guard glow (warrior, not the mage's blue)
     this.flashHudMessage?.("Defesa!");
-    this._shieldFx?.destroy();
-    this._shieldFx = this.add.ellipse(this.player.x, this.player.y, 70, 70, 0x6fd0ff, 0.16)
-      .setStrokeStyle(3, 0x6fd0ff, 0.9).setDepth((this.player.depth ?? 0) + 1);
-    this._shieldTween = this.tweens.add({ targets: this._shieldFx, scaleX: 1.12, scaleY: 1.12, alpha: 0.45, duration: 480, yoyo: true, repeat: -1 });
     this.time.delayedCall(5000, () => {
       this._defending = false;
-      this.player?.clearTint();
-      this._shieldTween?.remove(); this._shieldTween = null;
-      this._shieldFx?.destroy(); this._shieldFx = null;
+      this.playerInvincible = false;
+      if (this.player) { this.player.defending = false; this.player.clearTint(); }
     });
   }
 
@@ -1236,8 +1233,8 @@ export default class BaseGameScene extends Phaser.Scene {
   showBlockSpark() {
     if (!this.player || (this._lastBlockSparkAt && this.time.now - this._lastBlockSparkAt < 120)) return;
     this._lastBlockSparkAt = this.time.now;
-    const t = this.add.text(this.player.x, this.player.y - 40, "BLOCK", {
-      fontFamily: "monospace", fontSize: "12px", color: "#9fd8ff", stroke: "#0a1830", strokeThickness: 4
+    const t = this.add.text(this.player.x, this.player.y - 40, "DEFENDIDO", {
+      fontFamily: "monospace", fontSize: "12px", color: "#ffe7a0", stroke: "#2a1c04", strokeThickness: 4
     }).setOrigin(0.5).setDepth(9000);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 500, onComplete: () => t.destroy() });
   }
@@ -2541,10 +2538,10 @@ export default class BaseGameScene extends Phaser.Scene {
     this.tickRegen();
     this.updateWarriorBar();
 
-    // Rooted defend stance: keep the shield on the player and block movement/input.
+    // Defend stance: the warrior shuffles slowly in a guard pose (Player.update), can't
+    // attack/interact, and takes no damage. No mage-like shield bubble.
     if (this._defending) {
-      this.player.update(this.cursors, this.wasd, true);
-      this._shieldFx?.setPosition(this.player.x, this.player.y);
+      this.player.update(this.cursors, this.wasd);
       this.interactions.prompt?.setVisible(false);
       return;
     }
