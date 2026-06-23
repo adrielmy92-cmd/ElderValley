@@ -170,27 +170,29 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   update(cursors, wasd, frozen = false) {
     this.setDepth(this.y + this.depthBias);
 
-    // Defend stance: move slowly while holding a raised-sword guard pose.
+    // Defend stance: shuffle slowly. Walking animates the legs normally; standing
+    // still holds a raised-sword guard pose. Either way the golden tint marks defense.
     if (this.defending) {
       const dl = cursors.left.isDown || wasd.left.isDown;
       const dr = cursors.right.isDown || wasd.right.isDown;
       const du = cursors.up.isDown || wasd.up.isDown;
       const dd = cursors.down.isDown || wasd.down.isDown;
       const v = new Phaser.Math.Vector2(Number(dr) - Number(dl), Number(dd) - Number(du));
+      this.setFlipX(false);
       if (v.lengthSq() > 0) {
         v.normalize().scale((this.speed ?? 140) * 0.55);
         this.setVelocity(v.x, v.y);
         if (Math.abs(v.x) > Math.abs(v.y)) this.facing = v.x < 0 ? "left" : "right";
         else this.facing = v.y < 0 ? "up" : "down";
+        this.play(`${this.animPrefix}-walk-${this.facing}`, true); // legs animate while moving
       } else {
         this.setVelocity(0, 0);
-      }
-      if (this.profile.attackTexture && this.scene.textures.exists(this.profile.attackTexture)) {
-        const af = this.profile.attackFrames ?? this.profile.framesPerDirection ?? 8;
-        const row = { down: 0, left: 1, right: 2, up: 3 }[this.facing] ?? 0;
-        this.anims.stop();
-        this.setTexture(this.profile.attackTexture, row * af); // raised-sword wind-up frame
-        this.setFlipX(false);
+        if (this.profile.attackTexture && this.scene.textures.exists(this.profile.attackTexture)) {
+          const af = this.profile.attackFrames ?? this.profile.framesPerDirection ?? 8;
+          const row = { down: 0, left: 1, right: 2, up: 3 }[this.facing] ?? 0;
+          this.anims.stop();
+          this.setTexture(this.profile.attackTexture, row * af); // raised-sword guard when still
+        }
       }
       return;
     }
