@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=192";
+import Player from "../player/Player.js?v=193";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=228";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=229";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -722,8 +722,8 @@ export default class BaseGameScene extends Phaser.Scene {
     const SLOT_W = 52, SLOT_H = 44, GAP = 6;
     const abilities = [
       { key: "1", label: "Atk",    border: 0xffa23c, icon: "sword",  cd: null },
-      { key: "2", label: "Giro",   border: 0xc6cedd, icon: "swords", cd: () => ({ end: this._spinCooldownUntil ?? 0,   total: 1500 }) },
-      { key: "3", label: "Defesa", border: 0x6fd0ff, icon: "shield", cd: () => ({ end: this._defendCooldownUntil ?? 0, total: 10000 }) }
+      { key: "2", label: "Giro",   border: 0xc6cedd, icon: "swords", cd: () => ({ end: this._spinCooldownUntil ?? 0,   total: 8000 }) },
+      { key: "3", label: "Defesa", border: 0x6fd0ff, icon: "shield", cd: () => ({ end: this._defendCooldownUntil ?? 0, total: 12000 }) }
     ];
     this.spellSlots = abilities.map((ab, i) => {
       const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
@@ -929,17 +929,23 @@ export default class BaseGameScene extends Phaser.Scene {
     }
   }
 
-  // Final damage for the current cast = (base + attack bonus) * shot multiplier.
+  // Final damage = (base + attack bonus) * shot multiplier. During a melee strike the
+  // base is overridden (warrior starts at 50 and grows with weapons + Strength/level),
+  // instead of the scene's spell base.
   spellDamage(base) {
-    return Math.max(1, Math.round((base + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
+    const b = this._meleeBase != null ? this._meleeBase : base;
+    return Math.max(1, Math.round((b + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
   }
 
-  // Melee sword strike: area-of-effect damage in front of the warrior. Reuses each
-  // combat scene's applyLightningDamage (boss/trolls/bees) so damage + hit sparks +
-  // damage numbers all work per scene. Uses the attack bonus, never burns a spiritshot.
-  applyMeleeDamage(x, y, radius) {
-    this.beginCast(); // attack bonus + consumes a Soulshot (the warrior's shot type)
+  // Melee sword strike: area-of-effect damage via each combat scene's applyLightningDamage
+  // (boss/trolls/bees) — keeps hit sparks + damage numbers + server hits. Base 50 +
+  // weapon/Strength bonus (scales with level), times the Soulshot + ability multiplier.
+  applyMeleeDamage(x, y, radius, mult = 1) {
+    this.beginCast(); // attack bonus (gear + Strength) + consumes a Soulshot
+    this._castMult *= mult;
+    this._meleeBase = this.player?.profile?.meleeBase ?? 50;
     this.applyLightningDamage?.(x, y, radius);
+    this._meleeBase = null;
   }
 
   // [2] Spin attack — the warrior whirls 360° dealing area damage all around. Reuses
@@ -949,10 +955,10 @@ export default class BaseGameScene extends Phaser.Scene {
     const now = this.time?.now ?? Date.now();
     if (now < (this._spinCooldownUntil ?? 0)) return;
     if (this.player.spin?.()) {
-      this._spinCooldownUntil = now + 1500;
+      this._spinCooldownUntil = now + 8000; // 8s cooldown
       this._spawnSpinSwords(620);
       this.time.delayedCall(180, () => {
-        if (this.player?.active) this.applyMeleeDamage(this.player.x, this.player.y, this.player.profile.spinRadius ?? 82);
+        if (this.player?.active) this.applyMeleeDamage(this.player.x, this.player.y, this.player.profile.spinRadius ?? 82, this.player.profile.spinDamageMult ?? 2.5);
       });
     }
   }
@@ -1001,7 +1007,7 @@ export default class BaseGameScene extends Phaser.Scene {
     });
   }
 
-  // [3] Defend — rooted block stance: invincible for ~2.5s, then a 10s cooldown.
+  // [3] Defend — rooted block stance: 100% invincible for 5s, then a 12s cooldown.
   defend() {
     if (!this.player?.profile?.melee || this._defending) return;
     const now = this.time?.now ?? Date.now();
@@ -1010,7 +1016,7 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
     this._defending = true;
-    this._defendCooldownUntil = now + 10000;
+    this._defendCooldownUntil = now + 12000;
     this.player.setVelocity(0, 0);
     this.player.setTint(0x9fd8ff);
     this.flashHudMessage?.("Defesa!");
@@ -1018,7 +1024,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this._shieldFx = this.add.ellipse(this.player.x, this.player.y, 70, 70, 0x6fd0ff, 0.16)
       .setStrokeStyle(3, 0x6fd0ff, 0.9).setDepth((this.player.depth ?? 0) + 1);
     this._shieldTween = this.tweens.add({ targets: this._shieldFx, scaleX: 1.12, scaleY: 1.12, alpha: 0.45, duration: 480, yoyo: true, repeat: -1 });
-    this.time.delayedCall(2500, () => {
+    this.time.delayedCall(5000, () => {
       this._defending = false;
       this.player?.clearTint();
       this._shieldTween?.remove(); this._shieldTween = null;
