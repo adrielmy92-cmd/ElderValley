@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=195";
+import Player from "../player/Player.js?v=196";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=231";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=232";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -722,8 +722,8 @@ export default class BaseGameScene extends Phaser.Scene {
     const SLOT_W = 52, SLOT_H = 44, GAP = 6;
     const abilities = [
       { key: "1", label: "Atk",    border: 0xffa23c, icon: "sword",  cd: null },
-      { key: "2", label: "Giro",   border: 0xc6cedd, icon: "swords", cd: () => ({ end: this._spinCooldownUntil ?? 0,   total: 8000 }) },
-      { key: "3", label: "Defesa", border: 0x6fd0ff, icon: "shield", cd: () => ({ end: this._defendCooldownUntil ?? 0, total: 12000 }) }
+      { key: "2", label: "Spin",   border: 0xc6cedd, icon: "swords", cd: () => ({ end: this._spinCooldownUntil ?? 0,   total: 8000 }) },
+      { key: "3", label: "Defend", border: 0x6fd0ff, icon: "shield", cd: () => ({ end: this._defendCooldownUntil ?? 0, total: 12000 }) }
     ];
     this.spellSlots = abilities.map((ab, i) => {
       const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
@@ -933,6 +933,7 @@ export default class BaseGameScene extends Phaser.Scene {
   // base is overridden (warrior starts at 50 and grows with weapons + Strength/level),
   // instead of the scene's spell base.
   spellDamage(base) {
+    if (this._meleeBase != null) this._meleeHits = (this._meleeHits ?? 0) + 1; // count enemies struck
     const b = this._meleeBase != null ? this._meleeBase : base;
     return Math.max(1, Math.round((b + (this._castAtk ?? 0)) * (this._castMult ?? 1)));
   }
@@ -944,8 +945,11 @@ export default class BaseGameScene extends Phaser.Scene {
     this.beginCast(); // attack bonus (gear + Strength) + consumes a Soulshot
     this._castMult *= mult;
     this._meleeBase = this.player?.profile?.meleeBase ?? 50;
+    this._meleeHits = 0;
     this.applyLightningDamage?.(x, y, radius);
     this._meleeBase = null;
+    // Sword clash sound only when the strike actually connects with an enemy.
+    if (this._meleeHits > 0) this.playSfx(Math.random() < 0.5 ? "sword-hit-1" : "sword-hit-2", 0.5);
   }
 
   // [2] Spin attack — the warrior whirls 360° dealing area damage all around. Reuses
@@ -1013,7 +1017,7 @@ export default class BaseGameScene extends Phaser.Scene {
     if (!this.player?.profile?.melee || this._defending) return;
     const now = this.time?.now ?? Date.now();
     if (now < (this._defendCooldownUntil ?? 0)) {
-      this.flashHudMessage?.(`Defesa recarregando (${Math.ceil((this._defendCooldownUntil - now) / 1000)}s)`);
+      this.flashHudMessage?.(`Defend on cooldown (${Math.ceil((this._defendCooldownUntil - now) / 1000)}s)`);
       return;
     }
     this._defending = true;
@@ -1021,7 +1025,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.player.defending = true; // slow guard movement + raised-sword pose (Player.update)
     this._defendCooldownUntil = now + 12000;
     this.player.setTint(0xffe7a0); // warm golden guard glow (warrior, not the mage's blue)
-    this.flashHudMessage?.("Defesa!");
+    this.flashHudMessage?.("Defend!");
     this.time.delayedCall(5000, () => {
       this._defending = false;
       this.playerInvincible = false;
@@ -1233,7 +1237,7 @@ export default class BaseGameScene extends Phaser.Scene {
   showBlockSpark() {
     if (!this.player || (this._lastBlockSparkAt && this.time.now - this._lastBlockSparkAt < 120)) return;
     this._lastBlockSparkAt = this.time.now;
-    const t = this.add.text(this.player.x, this.player.y - 40, "DEFENDIDO", {
+    const t = this.add.text(this.player.x, this.player.y - 40, "BLOCKED", {
       fontFamily: "monospace", fontSize: "12px", color: "#ffe7a0", stroke: "#2a1c04", strokeThickness: 4
     }).setOrigin(0.5).setDepth(9000);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 500, onComplete: () => t.destroy() });

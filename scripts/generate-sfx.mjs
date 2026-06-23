@@ -104,6 +104,20 @@ const SFX = [
     duration: 1.8,
     prompt_influence: 0.4,
     text: "Enchanted item shattering and failing, a sharp glassy magical crack and crystalline shatter with a dark fizzling power-down, fantasy RPG failure sound"
+  },
+
+  // Warrior melee — sword connecting with an enemy
+  {
+    key: "sword-hit-1",
+    duration: 0.9,
+    prompt_influence: 0.45,
+    text: "Sharp steel sword slash connecting, a quick blade cut with a solid meaty impact and a brief metallic ring, fantasy RPG melee hit"
+  },
+  {
+    key: "sword-hit-2",
+    duration: 0.9,
+    prompt_influence: 0.45,
+    text: "Heavy sword striking metal armor, a forceful blade clang with a bright metallic clash and a short spark, fantasy RPG melee impact"
   }
 ];
 

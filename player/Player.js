@@ -178,7 +178,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       const dd = cursors.down.isDown || wasd.down.isDown;
       const v = new Phaser.Math.Vector2(Number(dr) - Number(dl), Number(dd) - Number(du));
       if (v.lengthSq() > 0) {
-        v.normalize().scale((this.speed ?? 140) * 0.4);
+        v.normalize().scale((this.speed ?? 140) * 0.55);
         this.setVelocity(v.x, v.y);
         if (Math.abs(v.x) > Math.abs(v.y)) this.facing = v.x < 0 ? "left" : "right";
         else this.facing = v.y < 0 ? "up" : "down";
