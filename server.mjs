@@ -1278,8 +1278,10 @@ async function runEconomyAction(action, profileId, payload) {
   if (action === "buy") {
     const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
     if (!item) return fail("Unknown item");
-    if (profile.coins < item.price) return fail("Not enough coins");
-    profile.coins -= item.price;
+    if (!profile.isDeveloper) { // developers buy for free (testing)
+      if (profile.coins < item.price) return fail("Not enough coins");
+      profile.coins -= item.price;
+    }
     bagAdd(bag, item.key, 1);
     return commit();
   }

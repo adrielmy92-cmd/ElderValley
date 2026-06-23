@@ -1049,11 +1049,35 @@ export default class BaseGameScene extends Phaser.Scene {
     this._defendCooldownUntil = now + 12000;
     this.player.setTint(0xffe7a0); // warm golden guard glow (warrior, not the mage's blue)
     this.flashHudMessage?.("Defend!");
+    // Visible golden shield barrier around the warrior (drawn each frame in updateBase).
+    this._defendBarrier?.destroy();
+    this._defendBarrier = this.add.graphics().setDepth((this.player.depth ?? 0) + 2);
     this.time.delayedCall(5000, () => {
       this._defending = false;
       this.playerInvincible = false;
       if (this.player) { this.player.defending = false; this.player.clearTint(); }
+      this._defendBarrier?.destroy(); this._defendBarrier = null;
     });
+  }
+
+  // Rotating, pulsing golden hexagonal shield barrier shown while defending.
+  drawDefendBarrier() {
+    if (!this._defendBarrier || !this.player) return;
+    const g = this._defendBarrier;
+    const cx = this.player.x, cy = this.player.y - 8;
+    const t = this.time.now;
+    const pulse = 0.5 + 0.5 * Math.sin(t / 140);
+    const rot = t / 700;
+    const R = 42 + 4 * pulse;
+    g.clear();
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const a = rot + i * Math.PI / 3;
+      pts.push(new Phaser.Geom.Point(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.85));
+    }
+    g.fillStyle(0xffcf57, 0.10 + 0.07 * pulse); g.fillPoints(pts, true);
+    g.lineStyle(3, 0xffe7a0, 0.55 + 0.35 * pulse); g.strokePoints(pts, true);
+    g.lineStyle(1.5, 0xffffff, 0.25 * pulse); g.strokeEllipse(cx, cy, (R - 6) * 2, (R - 6) * 1.7);
   }
 
   // ── Enchant gamble (Phase 3) ────────────────────────────────────────────────
@@ -1372,6 +1396,7 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   getCoins() {
+    if (this.isDevMode?.()) return 999999999; // dev: unlimited money for testing
     const profileId = this.getPlayerProfileId();
     const registryCoins = this.registry.get("coins");
     if (typeof registryCoins === "number" && this.registry.get("coinsProfileId") === profileId) {
@@ -2569,6 +2594,7 @@ export default class BaseGameScene extends Phaser.Scene {
     // attack/interact, and takes no damage. No mage-like shield bubble.
     if (this._defending) {
       this.player.update(this.cursors, this.wasd);
+      this.drawDefendBarrier();
       this.interactions.prompt?.setVisible(false);
       return;
     }
