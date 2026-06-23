@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=260";
+import BaseGameScene from "./BaseGameScene.js?v=261";
 
 const TILE = 32;
 

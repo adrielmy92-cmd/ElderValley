@@ -1,4 +1,6 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=243";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=244";
+import ShopSystem from "../systems/ShopSystem.js?v=13";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=14";
 
 export default class MiddleForgeInteriorScene extends InteriorBaseScene {
   constructor() {
@@ -54,8 +56,46 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
     const ember = this.add.image(524, 188, "card-sparkle-0").setDepth(500).setTint(0xff7a18);
     this.tweens.add({ targets: ember, alpha: 0.22, scale: 1.35, duration: 520, yoyo: true, repeat: -1 });
 
-    this.addNpc(520, 250, 2, "Ferreiro", "As melhores cartas tambem precisam de bons estojos. Metal protege memoria.");
+    // Blacksmith vendor — sells the weapons (the only place to buy them).
+    this.shop = new ShopSystem(this, {
+      items: ALCHEMIST_ITEMS.filter((i) => i.slot === "weapon"),
+      title: "The Forge — Armory",
+      subtitle: "Blades forged for those who walk into danger"
+    });
+    this.addForgeVendor(520, 250);
     this.addExitDoor(352, 504, "middleForge");
+  }
+
+  // Smith sprite (npc-sheet frame 2) + an "E Weapons" prompt that opens the shop.
+  addForgeVendor(x, y) {
+    const npc = this.physics.add.sprite(x, y, "npc-sheet", 2).setDepth(y);
+    npc.body.setSize(14, 12).setOffset(5, 18);
+    npc.body.immovable = true;
+    this.solids.add(npc);
+    const key = "npc-idle-2";
+    if (!this.anims.exists(key)) {
+      this.anims.create({
+        key, frames: this.anims.generateFrameNumbers("npc-sheet", { start: 2, end: 3 }),
+        frameRate: 2, repeat: -1
+      });
+    }
+    npc.play(key);
+    this.interactions.add({
+      x, y, promptY: y - 36, promptText: "E Weapons", radius: 60,
+      enabled: () => !this.shop.isOpen(),
+      onInteract: () => this.shop.open()
+    });
+    return npc;
+  }
+
+  update() {
+    // Freeze the player (and hide prompts) while the weapon shop is open.
+    if (this.shop?.isOpen()) {
+      this.player?.update(this.cursors, this.wasd, true);
+      this.interactions?.prompt?.setVisible(false);
+      return;
+    }
+    this.updateBase();
   }
 
   addForgeArchitecture() {

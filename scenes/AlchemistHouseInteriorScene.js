@@ -1,5 +1,6 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=243";
-import ShopSystem from "../systems/ShopSystem.js?v=12";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=244";
+import ShopSystem from "../systems/ShopSystem.js?v=13";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=14";
 
 const WIDTH = 1254;
 const HEIGHT = 1254;
@@ -30,7 +31,8 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.addAlchemistExit(spawnKey);
     this.addNpc(735, 872, 2, "Alchemist", "Not every potion should be drunk. Some serve only to remind us that curiosity has a price.");
 
-    this.shop = new ShopSystem(this);
+    // Alchemist sells everything except weapons (those are at the Forge).
+    this.shop = new ShopSystem(this, { items: ALCHEMIST_ITEMS.filter((i) => i.slot !== "weapon") });
     const pos = this.getVendorPos();
     this.addShopVendor(pos.x, pos.y);
   }

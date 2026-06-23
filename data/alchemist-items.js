@@ -4,8 +4,8 @@
 // Potions: `heal`/`mana` = fraction of max HP/MP restored; `cooldownMs` gates use.
 // Gear: `slot` ("ring" | "amulet" | "weapon") + `stats` (applied when equipped).
 // All combat stats are wired: maxHp/maxMp (bars), attack, defense, dodge, crit,
-// lifesteal, attackSpeed, hpRegen, xpBonus. `procIcon` items draw their bag icon in
-// code (no PNG under assets/items/).
+// lifesteal, attackSpeed, hpRegen, xpBonus. Weapons are sold at the Forge, jewelry/
+// potions at the Alchemist.
 
 export const RARITY = {
   common:    { label: "Common",    color: 0x9aa4b2, text: "#c7d0db", glow: 0x9aa4b2 },
@@ -56,12 +56,22 @@ export const ALCHEMIST_ITEMS = [
   { key: "grovewarden-talisman", name: "Grovewarden Talisman",rarity: "legendary", price: 850, effect: "+30 Max HP · +2 HP/s Regen",       slot: "amulet", stats: { maxHp: 30, hpRegen: 2 } },
   { key: "wraithbone-charm",     name: "Wraithbone Charm",    rarity: "epic",      price: 600, effect: "+12 Shadow Damage · +5% Lifesteal",slot: "amulet", stats: { attack: 12, lifesteal: 0.05 } },
 
-  // Weapons (equippable, slot: "weapon"). Stat-only — no on-character visual.
-  // `procIcon` → inventory icon is drawn procedurally (no PNG / no SpriteCook cost).
-  // Weapons are the main Attack source (bigger than rings) + a signature stat.
-  { key: "iron-sword",        name: "Iron Sword",          rarity: "common",    price: 120,  effect: "+14 Attack",                       slot: "weapon", procIcon: true, stats: { attack: 14 } },
-  { key: "steel-longsword",   name: "Steel Longsword",     rarity: "uncommon",  price: 280,  effect: "+22 Attack",                       slot: "weapon", procIcon: true, stats: { attack: 22 } },
-  { key: "emberbrand",        name: "Emberbrand",          rarity: "rare",      price: 520,  effect: "+30 Attack · +6% Crit",            slot: "weapon", procIcon: true, stats: { attack: 30, crit: 0.06 } },
-  { key: "tempest-edge",      name: "Tempest Edge",        rarity: "epic",      price: 780,  effect: "+38 Attack · +12% Attack Speed",   slot: "weapon", procIcon: true, stats: { attack: 38, attackSpeed: 0.12 } },
-  { key: "dragonfang",        name: "Dragonfang Greatsword",rarity: "legendary",price: 1200, effect: "+50 Attack · +10% Crit · 4% Lifesteal", slot: "weapon", procIcon: true, stats: { attack: 50, crit: 0.10, lifesteal: 0.04 } }
+  // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
+  // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack
+  // source (bigger than rings) + a signature stat. Sorted roughly by tier.
+  { key: "rusted-shortsword",   name: "Rusted Shortsword",   rarity: "common",    price: 100,  effect: "+12 Attack",                          slot: "weapon", stats: { attack: 12 } },
+  { key: "steel-longsword",     name: "Steel Longsword",     rarity: "common",    price: 200,  effect: "+20 Attack",                          slot: "weapon", stats: { attack: 20 } },
+  { key: "bonereaver",          name: "Bonereaver",          rarity: "uncommon",  price: 300,  effect: "+24 Attack · 3% Lifesteal",           slot: "weapon", stats: { attack: 24, lifesteal: 0.03 } },
+  { key: "cogforged-saber",     name: "Cogforged Saber",     rarity: "uncommon",  price: 340,  effect: "+22 Attack · +10% Attack Speed",      slot: "weapon", stats: { attack: 22, attackSpeed: 0.10 } },
+  { key: "leafsong-blade",      name: "Leafsong Blade",      rarity: "rare",      price: 460,  effect: "+26 Attack · +2 HP/s Regen",          slot: "weapon", stats: { attack: 26, hpRegen: 2 } },
+  { key: "emerald-edge",        name: "Emerald Edge",        rarity: "rare",      price: 480,  effect: "+28 Attack · +6% Crit",               slot: "weapon", stats: { attack: 28, crit: 0.06 } },
+  { key: "thornvine-blade",     name: "Thornvine Blade",     rarity: "rare",      price: 500,  effect: "+30 Attack · 4% Lifesteal",           slot: "weapon", stats: { attack: 30, lifesteal: 0.04 } },
+  { key: "frostrune-blade",     name: "Frostrune Blade",     rarity: "rare",      price: 520,  effect: "+30 Attack · +8% Crit",               slot: "weapon", stats: { attack: 30, crit: 0.08 } },
+  { key: "tideblade",           name: "Tideblade",           rarity: "epic",      price: 680,  effect: "+34 Attack · +12 Mana · +6% Crit",    slot: "weapon", stats: { attack: 34, maxMp: 12, crit: 0.06 } },
+  { key: "voidcaller-blade",    name: "Voidcaller Blade",    rarity: "epic",      price: 720,  effect: "+36 Attack · +10% Crit",              slot: "weapon", stats: { attack: 36, crit: 0.10 } },
+  { key: "runic-claymore",      name: "Runic Claymore",      rarity: "epic",      price: 760,  effect: "+38 Attack · +10% XP Gain",           slot: "weapon", stats: { attack: 38, xpBonus: 0.10 } },
+  { key: "stormfang",           name: "Stormfang",           rarity: "epic",      price: 800,  effect: "+38 Attack · +12% Attack Speed",      slot: "weapon", stats: { attack: 38, attackSpeed: 0.12 } },
+  { key: "bone-scimitar",       name: "Bone Scimitar",       rarity: "epic",      price: 820,  effect: "+40 Attack · 5% Lifesteal",           slot: "weapon", stats: { attack: 40, lifesteal: 0.05 } },
+  { key: "infernal-edge",       name: "Infernal Edge",       rarity: "legendary", price: 1100, effect: "+46 Attack · +10% Crit · 4% Lifesteal", slot: "weapon", stats: { attack: 46, crit: 0.10, lifesteal: 0.04 } },
+  { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+52 Attack · +12% Crit · +12% Attack Speed", slot: "weapon", stats: { attack: 52, crit: 0.12, attackSpeed: 0.12 } }
 ];
