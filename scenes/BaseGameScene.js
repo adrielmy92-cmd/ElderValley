@@ -1,8 +1,8 @@
-import Player from "../player/Player.js?v=191";
+import Player from "../player/Player.js?v=192";
 import DialogSystem from "../systems/DialogSystem.js?v=133";
 import InteractionSystem from "../systems/InteractionSystem.js?v=133";
 import ChatSystem from "../systems/ChatSystem.js?v=209";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=227";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=228";
 import MobileControls from "../systems/MobileControls.js?v=1";
 import Inventory, { itemData } from "../systems/Inventory.js?v=6";
 import InventoryUI from "../systems/InventoryUI.js?v=9";
@@ -619,7 +619,8 @@ export default class BaseGameScene extends Phaser.Scene {
       }
     });
     this.createPlayerHpBar();
-    if (!this.player?.profile?.melee) this.createSpellBar(); // mage spells only
+    if (this.player?.profile?.melee) this.createWarriorBar();
+    else this.createSpellBar();
     this.updateInventoryHud();
     this.updateClockHud();
     this.updateCurrencyHud();
@@ -711,6 +712,76 @@ export default class BaseGameScene extends Phaser.Scene {
     this.spellSlots.forEach(({ container }, i) => {
       container.setPosition(startX + i * (SLOT_W + GAP), Y);
     });
+  }
+
+  // Bottom ability bar for the warrior: [1] Attack, [2] Spin, [3] Defend, with
+  // cooldown overlays (mirrors the mage spell bar). Reuses this.spellSlots so the
+  // existing layout/resize handling works.
+  createWarriorBar() {
+    const DEPTH = 3000;
+    const SLOT_W = 52, SLOT_H = 44, GAP = 6;
+    const abilities = [
+      { key: "1", label: "Atk",    border: 0xffa23c, icon: "sword",  cd: null },
+      { key: "2", label: "Giro",   border: 0xc6cedd, icon: "swords", cd: () => ({ end: this._spinCooldownUntil ?? 0,   total: 1500 }) },
+      { key: "3", label: "Defesa", border: 0x6fd0ff, icon: "shield", cd: () => ({ end: this._defendCooldownUntil ?? 0, total: 10000 }) }
+    ];
+    this.spellSlots = abilities.map((ab, i) => {
+      const container = this.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
+      const bg = this.add.graphics();
+      bg.fillStyle(0x14110a, 0.9); bg.fillRoundedRect(0, 0, SLOT_W, SLOT_H, 6);
+      bg.lineStyle(2, ab.border, 1); bg.strokeRoundedRect(0, 0, SLOT_W, SLOT_H, 6);
+      const keyLabel = this.add.text(5, 4, `[${ab.key}]`, {
+        fontFamily: "monospace", fontSize: "10px", color: "#" + ab.border.toString(16).padStart(6, "0"),
+        stroke: "#000000", strokeThickness: 2
+      });
+      const iconG = this.add.graphics();
+      if (ab.icon === "sword") {
+        iconG.fillStyle(0xd9dde6, 1); iconG.fillRect(25, 12, 3, 16);
+        iconG.fillStyle(0xe8b84a, 1); iconG.fillRect(21, 27, 11, 3);
+        iconG.fillStyle(0x6b4a2a, 1); iconG.fillRect(25, 30, 3, 4);
+      } else if (ab.icon === "swords") {
+        iconG.lineStyle(3, 0xd9dde6, 1); iconG.lineBetween(19, 14, 33, 30); iconG.lineBetween(33, 14, 19, 30);
+        iconG.fillStyle(0xe8b84a, 1); iconG.fillRect(24, 20, 4, 4);
+      } else { // shield
+        iconG.fillStyle(0x6fd0ff, 0.9); iconG.fillRoundedRect(20, 12, 12, 12, 3);
+        iconG.fillTriangle(20, 23, 32, 23, 26, 31);
+        iconG.fillStyle(0xffffff, 0.8); iconG.fillRect(25, 15, 2, 10);
+      }
+      const nameLabel = this.add.text(SLOT_W / 2, SLOT_H - 10, ab.label, {
+        fontFamily: "monospace", fontSize: "9px", color: "#ffffff", stroke: "#000000", strokeThickness: 2
+      }).setOrigin(0.5, 0.5);
+      const cdOverlay = this.add.graphics();
+      const cdText = this.add.text(SLOT_W / 2, SLOT_H / 2 - 2, "", {
+        fontFamily: "monospace", fontSize: "16px", fontStyle: "bold",
+        color: "#ffffff", stroke: "#000000", strokeThickness: 3
+      }).setOrigin(0.5, 0.5).setAlpha(0);
+      container.add([bg, keyLabel, iconG, nameLabel, cdOverlay, cdText]);
+      return { container, bg, cdOverlay, cdText, cd: ab.cd, w: SLOT_W, h: SLOT_H };
+    });
+    this._spellSlotW = SLOT_W;
+    this._spellSlotGap = GAP;
+    this._spellBarTotalW = abilities.length * SLOT_W + (abilities.length - 1) * GAP;
+    this.layoutSpellBar(this.scale.width, this.scale.height);
+  }
+
+  updateWarriorBar() {
+    if (!this.spellSlots || !this.player?.profile?.melee) return;
+    const now = this.time.now;
+    for (const slot of this.spellSlots) {
+      if (!slot.cd) continue;
+      const { end, total } = slot.cd();
+      const remaining = end - now;
+      slot.cdOverlay.clear();
+      if (remaining > 0) {
+        const frac = Math.max(0, Math.min(1, remaining / total));
+        const h = (slot.h - 2) * frac;
+        slot.cdOverlay.fillStyle(0x000000, 0.62);
+        slot.cdOverlay.fillRoundedRect(1, 1 + (slot.h - 2 - h), slot.w - 2, h, 4);
+        slot.cdText.setText(Math.ceil(remaining / 1000).toString()).setAlpha(1);
+      } else {
+        slot.cdText.setAlpha(0);
+      }
+    }
   }
 
   createPlayerHpBar() {
@@ -879,10 +950,55 @@ export default class BaseGameScene extends Phaser.Scene {
     if (now < (this._spinCooldownUntil ?? 0)) return;
     if (this.player.spin?.()) {
       this._spinCooldownUntil = now + 1500;
+      this._spawnSpinSwords(620);
       this.time.delayedCall(180, () => {
         if (this.player?.active) this.applyMeleeDamage(this.player.x, this.player.y, this.player.profile.spinRadius ?? 82);
       });
     }
+  }
+
+  // Procedural little sword texture (no asset) for the spin VFX.
+  _ensureSpinSwordTexture() {
+    if (this.textures.exists("spin-sword")) return;
+    const g = this.add.graphics();
+    g.fillStyle(0xd9dde6, 1); g.fillRect(5, 4, 4, 28);      // blade
+    g.fillStyle(0xf2f4f8, 1); g.fillRect(6, 4, 1, 28);      // highlight
+    g.fillStyle(0x9aa0ab, 1); g.fillRect(8, 4, 1, 28);      // shade
+    g.fillTriangle(5, 4, 9, 4, 7, 0);                       // tip
+    g.fillStyle(0xe8b84a, 1); g.fillRect(1, 32, 12, 4);     // crossguard
+    g.fillStyle(0x6b4a2a, 1); g.fillRect(6, 36, 2, 7);      // grip
+    g.fillStyle(0xe8b84a, 1); g.fillRect(5, 42, 4, 3);      // pommel
+    g.generateTexture("spin-sword", 14, 46);
+    g.destroy();
+  }
+
+  // Whirl a ring of swords around the warrior for the spin attack (no sprite rotation).
+  _spawnSpinSwords(duration = 600) {
+    if (!this.player) return;
+    this._ensureSpinSwordTexture();
+    const K = 5;
+    const swords = Array.from({ length: K }, (_, i) => {
+      const img = this.add.image(this.player.x, this.player.y, "spin-sword")
+        .setOrigin(0.5, 1).setDepth((this.player.depth ?? 0) + 2);
+      return { img, off: (i / K) * Math.PI * 2 };
+    });
+    const turns = 2.2;
+    this.tweens.addCounter({
+      from: 0, to: 1, duration, ease: "Cubic.easeOut",
+      onUpdate: (tw) => {
+        const p = tw.getValue();
+        const a = p * Math.PI * 2 * turns;
+        const R = 26 + 56 * Math.sin(Math.PI * p); // grow then pull back in
+        const cx = this.player?.x ?? 0, cy = this.player?.y ?? 0;
+        for (const sw of swords) {
+          const ang = a + sw.off;
+          sw.img.setPosition(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
+          sw.img.setRotation(ang + Math.PI / 2); // blade points outward
+          sw.img.setAlpha(0.5 + 0.5 * Math.sin(Math.PI * p));
+        }
+      },
+      onComplete: () => swords.forEach((sw) => sw.img.destroy())
+    });
   }
 
   // [3] Defend — rooted block stance: invincible for ~2.5s, then a 10s cooldown.
@@ -2403,6 +2519,7 @@ export default class BaseGameScene extends Phaser.Scene {
     this.updateManualCollisionEditorControls();
     this.updateWorldClock();
     this.tickRegen();
+    this.updateWarriorBar();
 
     // Rooted defend stance: keep the shield on the player and block movement/input.
     if (this._defending) {

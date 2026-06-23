@@ -276,8 +276,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     return true;
   }
 
-  // Spin attack animation: show the side-attack pose (sword extended) and whirl the
-  // sprite a full turn. Damage is applied by the scene (warriorSpin). Reuses sprites.
+  // Spin attack: the warrior braces and swings while the scene whirls swords around
+  // him (warriorSpin). The sprite itself does NOT rotate. Reuses existing sprites.
   spin() {
     if (this.isAttacking) return false;
     const profile = this.profile;
@@ -285,17 +285,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.isAttacking = true;
     this.setVelocity(0, 0);
     this.setFlipX(false);
-    const af = profile.attackFrames ?? profile.framesPerDirection ?? 8;
-    this.setTexture(profile.attackTexture, 2 * af); // right-attack row, first frame
-    this.play(`${this.animPrefix}-attack-right`, true);
+    this.angle = 0;
+    this.play(`${this.animPrefix}-attack-${this.facing}`, true);
     const finish = () => {
       if (!this.active) return;
-      this.angle = 0;
       this.isAttacking = false;
       this.playIdle();
     };
-    this.scene.tweens.add({ targets: this, angle: 360, duration: 520, ease: "Sine.easeInOut", onComplete: finish });
-    this.scene.time.delayedCall(720, () => { if (this.isAttacking) finish(); });
+    this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, finish);
+    this.scene.time.delayedCall(700, () => { if (this.isAttacking) finish(); });
     return true;
   }
 }
