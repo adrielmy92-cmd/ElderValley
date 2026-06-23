@@ -1192,7 +1192,7 @@ const ENCHANT_MAX = 10;
 const ENCHANT_SHATTER_FROM = 4; // failing at +4 or higher can shatter (normal scroll)
 
 function enchantChanceFor(level) {
-  const table = [1, 1, 1, 0.65, 0.55, 0.45, 0.35, 0.30, 0.25, 0.20];
+  const table = [1.00, 0.90, 0.80, 0.70, 0.60, 0.50, 0.42, 0.34, 0.27, 0.20];
   return table[level] ?? 0.15;
 }
 

@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=206";
-import DialogSystem from "../systems/DialogSystem.js?v=142";
-import InteractionSystem from "../systems/InteractionSystem.js?v=142";
-import ChatSystem from "../systems/ChatSystem.js?v=218";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=242";
-import MobileControls from "../systems/MobileControls.js?v=10";
-import Inventory, { itemData } from "../systems/Inventory.js?v=15";
-import InventoryUI from "../systems/InventoryUI.js?v=18";
-import Leveling from "../systems/Leveling.js?v=12";
+import Player from "../player/Player.js?v=207";
+import DialogSystem from "../systems/DialogSystem.js?v=143";
+import InteractionSystem from "../systems/InteractionSystem.js?v=143";
+import ChatSystem from "../systems/ChatSystem.js?v=219";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=243";
+import MobileControls from "../systems/MobileControls.js?v=11";
+import Inventory, { itemData } from "../systems/Inventory.js?v=16";
+import InventoryUI from "../systems/InventoryUI.js?v=19";
+import Leveling from "../systems/Leveling.js?v=13";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1256,7 +1256,7 @@ export default class BaseGameScene extends Phaser.Scene {
 
   // Success chance for the attempt that takes gear from `level` to `level+1`.
   enchantChance(level) {
-    const table = [1, 1, 1, 0.65, 0.55, 0.45, 0.35, 0.30, 0.25, 0.20];
+    const table = [1.00, 0.90, 0.80, 0.70, 0.60, 0.50, 0.42, 0.34, 0.27, 0.20];
     return table[level] ?? 0.15;
   }
 
