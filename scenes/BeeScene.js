@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=268";
+import WorldScene from "./WorldScene.js?v=269";
 
 const BEE_W = 2752;
 const BEE_H = 1536;
@@ -882,7 +882,8 @@ export default class BeeScene extends WorldScene {
 
     this._sfx("bee-hit", 0.55);
     this._showBossHitEffect(boss.x, boss.y);
-    this._showBossDmgNumber(boss.x, boss.y - 70, finalAmount, boss.state === "vulnerable" || !!this._lastCritHit);
+    const wasCrit = !!this._lastCritHit; this._lastCritHit = false; // consume the crit flag
+    this._showBossDmgNumber(boss.x, boss.y - 70, finalAmount, wasCrit, boss.state === "vulnerable");
 
     // Servidor é a autoridade — apenas envia o dano
     this.multiplayer?.sendHitBeeQueen(finalAmount);
@@ -994,19 +995,24 @@ export default class BeeScene extends WorldScene {
 
   _showBossHitEffect(_x, _y) {}
 
-  _showBossDmgNumber(x, y, amount, crit = false) {
-    const txt = this.add.text(x, y, crit ? `⚡${amount}` : `-${amount}`, {
-      fontFamily: "monospace",
-      fontSize: crit ? "24px" : "18px",
-      color: crit ? "#ffffff" : "#ffee44",
-      stroke: "#000000",
-      strokeThickness: crit ? 5 : 3
+  // crit = player critical hit (orange "CRIT!", matches Forest/Swamp); vulnerable =
+  // the queen's stunned bonus-damage window (⚡). A crit takes visual priority.
+  _showBossDmgNumber(x, y, amount, crit = false, vulnerable = false) {
+    let label, color, size, thick, scale, dur;
+    if (crit) {
+      label = `${amount} CRIT!`; color = "#ff8a1e"; size = "26px"; thick = 5; scale = 1.6; dur = 950;
+    } else if (vulnerable) {
+      label = `⚡${amount}`; color = "#ffffff"; size = "24px"; thick = 5; scale = 1.5; dur = 950;
+    } else {
+      label = `-${amount}`; color = "#ffee44"; size = "18px"; thick = 3; scale = 1.2; dur = 750;
+    }
+    const txt = this.add.text(x, y, label, {
+      fontFamily: "monospace", fontSize: size, color, stroke: "#000000",
+      strokeThickness: thick, fontStyle: crit ? "bold" : "normal"
     }).setOrigin(0.5).setDepth(9500);
     this.tweens.add({
-      targets: txt, y: y - 60, alpha: 0,
-      scaleX: crit ? 1.5 : 1.2, scaleY: crit ? 1.5 : 1.2,
-      duration: crit ? 950 : 750, ease: "Power2",
-      onComplete: () => txt.destroy()
+      targets: txt, y: y - 60, alpha: 0, scaleX: scale, scaleY: scale,
+      duration: dur, ease: "Power2", onComplete: () => txt.destroy()
     });
   }
 
