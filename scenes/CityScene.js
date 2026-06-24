@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=277";
+import WorldScene from "./WorldScene.js?v=278";
 
 const TILE = 32;
 

@@ -1369,6 +1369,28 @@ async function runEconomyAction(action, profileId, payload) {
 const XP_POINTS_PER_LEVEL = 1;
 const XP_MAX_LEVEL = 99;
 const XP_REWARDS = { golem: 500, beeQueen: 600, troll: 80, beeSoldier: 25 };
+// Coin bounties dropped on kill (server-awarded, authoritative). Tuned so a handful
+// of troll/golem kills funds a basic weapon and bosses meaningfully bankroll gear.
+const COIN_REWARDS = { golem: 450, beeQueen: 520, troll: 35, beeSoldier: 6 };
+
+// Fishing — a peaceful coin faucet at the village river. The catch minigame runs on
+// the client; the server rolls the fish + awards coins authoritatively (so wallet
+// profiles actually keep them) with a short per-profile cooldown against scripted spam.
+const FISH_TABLE = [
+  { name: "Sardinha",      rarity: "common",    weight: 58, coins: 14 },
+  { name: "Truta",         rarity: "uncommon",  weight: 27, coins: 32 },
+  { name: "Salmão",        rarity: "rare",      weight: 12, coins: 70 },
+  { name: "Peixe Dourado", rarity: "legendary", weight: 3,  coins: 220 }
+];
+const FISH_WEIGHT_TOTAL = FISH_TABLE.reduce((sum, f) => sum + f.weight, 0);
+function rollFish() {
+  let r = Math.random() * FISH_WEIGHT_TOTAL;
+  for (const f of FISH_TABLE) { if ((r -= f.weight) <= 0) return f; }
+  return FISH_TABLE[0];
+}
+const fishingCooldownByProfile = new Map();
+const FISHING_MIN_INTERVAL_MS = 2500;
+
 function xpForLevel(level) {
   // XP needed to go from `level` to `level+1`.
   return Math.floor(80 * Math.pow(Math.max(1, level), 1.35));
@@ -1448,6 +1470,30 @@ async function grantXpToProfileId(profileId, amount) {
 function awardArenaXp(players, amount) {
   for (const c of players) {
     if (c.profileId) grantXpToProfileId(c.profileId, amount).catch(() => {});
+  }
+}
+
+// Award combat coins to one profile. Locked (concurrent kills can't lose coins) and
+// authoritative for wallet profiles; the new total + delta are pushed to live sockets.
+async function grantCoinsToProfileId(profileId, amount, reason = "combat") {
+  const base = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!profileId || base <= 0) return null;
+  const saved = await withProfileLock(profileId, async () => {
+    const profile = await loadProfileForMutation(profileId);
+    profile.coins = Math.max(0, Math.floor(Number(profile.coins ?? 0) || 0)) + base;
+    return (await writeProfile(profileId, profile)).profile;
+  });
+  for (const c of clients.values()) {
+    if (c.profileId && c.profileId === profileId) {
+      sendWs(c.socket, { type: "coins", coins: saved.coins, gained: base, reason });
+    }
+  }
+  return saved;
+}
+// Fire-and-forget coin bounty to every player currently in a boss arena.
+function awardArenaCoins(players, amount) {
+  for (const c of players) {
+    if (c.profileId) grantCoinsToProfileId(c.profileId, amount).catch(() => {});
   }
 }
 
@@ -1749,6 +1795,43 @@ const server = createServer(async (req, res) => {
       }
       const houses = await readIndexedHousesForWallet(normalizedWallet);
       sendJson(res, 200, { ok: true, walletAddress: normalizedWallet, houses });
+      return;
+    }
+
+    if (url.pathname === "/api/fishing/catch") {
+      if (req.method !== "POST") {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      const payload = JSON.parse(await readBody(req) || "{}");
+      const profileId = sanitizeText(payload.profileId, 140);
+      if (!profileId) {
+        sendJson(res, 400, { ok: false, error: "Missing profile id" });
+        return;
+      }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) {
+        sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
+      if (isWalletProfile(profileId) && !hasActiveWalletPresence(profileId, payload.presenceId)) {
+        sendJson(res, 409, { ok: false, error: "Wallet has no active server presence. Rejoin the game." });
+        return;
+      }
+      const now = Date.now();
+      if (now - (fishingCooldownByProfile.get(profileId) ?? 0) < FISHING_MIN_INTERVAL_MS) {
+        sendJson(res, 429, { ok: false, error: "Reel in slower." });
+        return;
+      }
+      fishingCooldownByProfile.set(profileId, now);
+      const fish = rollFish();
+      const saved = await grantCoinsToProfileId(profileId, fish.coins, "fishing");
+      sendJson(res, 200, {
+        ok: true,
+        fish: { name: fish.name, rarity: fish.rarity },
+        gained: fish.coins,
+        coins: saved?.coins ?? null
+      });
       return;
     }
 
@@ -2532,6 +2615,7 @@ function applyBossDamage(amount) {
     sendToArena({ type: "bossSync", hp: 0, maxHp: BOSS_MAX_HP, phase: bossState.phase, x: Math.round(bossState.x), y: Math.round(bossState.y), flipX: bossState.flipX, anim: "golem-walk", dead: true });
     sendToArena({ type: "bossAttack", event: "died" });
     awardArenaXp(getArenaPlayers(), XP_REWARDS.golem);
+    awardArenaCoins(getArenaPlayers(), COIN_REWARDS.golem);
     console.log("[boss] Golem derrotado! Renascendo em 60s.");
   }
 }
@@ -2793,6 +2877,7 @@ function applyTrollDamage(idx, damage) {
     troll.respawnAt = Date.now() + TROLL_RESPAWN_MS;
     sendToSwamp({ type: "trollDied", i: idx });
     awardArenaXp(getSwampPlayers(), XP_REWARDS.troll);
+    awardArenaCoins(getSwampPlayers(), COIN_REWARDS.troll);
   }
   sendToSwamp({ type: "trollSync", trolls: swampTrolls.map(serializeTroll) });
 }
@@ -2954,6 +3039,7 @@ function applyBeeDamage(amount) {
     sendToBee({ type: "beeAttack", event: "died" });
     sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
     awardArenaXp(getBeePlayers(), XP_REWARDS.beeQueen);
+    awardArenaCoins(getBeePlayers(), COIN_REWARDS.beeQueen);
     console.log("[bee] Rainha derrotada! Renascendo em 28s.");
     return;
   }
@@ -2977,6 +3063,7 @@ function applyBeeSoldierDamage(idx, amount) {
     s.diedAt = Date.now();
     sendToBee({ type: "beeSoldierDied", i: idx });
     awardArenaXp(getBeePlayers(), XP_REWARDS.beeSoldier);
+    awardArenaCoins(getBeePlayers(), COIN_REWARDS.beeSoldier);
   }
   sendToBee({ type: "beeSoldierSync", soldiers: beeSoldiers.map(serializeSoldier) });
 }

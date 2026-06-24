@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=265";
+import BaseGameScene from "./BaseGameScene.js?v=266";
 import MarketSystem from "../systems/MarketSystem.js?v=15";
 
 const TILE = 32;
@@ -572,6 +572,7 @@ export default class WorldScene extends BaseGameScene {
     this.addNpc();
     this.addCityTransition();
     this.addWestForestGate();
+    this.addFishingSpots();
     this.buildGates();
     this.addWorldBounds();
   }
@@ -3329,6 +3330,32 @@ export default class WorldScene extends BaseGameScene {
       }
     });
     return { post, board, label };
+  }
+
+  // Fishing signs along the north bank of the river. Walk up + press E to open the
+  // catch minigame (BaseGameScene.openFishingMinigame). Purely visual posts; no
+  // collision — the interaction radius is what matters.
+  addFishingSpots() {
+    const bankY = RIVER_TOP - 36; // just north of the water strip, on walkable grass
+    const xs = [520, 1480, 2360];
+    this.fishingSpots = [];
+    xs.forEach((x, i) => {
+      const post = this.add.rectangle(x + 40, bankY - 14, 7, 40, 0x5a4326, 1)
+        .setOrigin(0.5, 1).setDepth(bankY - 2);
+      const board = this.add.rectangle(x, bankY - 48, 104, 30, 0x2f6d8a, 1)
+        .setDepth(bankY - 1).setStrokeStyle(2, 0x16323f, 1);
+      const label = this.add.text(x, bankY - 48, "🎣 Pesca", {
+        fontFamily: "monospace", fontSize: "13px", color: "#dff3ff",
+        stroke: "#0c1a22", strokeThickness: 3
+      }).setOrigin(0.5).setDepth(bankY);
+      this.interactions.add({
+        id: `fishing_spot_${i}`,
+        x, y: bankY, promptY: bankY - 84,
+        promptText: "E Pescar", radius: 80,
+        onInteract: () => this.openFishingMinigame()
+      });
+      this.fishingSpots.push({ post, board, label });
+    });
   }
 
   // Market stall on the main village road — opens the player marketplace overlay.

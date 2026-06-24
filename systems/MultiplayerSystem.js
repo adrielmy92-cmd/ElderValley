@@ -269,6 +269,10 @@ export default class MultiplayerSystem {
       this.scene.onXpGained?.(payload);
       return;
     }
+    if (payload.type === "coins") {
+      this.scene.onCoinsGained?.(payload);
+      return;
+    }
     if (payload.type === "marketUpdate") {
       this.scene.onMarketUpdate?.();
       return;

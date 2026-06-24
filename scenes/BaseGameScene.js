@@ -2,7 +2,7 @@ import Player from "../player/Player.js?v=208";
 import DialogSystem from "../systems/DialogSystem.js?v=144";
 import InteractionSystem from "../systems/InteractionSystem.js?v=144";
 import ChatSystem from "../systems/ChatSystem.js?v=220";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=244";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=245";
 import MobileControls from "../systems/MobileControls.js?v=12";
 import Inventory, { itemData } from "../systems/Inventory.js?v=17";
 import InventoryUI from "../systems/InventoryUI.js?v=20";
@@ -1406,6 +1406,160 @@ export default class BaseGameScene extends Phaser.Scene {
       this.showXpPopup?.(payload.gained);
     }
     this.updateXpHud?.();
+  }
+
+  // Server-awarded combat coins (bounties). Wallet profiles trust the authoritative
+  // server total; guests add the delta to their local (client-owned) balance.
+  onCoinsGained(payload) {
+    const gained = Math.max(0, Math.floor(Number(payload?.gained) || 0));
+    if (this.bag?.serverMode) {
+      if (typeof payload?.coins === "number") this.setCoins(payload.coins);
+    } else if (gained > 0) {
+      this.addCoins(gained);
+    }
+    // Fishing shows its own catch feedback in the modal; skip the duplicate popup.
+    if (gained > 0 && payload?.reason !== "fishing") {
+      this.showCoinPopup?.(gained);
+      this.playSfx?.("sfx-purchase", 0.4);
+    }
+  }
+
+  showCoinPopup(amount) {
+    if (!this.player) return;
+    const t = this.add.text(this.player.x, this.player.y - 60, `+${amount}`, {
+      fontFamily: "monospace", fontSize: "14px", color: "#ffd34d", stroke: "#3a2a05", strokeThickness: 4
+    }).setOrigin(0.5).setDepth(9001);
+    this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 1100, ease: "Cubic.Out", onComplete: () => t.destroy() });
+  }
+
+  // ─── Fishing minigame ────────────────────────────────────────────────────
+  // A sweeping marker over a track with a green zone that shrinks each round. Hit
+  // the green 3× in a row to land the fish; one miss and it escapes. The catch +
+  // coin reward is rolled/awarded server-side (see /api/fishing/catch).
+  openFishingMinigame() {
+    if (this.isFishing || this.isWorking) return;
+    if (this.inventoryUI?.isOpen?.() || this.dialog?.active || this.chat?.active) return;
+    this.isFishing = true;
+    this.player?.setVelocity(0, 0);
+    const RARITY_COLORS = {
+      common: "#cdd6cf", uncommon: "#6fdc8c", rare: "#5fb0ff", legendary: "#ffd34d"
+    };
+
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+    const D = 9700;
+    const objs = [];
+    const keep = (o) => { objs.push(o); return o; };
+
+    keep(this.add.rectangle(cx, cy, cam.width, cam.height, 0x05070a, 0.62).setScrollFactor(0).setDepth(D));
+    keep(this.add.rectangle(cx, cy, 470, 248, 0x132633, 0.98).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(3, 0x2f7d9a, 1));
+    keep(this.add.text(cx, cy - 96, "🎣  Pesca", {
+      fontFamily: "monospace", fontSize: "22px", color: "#bfe9ff", stroke: "#06141c", strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+    const status = keep(this.add.text(cx, cy - 64, "", {
+      fontFamily: "monospace", fontSize: "15px", color: "#eaf6ff", stroke: "#06141c", strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+    keep(this.add.text(cx, cy + 92, "ESPAÇO ou clique para fisgar", {
+      fontFamily: "monospace", fontSize: "13px", color: "#8fb4c6", stroke: "#06141c", strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+
+    const trackW = 380;
+    const trackH = 36;
+    const trackX0 = cx - trackW / 2;
+    const trackX1 = cx + trackW / 2;
+    const trackY = cy + 2;
+    keep(this.add.rectangle(cx, trackY, trackW, trackH, 0x081e2a, 1).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(2, 0x1d5066, 1));
+
+    const greenWidths = [110, 70, 42];
+    const st = { phase: 0, total: 3, locked: false, done: false, green: null, marker: null, sweep: null };
+
+    const cleanup = () => {
+      st.done = true;
+      st.sweep?.stop();
+      this.input.keyboard.off("keydown-SPACE", onPress);
+      this.input.off("pointerdown", onPress);
+      objs.forEach((o) => o.destroy());
+      this.isFishing = false;
+    };
+
+    const startPhase = () => {
+      if (st.done) return;
+      st.locked = false;
+      status.setText(`Fisgada  ${st.phase + 1} / ${st.total}`).setColor("#eaf6ff");
+      const gw = greenWidths[st.phase] ?? 42;
+      const gx0 = trackX0 + 10 + Math.random() * (trackW - gw - 20);
+      st.greenX0 = gx0;
+      st.greenX1 = gx0 + gw;
+      st.green?.destroy();
+      st.green = keep(this.add.rectangle(gx0 + gw / 2, trackY, gw, trackH - 10, 0x2ecc71, 0.92)
+        .setScrollFactor(0).setDepth(D + 2));
+      st.marker?.destroy();
+      st.marker = keep(this.add.rectangle(trackX0 + 3, trackY, 6, trackH + 12, 0xffe066, 1)
+        .setScrollFactor(0).setDepth(D + 3));
+      const dur = Math.max(360, 720 - st.phase * 150);
+      st.sweep = this.tweens.add({
+        targets: st.marker, x: trackX1 - 3, duration: dur, yoyo: true, repeat: -1, ease: "Sine.InOut"
+      });
+    };
+
+    const escape = () => {
+      if (st.done) return;
+      st.sweep?.stop();
+      st.green?.setFillStyle(0xc0392b, 0.9);
+      status.setText("O peixe escapou!").setColor("#ff8a7a");
+      this.playSfx?.("sfx-enchant-shatter", 0.4);
+      this.time.delayedCall(1100, cleanup);
+    };
+
+    const land = async () => {
+      st.sweep?.stop();
+      st.marker?.destroy();
+      st.green?.destroy();
+      status.setText("Puxando a linha...").setColor("#bfe9ff");
+      try {
+        const res = await this.claimFishingCatch();
+        if (st.done) return;
+        const color = RARITY_COLORS[res.fish?.rarity] ?? "#eaf6ff";
+        status.setText(`Pescou: ${res.fish?.name ?? "Peixe"}!  +${res.gained ?? 0}`).setColor(color);
+        this.playSfx?.("sfx-purchase", 0.5);
+      } catch (err) {
+        if (st.done) return;
+        status.setText(err?.message ?? "A linha arrebentou.").setColor("#ff8a7a");
+      }
+      this.time.delayedCall(1500, cleanup);
+    };
+
+    const onPress = () => {
+      if (st.locked || st.done) return;
+      st.locked = true;
+      const mx = st.marker?.x ?? -1;
+      const hit = mx >= st.greenX0 && mx <= st.greenX1;
+      if (!hit) { escape(); return; }
+      st.sweep?.stop();
+      st.green?.setFillStyle(0x7CFC00, 1);
+      this.playSfx?.("sfx-enchant-success", 0.4);
+      st.phase += 1;
+      if (st.phase >= st.total) { land(); return; }
+      this.time.delayedCall(360, startPhase);
+    };
+
+    this.input.keyboard.on("keydown-SPACE", onPress);
+    this.input.on("pointerdown", onPress);
+    startPhase();
+  }
+
+  async claimFishingCatch() {
+    const profileId = this.getPlayerProfileId();
+    const body = { profileId, presenceId: this.multiplayer?.getPresenceId?.() ?? "" };
+    const response = await fetch("/api/fishing/catch", {
+      method: "POST",
+      headers: this.getSessionHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) throw new Error(result?.error ?? "The line snapped.");
+    return result;
   }
 
   // Drink a potion from the bag: restore HP/MP (fraction of max), cooldown-gated.
@@ -2842,6 +2996,12 @@ export default class BaseGameScene extends Phaser.Scene {
       if (this.workCancelKey && Phaser.Input.Keyboard.JustDown(this.workCancelKey)) {
         this.finishTimedWork?.(true);
       }
+      return;
+    }
+
+    if (this.isFishing) {
+      this.player.setVelocity(0, 0);
+      this.interactions.prompt?.setVisible(false);
       return;
     }
 
