@@ -388,9 +388,9 @@
 
   <p class="nav-section">Web3</p>
   <ul>
+    <li><a href="#token">$ELDER Token</a></li>
     <li><a href="#genesis">Genesis Collection</a></li>
     <li><a href="#ownership">House Ownership</a></li>
-    <li><a href="#ownership">Token Yield</a></li>
   </ul>
 
   <p class="nav-section">Technical</p>
@@ -414,11 +414,11 @@
   <div class="hero">
     <div class="hero-tag">Official Documentation</div>
     <h1>ElderValley</h1>
-    <p>A multiplayer social RPG on the Base blockchain. Explore a living pixel-art world, fight bosses together, and own a piece of the valley forever.</p>
+    <p>A multiplayer social RPG with on-chain ownership. Explore a living pixel-art world, fight bosses together, and own a piece of the valley. Free to play in the browser.</p>
     <div class="hero-badges">
       <span class="badge badge-gold">Phaser 3 · Pixel Art</span>
-      <span class="badge badge-blue">Base Chain · ERC-721</span>
-      <span class="badge badge-green">Live on Base · Genesis Mint</span>
+      <span class="badge badge-blue">$ELDER · Solana / Pump.fun</span>
+      <span class="badge badge-green">Live · Play Free</span>
     </div>
   </div>
 
@@ -431,11 +431,16 @@
 
       <p>ElderValley is a browser-based multiplayer RPG where players share a persistent open world rendered in pixel art. The game runs entirely in the browser with no downloads — just open the URL and you are in the valley alongside other players in real time.</p>
 
-      <p>The project combines classic RPG exploration with Web3 ownership. Houses in the valley are real NFTs on the Base blockchain. Owning a house means owning a piece of the world: you can customize the interior, set the decorations, and your property persists across all sessions for every visitor.</p>
+      <p>The project combines classic RPG exploration with Web3 ownership. The <strong>$ELDER</strong> community token launches on <strong>Pump.fun</strong> (Solana), and houses in the valley are real NFTs (ERC-721 on Base). Owning a house means owning a piece of the world: you can customize the interior, set the decorations, and your property persists across all sessions for every visitor.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
-        <p>ElderValley is <strong>live on Base mainnet</strong>. Core gameplay, multiplayer, and boss fights are playable now, and Genesis houses can be minted on-chain straight from the in-game shop — connect a wallet, pick a house, and confirm the transaction on Base.</p>
+        <p>The full game is <strong>live and free to play</strong> right now — open world, real-time multiplayer, boss fights, fishing, and the economy are all playable with no wallet required.</p>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">🔁</span>
+        <p>The token is moving to <strong>Pump.fun on Solana</strong>. On-chain house minting is temporarily <strong>paused</strong> during the transition — the Genesis houses below remain real ERC-721 NFTs on Base and stay tradable on OpenSea.</p>
       </div>
     </section>
 
@@ -618,6 +623,21 @@
       <p>Guard patrol routes are algorithmically constrained to the paved road area — they never wander into grass or house zones.</p>
     </section>
 
+    <!-- TOKEN -->
+    <section id="token">
+      <h2>$ELDER Token</h2>
+      <p class="section-lead">The ElderValley community token on Solana.</p>
+
+      <p><strong>$ELDER</strong> is the community token for ElderValley, launching on <strong>Pump.fun</strong> on the Solana chain. It is a community and culture token — the game itself is fully free to play and does not gate gameplay behind the token.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">🚀</span>
+        <p>The token launches on <strong>Pump.fun</strong>. The contract address and live trade link will be published here and in-game the moment it goes live. Always verify the mint address against the official <a href="https://x.com/Eldervalley" target="_blank" rel="noopener" style="color:var(--accent)">@Eldervalley</a> channel — ignore any address posted elsewhere.</p>
+      </div>
+
+      <p>Trade $ELDER on <a href="https://pump.fun" target="_blank" rel="noopener" style="color:var(--accent)">Pump.fun</a> once live.</p>
+    </section>
+
     <!-- GENESIS COLLECTION -->
     <section id="genesis">
       <h2>Genesis Collection</h2>
@@ -625,7 +645,7 @@
 
       <div class="callout callout-success">
         <span class="callout-icon">🏠</span>
-        <p>The Genesis Collection is a limited set of 50 houses minted on the Base blockchain. Each house is an ERC-721 token. Supply is hard-capped in the smart contract constructor — no admin can add more.</p>
+        <p>The Genesis Collection is a limited set of 50 houses on the Base blockchain. Each house is an ERC-721 token, supply hard-capped in the smart contract constructor — no admin can add more. Listed prices are the original on-chain Base mint prices; new minting is paused during the Solana token move, but existing houses stay tradable on OpenSea.</p>
       </div>
 
       <table>
@@ -734,29 +754,6 @@
       <h2>House Ownership</h2>
       <p class="section-lead">What it means to own a house in ElderValley.</p>
 
-      <h3>💰 Token Volume Yield</h3>
-      <p>This is the core value of owning a house. <strong>50% of all trading volume fees from the ElderValley token are distributed to house owners.</strong> The distribution is weighted by tier — the rarer the house, the greater the share.</p>
-
-      <table>
-        <thead>
-          <tr><th>Tier</th><th>Fee Weight</th><th>Houses</th><th>Total Weight</th><th>Share of Pool</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><span class="tier-common">Common</span></td><td>1×</td><td>25</td><td>25</td><td>20.7%</td></tr>
-          <tr><td><span class="tier-uncommon">Uncommon</span></td><td>2×</td><td>12</td><td>24</td><td>19.8%</td></tr>
-          <tr><td><span class="tier-rare">Rare</span></td><td>4×</td><td>8</td><td>32</td><td>26.4%</td></tr>
-          <tr><td><span class="tier-legendary">Legendary</span></td><td>8×</td><td>5</td><td>40</td><td>33.1%</td></tr>
-          <tr style="font-weight:600"><td>Total</td><td>—</td><td>50</td><td>121</td><td>100%</td></tr>
-        </tbody>
-      </table>
-
-      <div class="callout callout-success">
-        <span class="callout-icon">📈</span>
-        <p><strong>Example:</strong> If the token generates 100 ETH in trading fees, 50 ETH goes to house owners. A Legendary owner receives <code>8/121 × 50 ETH = 3.3 ETH</code>. A Common owner receives <code>1/121 × 50 ETH = 0.41 ETH</code>. The more the token trades, the more every house earns.</p>
-      </div>
-
-      <p>This creates direct alignment: house owners are incentivized to grow the token's trading volume. The fee weight values are hardcoded in the smart contract via <code>feeWeightOf(tokenId)</code> — tamper-proof and verifiable on-chain.</p>
-
       <h3>In-Game Benefits</h3>
       <ul style="padding-left:20px; margin:10px 0 14px; font-size:15px; display:flex; flex-direction:column; gap:6px;">
         <li>Exclusive entry — private houses reject wallets that don't own them (server-verified)</li>
@@ -773,7 +770,7 @@
 
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <p>Guest mode allows exploring the world without a wallet, but house ownership features, profile persistence, and yield distribution require a connected wallet.</p>
+        <p>Guest mode allows exploring the world without a wallet, but house ownership features and on-chain profile persistence require a connected wallet.</p>
       </div>
     </section>
 
@@ -795,8 +792,8 @@
 <span class="key">Database</span>  <span class="val">PostgreSQL (Railway) with JSON file fallback</span>
 
 <span class="comment">// Blockchain</span>
-<span class="key">Chain</span>     <span class="val">Base (Ethereum L2, chainId 8453)</span>
-<span class="key">Contracts</span> <span class="val">ElderValleyHouses (ERC-721) + Marketplace</span>
+<span class="key">Token</span>     <span class="val">$ELDER on Solana (Pump.fun)</span>
+<span class="key">NFTs</span>      <span class="val">ElderValleyHouses (ERC-721) + Marketplace on Base (chainId 8453)</span>
 <span class="key">Tooling</span>   <span class="val">Hardhat + ethers.js v6 + OpenZeppelin 5</span>
 
 <span class="comment">// Deploy</span>
@@ -858,14 +855,16 @@ eldervalley/
     <!-- CONTRACTS -->
     <section id="contracts">
       <h2>Smart Contracts</h2>
-      <p class="section-lead">Deployed and verified on Base mainnet (chainId 8453).</p>
+      <p class="section-lead">House NFTs deployed and verified on Base mainnet (chainId 8453). The $ELDER token lives on Solana via Pump.fun.</p>
 
       <div class="code-block">
 <span class="comment">// Base mainnet · chainId 8453 · verified on BaseScan</span>
-<span class="key">$ELDER token</span>        <span class="val">0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8</span>
 <span class="key">ElderValleyHouses</span>   <span class="val">0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97</span>
 <span class="key">Marketplace</span>         <span class="val">0x87d217313CAE423EBFB1a462cb11403862A9bcd7</span>
 <span class="key">Treasury</span>            <span class="val">0x9d6B9918422F76207f5d1239c24bC79cC9dD0B51</span>
+
+<span class="comment">// Solana · Pump.fun</span>
+<span class="key">$ELDER token</span>        <span class="val">published at launch — verify via @Eldervalley</span>
       </div>
 
       <h3>ElderValleyHouses (ERC-721)</h3>
@@ -889,10 +888,9 @@ eldervalley/
       <div class="callout callout-info">
         <span class="callout-icon">📋</span>
         <p>Source verified and open on BaseScan:
-          <a href="https://basescan.org/token/0x201Ac2695De71B6c9bb8491BF214Afdf1d8558c8" target="_blank" rel="noopener" style="color:var(--accent)">$ELDER token</a> ·
           <a href="https://basescan.org/address/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97#code" target="_blank" rel="noopener" style="color:var(--accent)">Houses</a> ·
           <a href="https://basescan.org/address/0x87d217313CAE423EBFB1a462cb11403862A9bcd7#code" target="_blank" rel="noopener" style="color:var(--accent)">Marketplace</a>.
-          Houses are bought directly on-chain via <code>buyHouseByKey</code> from the in-game shop — no intermediary.</p>
+          On-chain house minting is paused during the Solana token move; existing houses remain tradable on OpenSea.</p>
       </div>
     </section>
 
@@ -946,8 +944,8 @@ eldervalley/
           </div>
           <div class="roadmap-body">
             <span class="roadmap-tag tag-active">→ Now</span>
-            <h4>Phase 4 — Economy</h4>
-            <p>Marketplace secondary sales, alchemy expanded with more jobs, coin rewards for boss kills, house rental system.</p>
+            <h4>Phase 4 — Economy &amp; Token Relaunch</h4>
+            <p>$ELDER relaunching on Pump.fun (Solana). In-game economy live: levels &amp; attributes, weapons and enchanting, the fishing minigame, coin bounties on bosses, and a player marketplace.</p>
           </div>
         </div>
 
@@ -1005,7 +1003,7 @@ eldervalley/
   </div><!-- /content -->
 
   <footer>
-    <span>ElderValley · Live on Base · 2026</span>
+    <span>ElderValley · $ELDER on Pump.fun · 2026</span>
     <span>
       <a href="https://x.com/Eldervalley" target="_blank" rel="noopener">Twitter</a> ·
       <a href="https://opensea.io/assets/base/0x3E96BCdC2bD5dB11644977f7e4a6F3a599624f97" target="_blank" rel="noopener">OpenSea</a> ·
