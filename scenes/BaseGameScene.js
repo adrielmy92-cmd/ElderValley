@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=210";
-import DialogSystem from "../systems/DialogSystem.js?v=146";
-import InteractionSystem from "../systems/InteractionSystem.js?v=146";
-import ChatSystem from "../systems/ChatSystem.js?v=222";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=247";
-import MobileControls from "../systems/MobileControls.js?v=14";
-import Inventory, { itemData } from "../systems/Inventory.js?v=19";
-import InventoryUI from "../systems/InventoryUI.js?v=23";
-import Leveling from "../systems/Leveling.js?v=16";
+import Player from "../player/Player.js?v=211";
+import DialogSystem from "../systems/DialogSystem.js?v=147";
+import InteractionSystem from "../systems/InteractionSystem.js?v=147";
+import ChatSystem from "../systems/ChatSystem.js?v=223";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=248";
+import MobileControls from "../systems/MobileControls.js?v=15";
+import Inventory, { itemData } from "../systems/Inventory.js?v=20";
+import InventoryUI from "../systems/InventoryUI.js?v=24";
+import Leveling from "../systems/Leveling.js?v=17";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1484,12 +1484,15 @@ export default class BaseGameScene extends Phaser.Scene {
 
     const zoneHalf = diff.zoneH / 2;
     const fishR = 13;
+    const startY = trackTop + trackH * 0.45;
     const st = {
       done: false, holding: false,
-      zoneY: trackTop + trackH * 0.55, zoneVel: 0,
-      fishY: trackTop + trackH * 0.35, fishTarget: trackTop + trackH * 0.5,
+      // Start the catch zone right on the fish so you don't open mid-loss.
+      zoneY: startY, zoneVel: 0,
+      fishY: startY, fishTarget: startY,
       retargetIn: 0, fishSpeed: diff.fishSpeed,
-      progress: 0.20
+      progress: 0.45,
+      grace: 0.8 // brief intro where the fish holds still and you can't lose yet
     };
 
     // Catch zone (player-controlled) + fish marker + progress meter.
@@ -1559,6 +1562,13 @@ export default class BaseGameScene extends Phaser.Scene {
     const tick = (_t, deltaMs) => {
       if (st.done) return;
       const dt = Math.min(0.05, deltaMs / 1000);
+      const warmup = st.grace > 0;
+      if (warmup) {
+        st.grace -= dt;
+        status.setText("Get ready...").setColor("#bfe9ff");
+      } else if (status.text === "Get ready...") {
+        status.setText("Keep the marker on the fish!").setColor("#eaf6ff");
+      }
 
       // Player-controlled zone: hold = climb, release = fall. Clamp at the rails.
       st.zoneVel += (st.holding ? -1080 : 880) * dt;
@@ -1569,9 +1579,9 @@ export default class BaseGameScene extends Phaser.Scene {
       if (st.zoneY > zMax) { st.zoneY = zMax; st.zoneVel = 0; }
       zone.y = st.zoneY;
 
-      // Fish wanders toward a target, with occasional sudden darts.
+      // Fish holds still during warmup, then wanders toward a target with darts.
       st.retargetIn -= dt;
-      if (st.retargetIn <= 0) {
+      if (!warmup && st.retargetIn <= 0) {
         const [lo, hi] = diff.retarget;
         st.retargetIn = lo + Math.random() * (hi - lo);
         st.fishTarget = trackTop + fishR + Math.random() * (trackH - fishR * 2);
@@ -1582,16 +1592,16 @@ export default class BaseGameScene extends Phaser.Scene {
       st.fishY += Math.max(-step, Math.min(step, dy));
       fish.y = st.fishY;
 
-      // Overlap → fill; otherwise drain.
+      // Overlap → fill; otherwise drain. No draining (and no losing) during warmup.
       const inZone = st.fishY >= st.zoneY - zoneHalf && st.fishY <= st.zoneY + zoneHalf;
-      st.progress += (inZone ? diff.fill : -diff.drain) * dt;
-      st.progress = Math.max(0, Math.min(1, st.progress));
+      const delta = inZone ? diff.fill : (warmup ? 0 : -diff.drain);
+      st.progress = Math.max(0, Math.min(1, st.progress + delta * dt));
       zone.setFillStyle(inZone ? 0x2ecc71 : 0x6fdc8c, inZone ? 0.45 : 0.22);
       fillBar.setDisplaySize(barW - 6, trackH * st.progress);
       fillBar.setFillStyle(st.progress > 0.66 ? 0x6fdc8c : st.progress > 0.33 ? 0xffd34d : 0xff8a7a, 1);
 
       if (st.progress >= 1) { land(); return; }
-      if (st.progress <= 0) { escape(); }
+      if (!warmup && st.progress <= 0) { escape(); }
     };
 
     const onDown = () => { st.holding = true; };
