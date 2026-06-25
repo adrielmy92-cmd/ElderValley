@@ -1294,6 +1294,16 @@ async function runEconomyAction(action, profileId, payload) {
     return commit();
   }
 
+  if (action === "sell") {
+    // Sell one owned (un-equipped) copy back to a shop for half its price.
+    const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
+    if (!item) return fail("Unknown item");
+    if (bagCount(bag, item.key) <= 0) return fail("Not owned");
+    bagRemove(bag, item.key, 1);
+    profile.coins = Math.max(0, Math.floor(Number(profile.coins) || 0)) + Math.floor((item.price ?? 0) / 2);
+    return commit();
+  }
+
   if (action === "consume") {
     const item = ITEMS_BY_KEY[sanitizeText(payload.itemKey, 80)];
     // Consumed during play: potions (heal/mana) AND spiritshots (shot, burned per cast).

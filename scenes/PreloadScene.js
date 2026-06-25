@@ -1,4 +1,4 @@
-import { createPixelArtTextures } from "../systems/PixelArtFactory.js?v=150";
+import { createPixelArtTextures } from "../systems/PixelArtFactory.js?v=151";
 
 export default class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -6,58 +6,58 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.video("title-intro", "./assets/videos/eldervalley-title.mp4?v=139", "loadeddata", false, true);
-    this.load.audio("title-theme", "./assets/audio/title-theme.mp3?v=139");
-    this.load.svg("wallet-metamask", "./assets/ui/metamask-icon.svg?v=168", { width: 128, height: 128 });
-    this.load.svg("wallet-phantom", "./assets/ui/phantom-icon.svg?v=168", { width: 128, height: 128 });
-    this.load.svg("opensea-logo", "./assets/ui/opensea-icon.svg?v=8", { width: 128, height: 128 });
-    this.load.svg("x-logo", "./assets/ui/x-icon.svg?v=8", { width: 128, height: 128 });
-    this.load.svg("pumpfun-logo", "./assets/ui/pumpfun-icon.svg?v=8", { width: 128, height: 128 });
-    this.load.svg("docs-logo", "./assets/ui/docs-icon.svg?v=8", { width: 128, height: 128 });
-    this.load.image("creative-house-tavern", "./assets/sprites/creative-house-tavern.png?v=139");
-    this.load.image("creative-house-manor", "./assets/sprites/creative-house-manor.png?v=139");
-    this.load.image("creative-house-cottage", "./assets/sprites/creative-house-cottage.png?v=139");
-    this.load.image("creative-house-blue-market", "./assets/sprites/creative-house-blue-market.png?v=139");
-    this.load.image("creative-house-red-lodge", "./assets/sprites/creative-house-red-lodge.png?v=139");
-    this.load.image("creative-house-green-cottage", "./assets/sprites/creative-house-green-cottage.png?v=139");
-    this.load.image("creative-house-alchemist", "./assets/sprites/creative-house-alchemist.png?v=151");
-    this.load.image("creative-house-ivy-manor", "./assets/sprites/creative-house-ivy-manor.png?v=205");
-    this.load.image("creative-house-thatch-cottage", "./assets/sprites/creative-house-thatch-cottage.png?v=202");
-    this.load.image("creative-house-blue-cottage", "./assets/sprites/creative-house-blue-cottage.png?v=202");
-    this.load.image("creative-house-red-tower-cottage", "./assets/sprites/creative-house-red-tower-cottage.png?v=202");
-    this.load.image("creative-house-blue-arcane-manor", "./assets/sprites/creative-house-blue-arcane-manor.png?v=208");
-    this.load.image("creative-house-elf-green-manor", "./assets/sprites/creative-house-elf-green-manor.png?v=208");
-    this.load.image("creative-house-blue-gold-tower", "./assets/sprites/creative-house-blue-gold-tower.png?v=208");
-    this.load.image("creative-house-teal-roof-manor", "./assets/sprites/creative-house-teal-roof-manor.png?v=208");
+    this.load.video("title-intro", "./assets/videos/eldervalley-title.mp4?v=140", "loadeddata", false, true);
+    this.load.audio("title-theme", "./assets/audio/title-theme.mp3?v=140");
+    this.load.svg("wallet-metamask", "./assets/ui/metamask-icon.svg?v=169", { width: 128, height: 128 });
+    this.load.svg("wallet-phantom", "./assets/ui/phantom-icon.svg?v=169", { width: 128, height: 128 });
+    this.load.svg("opensea-logo", "./assets/ui/opensea-icon.svg?v=9", { width: 128, height: 128 });
+    this.load.svg("x-logo", "./assets/ui/x-icon.svg?v=9", { width: 128, height: 128 });
+    this.load.svg("pumpfun-logo", "./assets/ui/pumpfun-icon.svg?v=9", { width: 128, height: 128 });
+    this.load.svg("docs-logo", "./assets/ui/docs-icon.svg?v=9", { width: 128, height: 128 });
+    this.load.image("creative-house-tavern", "./assets/sprites/creative-house-tavern.png?v=140");
+    this.load.image("creative-house-manor", "./assets/sprites/creative-house-manor.png?v=140");
+    this.load.image("creative-house-cottage", "./assets/sprites/creative-house-cottage.png?v=140");
+    this.load.image("creative-house-blue-market", "./assets/sprites/creative-house-blue-market.png?v=140");
+    this.load.image("creative-house-red-lodge", "./assets/sprites/creative-house-red-lodge.png?v=140");
+    this.load.image("creative-house-green-cottage", "./assets/sprites/creative-house-green-cottage.png?v=140");
+    this.load.image("creative-house-alchemist", "./assets/sprites/creative-house-alchemist.png?v=152");
+    this.load.image("creative-house-ivy-manor", "./assets/sprites/creative-house-ivy-manor.png?v=206");
+    this.load.image("creative-house-thatch-cottage", "./assets/sprites/creative-house-thatch-cottage.png?v=203");
+    this.load.image("creative-house-blue-cottage", "./assets/sprites/creative-house-blue-cottage.png?v=203");
+    this.load.image("creative-house-red-tower-cottage", "./assets/sprites/creative-house-red-tower-cottage.png?v=203");
+    this.load.image("creative-house-blue-arcane-manor", "./assets/sprites/creative-house-blue-arcane-manor.png?v=209");
+    this.load.image("creative-house-elf-green-manor", "./assets/sprites/creative-house-elf-green-manor.png?v=209");
+    this.load.image("creative-house-blue-gold-tower", "./assets/sprites/creative-house-blue-gold-tower.png?v=209");
+    this.load.image("creative-house-teal-roof-manor", "./assets/sprites/creative-house-teal-roof-manor.png?v=209");
     this.load.spritesheet("adventurer-sheet", "./assets/sprites/adventurer-sheet.png", {
       frameWidth: 48,
       frameHeight: 68
     });
-    this.load.spritesheet("mage-1-sheet", "./assets/sprites/blue-mage-sheet.png?v=139", {
+    this.load.spritesheet("mage-1-sheet", "./assets/sprites/blue-mage-sheet.png?v=140", {
       frameWidth: 56,
       frameHeight: 84
     });
-    this.load.spritesheet("mage-1-idle-sheet", "./assets/sprites/blue-mage-idle-sheet.png?v=139", {
+    this.load.spritesheet("mage-1-idle-sheet", "./assets/sprites/blue-mage-idle-sheet.png?v=140", {
       frameWidth: 56,
       frameHeight: 84
     });
-    this.load.spritesheet("mage-1-attack-normalized", "./assets/sprites/mage-1-attack-normalized.png?v=183", {
+    this.load.spritesheet("mage-1-attack-normalized", "./assets/sprites/mage-1-attack-normalized.png?v=184", {
       frameWidth: 56,
       frameHeight: 84
     });
-    this.load.spritesheet("mage-1-side-attack-normalized", "./assets/sprites/mage-1-side-attack-normalized.png?v=183", {
+    this.load.spritesheet("mage-1-side-attack-normalized", "./assets/sprites/mage-1-side-attack-normalized.png?v=184", {
       frameWidth: 56,
       frameHeight: 84
     });
-    this.load.spritesheet("dark-wanderer-sheet", "./assets/sprites/dark-wanderer-sheet.png?v=10", {
+    this.load.spritesheet("dark-wanderer-sheet", "./assets/sprites/dark-wanderer-sheet.png?v=11", {
       frameWidth: 96,
       frameHeight: 128
     });
-    this.load.spritesheet("warrior-walk-sheet", "./assets/sprites/warrior-walk-sheet.png?v=9", {
+    this.load.spritesheet("warrior-walk-sheet", "./assets/sprites/warrior-walk-sheet.png?v=10", {
       frameWidth: 82,
       frameHeight: 84
     });
-    this.load.spritesheet("warrior-attack-sheet", "./assets/sprites/warrior-attack-sheet.png?v=9", {
+    this.load.spritesheet("warrior-attack-sheet", "./assets/sprites/warrior-attack-sheet.png?v=10", {
       frameWidth: 82,
       frameHeight: 84
     });

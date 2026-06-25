@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=26";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=27";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -242,8 +242,37 @@ export default class ShopSystem {
       fontFamily: "monospace", fontSize: "20px", color: "#ffd95e", stroke: "#1a1304", strokeThickness: 3
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH + 3));
 
-    // Buy button / state
-    this._buyButton(item, cx, y + this._detail.h - 44);
+    // Buy button / state (+ Sell ½ when the player owns a spare copy)
+    const sellable = (this.scene.bag?.count?.(item.key) ?? 0) > 0;
+    this._buyButton(item, cx, y + this._detail.h - (sellable ? 62 : 44));
+    if (sellable) this._sellButton(item, cx, y + this._detail.h - 20);
+  }
+
+  _sellButton(item, cx, cy) {
+    const s = this.scene;
+    const w = Math.min(this._detail.w - 36, 220);
+    const value = Math.floor((item.price ?? 0) / 2);
+    const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 3);
+    g.fillStyle(0x5a3d12, 1); g.fillRoundedRect(cx - w / 2, cy - 18, w, 36, 8);
+    g.lineStyle(2, 0xd2a24a, 1); g.strokeRoundedRect(cx - w / 2, cy - 18, w, 36, 8);
+    this._dt(g);
+    this._dt(s.add.text(cx, cy, `Sell ½  ·  ${value}`, {
+      fontFamily: "Georgia, serif", fontSize: "15px", color: "#ffe6b0", stroke: "#1a1304", strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4));
+    const zone = s.add.zone(cx, cy, w, 36).setScrollFactor(0).setDepth(DEPTH + 5)
+      .setInteractive({ useHandCursor: true });
+    zone.on("pointerdown", () => this._sell(item));
+    this._dt(zone);
+  }
+
+  async _sell(item) {
+    const result = await (this.scene.bag?.sell(item) ?? Promise.resolve({ ok: false, error: "No bag" }));
+    if (!result.ok) { this._toast(result.error ?? "Sale failed", "#ffb4b4"); return; }
+    this.scene.playSfx?.("sfx-sell", 0.5);
+    if (this.coinText) this.coinText.setText(String(this._coins()));
+    this._toast(`Sold ${item.name} (+${Math.floor((item.price ?? 0) / 2)})`, "#ffe6b0");
+    this._renderDetail();
+    this._refreshOwnedTicks();
   }
 
   _buyButton(item, cx, cy) {

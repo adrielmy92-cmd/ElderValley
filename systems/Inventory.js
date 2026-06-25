@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=26";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=27";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -242,6 +242,21 @@ export default class Inventory {
     if (coins < item.price) return { ok: false, error: "Not enough coins" };
     this.scene.setCoins?.(coins - item.price);
     this.add(item.key);
+    return { ok: true };
+  }
+
+  // Sell one owned (un-equipped) copy back to a shop for half its price.
+  async sell(item) {
+    if (this.count(item.key) <= 0) return { ok: false, error: "None to sell" };
+    if (this.serverMode) {
+      try {
+        const data = await this._server("sell", { itemKey: item.key });
+        if (!this._reconcile(data, ++this._seq)) return { ok: false, error: data?.error ?? "Sale failed" };
+        return { ok: true };
+      } catch { return { ok: false, error: "Server unreachable" }; }
+    }
+    this.remove(item.key, 1);
+    this.scene.addCoins?.(Math.floor((item.price ?? 0) / 2));
     return { ok: true };
   }
 
