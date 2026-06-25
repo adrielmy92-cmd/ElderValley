@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=25";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=26";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -30,7 +30,9 @@ export default class Inventory {
 
   _profileId() { return this.scene.getPlayerProfileId?.() ?? "guest"; }
   _isWallet() { return String(this._profileId()).toLowerCase().startsWith("wallet:"); }
-  _storageKey() { return `eldervalley-bag-${this._profileId()}`; }
+  _charKey() { return this.scene.getCharKey?.() ?? "mage-1"; }
+  _storageKey() { return `eldervalley-bag-${this._profileId()}-${this._charKey()}`; }
+  _legacyStorageKey() { return `eldervalley-bag-${this._profileId()}`; }
 
   // Weapons are class-specific (mage = staff, warrior = sword) and live in a per-class
   // equipped slot, so switching characters never carries a weapon across. Rings,
@@ -78,7 +80,18 @@ export default class Inventory {
 
   _loadLocal() {
     try {
-      const raw = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null");
+      let stored = localStorage.getItem(this._storageKey());
+      if (stored === null) {
+        // One-time migration: the first character to load adopts the old shared bag,
+        // then the legacy key is removed so other characters start empty.
+        const legacy = localStorage.getItem(this._legacyStorageKey());
+        if (legacy !== null) {
+          localStorage.setItem(this._storageKey(), legacy);
+          localStorage.removeItem(this._legacyStorageKey());
+          stored = legacy;
+        }
+      }
+      const raw = JSON.parse(stored ?? "null");
       if (raw && typeof raw === "object") {
         this.stacks = raw.stacks ?? {};
         this.equipped = this._normEquipped(raw.equipped);

@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=214";
-import DialogSystem from "../systems/DialogSystem.js?v=150";
-import InteractionSystem from "../systems/InteractionSystem.js?v=150";
-import ChatSystem from "../systems/ChatSystem.js?v=226";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=251";
-import MobileControls from "../systems/MobileControls.js?v=18";
-import Inventory, { itemData } from "../systems/Inventory.js?v=23";
-import InventoryUI from "../systems/InventoryUI.js?v=27";
-import Leveling from "../systems/Leveling.js?v=20";
+import Player from "../player/Player.js?v=215";
+import DialogSystem from "../systems/DialogSystem.js?v=151";
+import InteractionSystem from "../systems/InteractionSystem.js?v=151";
+import ChatSystem from "../systems/ChatSystem.js?v=227";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=252";
+import MobileControls from "../systems/MobileControls.js?v=19";
+import Inventory, { itemData } from "../systems/Inventory.js?v=24";
+import InventoryUI from "../systems/InventoryUI.js?v=28";
+import Leveling from "../systems/Leveling.js?v=21";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1975,27 +1975,47 @@ export default class BaseGameScene extends Phaser.Scene {
     return `eldervalley-coins-${this.getPlayerProfileId()}`;
   }
 
+  // The active playable character (mage-1 / warrior). Each character is a separate
+  // save: coins, bag and leveling are all keyed by it, never shared across characters.
+  getCharKey() {
+    return this.player?.characterId
+      ?? this.registry.get("playerCharacter")
+      ?? this.registry.get("playerProfile")?.selectedCharacter
+      ?? "mage-1";
+  }
+  _coinsKey() { return `eldervalley-coins-${this.getPlayerProfileId()}-${this.getCharKey()}`; }
+
   getCoins() {
     if (this.isDevMode?.()) return 999999999; // dev: unlimited money for testing
-    const profileId = this.getPlayerProfileId();
+    const key = this._coinsKey();
     const registryCoins = this.registry.get("coins");
-    if (typeof registryCoins === "number" && this.registry.get("coinsProfileId") === profileId) {
+    if (typeof registryCoins === "number" && this.registry.get("coinsKey") === key) {
       return registryCoins;
     }
-    const saved = Number(localStorage.getItem(`eldervalley-coins-${profileId}`) ?? 0);
+    let raw = localStorage.getItem(key);
+    if (raw === null) {
+      // One-time migration: the first character to load adopts the old shared coins,
+      // then the legacy key is removed so other characters start from zero.
+      const legacy = localStorage.getItem(`eldervalley-coins-${this.getPlayerProfileId()}`);
+      if (legacy !== null) {
+        try { localStorage.setItem(key, legacy); localStorage.removeItem(`eldervalley-coins-${this.getPlayerProfileId()}`); } catch { /* ignore */ }
+        raw = legacy;
+      }
+    }
+    const saved = Number(raw ?? 0);
     const coins = Number.isFinite(saved) ? Math.max(0, Math.floor(saved)) : 0;
     this.registry.set("coins", coins);
-    this.registry.set("coinsProfileId", profileId);
+    this.registry.set("coinsKey", key);
     return coins;
   }
 
   setCoins(amount) {
     const coins = Math.max(0, Math.floor(amount));
-    const profileId = this.getPlayerProfileId();
+    const key = this._coinsKey();
     this.registry.set("coins", coins);
-    this.registry.set("coinsProfileId", profileId);
+    this.registry.set("coinsKey", key);
     try {
-      localStorage.setItem(`eldervalley-coins-${profileId}`, String(coins));
+      localStorage.setItem(key, String(coins));
     } catch {
       // Continua salvo no registry da sessao.
     }

@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=227";
+import WalletSystem from "../systems/WalletSystem.js?v=228";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -71,7 +71,7 @@ export default class TitleScene extends Phaser.Scene {
 
   startTitleMusic() {
     this.stopTitleMusic(true);
-    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=141");
+    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=142");
     this.titleMusic.loop = true;
     this.titleMusic.autoplay = true;
     this.titleMusic.preload = "auto";
@@ -1543,16 +1543,30 @@ export default class TitleScene extends Phaser.Scene {
         return !profileId.startsWith("wallet:");
       }
       const payload = await response.json();
-      const profile = payload?.profile;
+      let profile = payload?.profile;
       if (!profile) {
         await this.saveInitialProfile(profileId);
         return true;
       }
+      // Enter as the character the player picked (each character is a separate save).
+      // If it differs from the server's active one, POST the switch and adopt the
+      // per-character projection the server returns (its coins/bag/leveling block).
+      const desired = TitleScene.SELECTABLE_CHARACTERS.includes(this.selectedCharacter) ? this.selectedCharacter : "mage-1";
+      if (profile.selectedCharacter !== desired) {
+        try {
+          const res = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ ...profile, selectedCharacter: desired })
+          });
+          const pj = await res.json();
+          if (pj?.profile) profile = pj.profile;
+        } catch { /* keep the GET profile */ }
+      }
+      this.selectedCharacter = desired;
       this.registry.set("playerProfile", profile);
       this.registry.set("coins", Number(profile.coins ?? 0));
-      this.registry.set("coinsProfileId", profileId);
-      const saved = profile.selectedCharacter ?? this.selectedCharacter;
-      this.selectedCharacter = TitleScene.SELECTABLE_CHARACTERS.includes(saved) ? saved : "mage-1";
+      this.registry.set("coinsKey", `${profileId}-${desired}`);
     } catch {
       // If the server does not respond, fall back to the local cache.
     }

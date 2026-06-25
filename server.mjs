@@ -1435,6 +1435,19 @@ function normalizeLeveling(data) {
   };
   return { level, xp, unspent, attr };
 }
+
+// Per-character save block. Each playable character (mage-1, warrior, …) keeps its
+// own coins, bag and leveling — nothing carries across characters. The profile's
+// top-level coins/bag/leveling project the ACTIVE character (selectedCharacter);
+// `profile.characters` stores every character's block.
+function normalizeCharBlock(d = {}) {
+  return {
+    coins: Math.max(0, Math.floor(Number(d?.coins ?? 0) || 0)),
+    bag: normalizeBag(d?.bag),
+    bagMigrated: Boolean(d?.bagMigrated),
+    ...normalizeLeveling(d)
+  };
+}
 // Mutates the profile's leveling fields in place; returns the gained levels.
 function addXp(profile, amount) {
   const gain = Math.max(0, Math.floor(Number(amount) || 0));
@@ -1674,6 +1687,27 @@ async function runMarketAction(action, profileId, payload, sellerName) {
 function normalizeProfile(profileId, data = {}) {
   const now = new Date().toISOString();
   const walletAddress = sanitizeText(data.walletAddress, 90);
+  const selectedCharacter = sanitizeText(data.selectedCharacter, 32) || "mage-1";
+
+  // Per-character saves. Normalise every stored block, then make the active
+  // character's block from the incoming top-level fields (this captures the latest
+  // mutation, or migrates a pre-feature profile whose progress lived top-level).
+  const rawChars = (data.characters && typeof data.characters === "object") ? data.characters : {};
+  const characters = {};
+  for (const [k, v] of Object.entries(rawChars)) {
+    const key = sanitizeText(k, 32);
+    if (key) characters[key] = normalizeCharBlock(v);
+  }
+  const active = normalizeCharBlock({
+    coins: data.coins, bag: data.bag, bagMigrated: data.bagMigrated,
+    level: data.level, xp: data.xp, unspent: data.unspent, attr: data.attr
+  });
+  characters[selectedCharacter] = active;
+  const activeProjection = {
+    coins: active.coins, bag: active.bag, bagMigrated: active.bagMigrated,
+    level: active.level, xp: active.xp, unspent: active.unspent, attr: active.attr
+  };
+
   return {
     version: 1,
     profileId,
@@ -1681,14 +1715,12 @@ function normalizeProfile(profileId, data = {}) {
     walletAddress,
     walletProvider: sanitizeText(data.walletProvider, 32),
     isDeveloper: Boolean(data.isDeveloper) || isDeveloperWallet(walletAddress),
-    selectedCharacter: sanitizeText(data.selectedCharacter, 32) || "mage-1",
-    coins: Math.max(0, Math.floor(Number(data.coins ?? 0) || 0)),
+    selectedCharacter,
+    ...activeProjection,
+    characters,
     ownedCharacters: [...new Set(["mage-1", "adventurer", "skeleton-archer", ...(Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : [])])],
     ownedHouses: Array.isArray(data.ownedHouses) ? data.ownedHouses : [],
     items: Array.isArray(data.items) ? data.items : [],
-    bag: normalizeBag(data.bag),
-    bagMigrated: Boolean(data.bagMigrated),
-    ...normalizeLeveling(data),
     position: data.position && typeof data.position === "object" ? {
       scene: sanitizeText(data.position.scene, 48) || "WorldScene",
       x: Number(data.position.x) || 0,
@@ -2283,14 +2315,38 @@ const server = createServer(async (req, res) => {
         // via /api/xp/allocate); coins + bag are server-owned for wallet profiles only.
         const result = await withProfileLock(profileId, async () => {
           const existing = await loadProfileForMutation(profileId);
-          const merged = {
-            ...(payload ?? {}),
-            level: existing.level, xp: existing.xp, unspent: existing.unspent, attr: existing.attr
-          };
-          if (isWalletProfile(profileId)) {
-            merged.coins = existing.coins;
-            merged.bag = existing.bag;
-            merged.bagMigrated = existing.bagMigrated;
+          const reqChar = sanitizeText(payload?.selectedCharacter, 32);
+          const switching = reqChar && reqChar !== existing.selectedCharacter;
+          let merged;
+          if (switching) {
+            // Switching character: ignore the client's top-level coins/bag/leveling
+            // (those still belong to the OLD character) and project the NEW character's
+            // stored block. existing.characters already holds the old char's latest.
+            const chars = existing.characters ?? {};
+            const nb = chars[reqChar];
+            merged = {
+              ...(payload ?? {}),
+              characters: chars,
+              selectedCharacter: reqChar,
+              coins: nb ? nb.coins : 0,
+              bag: nb ? nb.bag : undefined,
+              bagMigrated: nb ? nb.bagMigrated : false,
+              level: nb ? nb.level : 1, xp: nb ? nb.xp : 0,
+              unspent: nb ? nb.unspent : 0, attr: nb ? nb.attr : undefined
+            };
+          } else {
+            // Same character: leveling is server-owned for everyone; coins+bag are
+            // server-owned for wallet profiles. Carry every character block through.
+            merged = {
+              ...(payload ?? {}),
+              characters: existing.characters,
+              level: existing.level, xp: existing.xp, unspent: existing.unspent, attr: existing.attr
+            };
+            if (isWalletProfile(profileId)) {
+              merged.coins = existing.coins;
+              merged.bag = existing.bag;
+              merged.bagMigrated = existing.bagMigrated;
+            }
           }
           return writeProfile(profileId, merged);
         });
