@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=209";
-import DialogSystem from "../systems/DialogSystem.js?v=145";
-import InteractionSystem from "../systems/InteractionSystem.js?v=145";
-import ChatSystem from "../systems/ChatSystem.js?v=221";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=246";
-import MobileControls from "../systems/MobileControls.js?v=13";
-import Inventory, { itemData } from "../systems/Inventory.js?v=18";
-import InventoryUI from "../systems/InventoryUI.js?v=22";
-import Leveling from "../systems/Leveling.js?v=15";
+import Player from "../player/Player.js?v=210";
+import DialogSystem from "../systems/DialogSystem.js?v=146";
+import InteractionSystem from "../systems/InteractionSystem.js?v=146";
+import ChatSystem from "../systems/ChatSystem.js?v=222";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=247";
+import MobileControls from "../systems/MobileControls.js?v=14";
+import Inventory, { itemData } from "../systems/Inventory.js?v=19";
+import InventoryUI from "../systems/InventoryUI.js?v=23";
+import Leveling from "../systems/Leveling.js?v=16";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1476,9 +1476,9 @@ export default class BaseGameScene extends Phaser.Scene {
 
     // Difficulty is rolled per attempt for variety (the reward itself is server-side).
     const diffs = [
-      { zoneH: 84, fishSpeed: 110, retarget: [0.55, 1.1], dart: 0.10, fill: 0.62, drain: 0.40 },
-      { zoneH: 66, fishSpeed: 165, retarget: [0.40, 0.85], dart: 0.18, fill: 0.58, drain: 0.46 },
-      { zoneH: 52, fishSpeed: 235, retarget: [0.30, 0.65], dart: 0.28, fill: 0.55, drain: 0.52 }
+      { zoneH: 66, fishSpeed: 155, retarget: [0.45, 0.90], dart: 0.18, fill: 0.50, drain: 0.56 },
+      { zoneH: 54, fishSpeed: 215, retarget: [0.32, 0.70], dart: 0.28, fill: 0.46, drain: 0.66 },
+      { zoneH: 42, fishSpeed: 295, retarget: [0.24, 0.55], dart: 0.40, fill: 0.42, drain: 0.78 }
     ];
     const diff = diffs[Math.floor(Math.random() * diffs.length)];
 
@@ -1489,7 +1489,7 @@ export default class BaseGameScene extends Phaser.Scene {
       zoneY: trackTop + trackH * 0.55, zoneVel: 0,
       fishY: trackTop + trackH * 0.35, fishTarget: trackTop + trackH * 0.5,
       retargetIn: 0, fishSpeed: diff.fishSpeed,
-      progress: 0.32
+      progress: 0.20
     };
 
     // Catch zone (player-controlled) + fish marker + progress meter.

@@ -1400,7 +1400,7 @@ const JUNK_TABLE = [
   { name: "Tangle of Weeds", emoji: "🌿" },
   { name: "Broken Bottle",   emoji: "🍾" }
 ];
-function rollTreasureCoins() { return 45 + Math.floor(Math.random() * 175); } // 45..219
+function rollTreasureCoins() { return 20 + Math.floor(Math.random() * 71); } // 20..90
 function rollCatchOutcome() {
   const r = Math.random();
   if (r < 0.10) return "treasure"; // 10% — bonus coins
