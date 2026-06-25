@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=23";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=24";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -190,10 +190,17 @@ export default class ShopSystem {
   _renderDetail() {
     const s = this.scene;
     this._clearDetail();
-    const { x, y, w } = this._detail;
-    const item = this.items[this.selected];
-    const rar = RARITY[item.rarity] ?? RARITY.common;
+    const { x, y, w, h } = this._detail;
     const cx = x + w / 2;
+    const item = this.items[this.selected];
+    if (!item) { // nothing for sale this character can use (e.g. mage at the forge)
+      this._dt(s.add.text(cx, y + h / 2, "Nothing here for\nyour class yet.", {
+        fontFamily: "Georgia, serif", fontSize: "16px", color: "#8a99ad",
+        align: "center", lineSpacing: 6
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3));
+      return;
+    }
+    const rar = RARITY[item.rarity] ?? RARITY.common;
 
     // Big icon with rarity glow
     const glow = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
