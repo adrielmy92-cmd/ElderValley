@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=208";
-import DialogSystem from "../systems/DialogSystem.js?v=144";
-import InteractionSystem from "../systems/InteractionSystem.js?v=144";
-import ChatSystem from "../systems/ChatSystem.js?v=220";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=245";
-import MobileControls from "../systems/MobileControls.js?v=12";
-import Inventory, { itemData } from "../systems/Inventory.js?v=17";
-import InventoryUI from "../systems/InventoryUI.js?v=21";
-import Leveling from "../systems/Leveling.js?v=14";
+import Player from "../player/Player.js?v=209";
+import DialogSystem from "../systems/DialogSystem.js?v=145";
+import InteractionSystem from "../systems/InteractionSystem.js?v=145";
+import ChatSystem from "../systems/ChatSystem.js?v=221";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=246";
+import MobileControls from "../systems/MobileControls.js?v=13";
+import Inventory, { itemData } from "../systems/Inventory.js?v=18";
+import InventoryUI from "../systems/InventoryUI.js?v=22";
+import Leveling from "../systems/Leveling.js?v=15";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -1433,9 +1433,10 @@ export default class BaseGameScene extends Phaser.Scene {
   }
 
   // ─── Fishing minigame ────────────────────────────────────────────────────
-  // A sweeping marker over a track with a green zone that shrinks each round. Hit
-  // the green 3× in a row to land the fish; one miss and it escapes. The catch +
-  // coin reward is rolled/awarded server-side (see /api/fishing/catch).
+  // Stardew-style reel bar: a fish darts up and down a vertical track while the
+  // player holds (SPACE/click = lift, release = fall) to keep a "catch zone" over
+  // it. Overlap fills a progress meter; losing the fish drains it. Fill the meter
+  // to land the catch (server rolls the reward); empty it and the fish escapes.
   openFishingMinigame() {
     if (this.isFishing || this.isWorking) return;
     if (this.inventoryUI?.isOpen?.() || this.dialog?.active || this.chat?.active) return;
@@ -1453,107 +1454,165 @@ export default class BaseGameScene extends Phaser.Scene {
     const keep = (o) => { objs.push(o); return o; };
 
     keep(this.add.rectangle(cx, cy, cam.width, cam.height, 0x05070a, 0.62).setScrollFactor(0).setDepth(D));
-    keep(this.add.rectangle(cx, cy, 470, 248, 0x132633, 0.98).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(3, 0x2f7d9a, 1));
-    keep(this.add.text(cx, cy - 96, "🎣  Fishing", {
+    keep(this.add.rectangle(cx, cy, 430, 320, 0x132633, 0.98).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(3, 0x2f7d9a, 1));
+    keep(this.add.text(cx, cy - 138, "🎣  Fishing", {
       fontFamily: "monospace", fontSize: "22px", color: "#bfe9ff", stroke: "#06141c", strokeThickness: 4
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
-    const status = keep(this.add.text(cx, cy - 64, "", {
-      fontFamily: "monospace", fontSize: "15px", color: "#eaf6ff", stroke: "#06141c", strokeThickness: 3
+    const status = keep(this.add.text(cx, cy - 108, "Keep the marker on the fish!", {
+      fontFamily: "monospace", fontSize: "14px", color: "#eaf6ff", stroke: "#06141c", strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
-    keep(this.add.text(cx, cy + 92, "SPACE or click to hook", {
-      fontFamily: "monospace", fontSize: "13px", color: "#8fb4c6", stroke: "#06141c", strokeThickness: 3
+    keep(this.add.text(cx, cy + 138, "Hold SPACE / click to reel up", {
+      fontFamily: "monospace", fontSize: "12px", color: "#8fb4c6", stroke: "#06141c", strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
 
-    const trackW = 380;
-    const trackH = 36;
-    const trackX0 = cx - trackW / 2;
-    const trackX1 = cx + trackW / 2;
-    const trackY = cy + 2;
-    keep(this.add.rectangle(cx, trackY, trackW, trackH, 0x081e2a, 1).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(2, 0x1d5066, 1));
+    // Geometry (screen space; y grows downward).
+    const trackX = cx - 64;
+    const trackW = 50;
+    const trackTop = cy - 78;
+    const trackH = 196;
+    const trackBottom = trackTop + trackH;
+    keep(this.add.rectangle(trackX, trackTop + trackH / 2, trackW, trackH, 0x081e2a, 1)
+      .setScrollFactor(0).setDepth(D + 1).setStrokeStyle(2, 0x1d5066, 1));
 
-    const greenWidths = [120, 88, 66];
-    const st = { phase: 0, total: 3, locked: false, done: false, green: null, marker: null, sweep: null };
+    // Difficulty is rolled per attempt for variety (the reward itself is server-side).
+    const diffs = [
+      { zoneH: 84, fishSpeed: 110, retarget: [0.55, 1.1], dart: 0.10, fill: 0.62, drain: 0.40 },
+      { zoneH: 66, fishSpeed: 165, retarget: [0.40, 0.85], dart: 0.18, fill: 0.58, drain: 0.46 },
+      { zoneH: 52, fishSpeed: 235, retarget: [0.30, 0.65], dart: 0.28, fill: 0.55, drain: 0.52 }
+    ];
+    const diff = diffs[Math.floor(Math.random() * diffs.length)];
+
+    const zoneHalf = diff.zoneH / 2;
+    const fishR = 13;
+    const st = {
+      done: false, holding: false,
+      zoneY: trackTop + trackH * 0.55, zoneVel: 0,
+      fishY: trackTop + trackH * 0.35, fishTarget: trackTop + trackH * 0.5,
+      retargetIn: 0, fishSpeed: diff.fishSpeed,
+      progress: 0.32
+    };
+
+    // Catch zone (player-controlled) + fish marker + progress meter.
+    const zone = keep(this.add.rectangle(trackX, st.zoneY, trackW - 8, diff.zoneH, 0x2ecc71, 0.30)
+      .setScrollFactor(0).setDepth(D + 2).setStrokeStyle(2, 0x2ecc71, 0.9));
+    const fish = keep(this.add.text(trackX, st.fishY, "🐟", { fontSize: "22px" })
+      .setOrigin(0.5).setScrollFactor(0).setDepth(D + 3));
+    const barX = cx + 48;
+    const barW = 22;
+    keep(this.add.rectangle(barX, trackTop + trackH / 2, barW, trackH, 0x09222e, 1)
+      .setScrollFactor(0).setDepth(D + 1).setStrokeStyle(2, 0x1d5066, 1));
+    const fillBar = keep(this.add.rectangle(barX, trackBottom, barW - 6, 0, 0xffd34d, 1)
+      .setOrigin(0.5, 1).setScrollFactor(0).setDepth(D + 2));
+
+    const finish = (delay) => { this.time.delayedCall(delay, cleanup); };
+
+    const escape = () => {
+      if (st.done) return;
+      st.done = true;
+      this.events.off("update", tick, this);
+      zone.setFillStyle(0xc0392b, 0.4).setStrokeStyle(2, 0xc0392b, 0.9);
+      status.setText("The fish got away!").setColor("#ff8a7a");
+      this.playSfx?.("sfx-fish-splash", 0.6);
+      finish(1100);
+    };
+
+    const applyResult = (res) => {
+      // Three outcomes: fish (to bag), treasure (bonus coins), junk (flavour + coins).
+      if (res.type === "treasure") {
+        if (this.bag?.serverMode) { if (typeof res.coins === "number") this.setCoins(res.coins); }
+        else this.addCoins?.(res.gained ?? 0);
+        status.setText(`💰  Treasure!  +${res.gained ?? 0} coins`).setColor("#ffd34d");
+        this.playSfx?.("sfx-purchase", 0.6);
+      } else if (res.type === "junk") {
+        if (this.bag?.serverMode) { if (typeof res.coins === "number") this.setCoins(res.coins); }
+        else if ((res.gained ?? 0) > 0) this.addCoins?.(res.gained);
+        const j = res.junk ?? {};
+        status.setText(`${j.emoji ?? "🗑️"}  ${j.name ?? "Junk"}  (+${res.gained ?? 0})`).setColor("#9aa8bc");
+        this.playSfx?.("sfx-fish-splash", 0.4);
+      } else {
+        if (this.bag?.serverMode) { if (res.bag) this.bag._applyBag(res.bag); }
+        else if (res.fish?.key) this.bag?.add(res.fish.key);
+        const color = RARITY_COLORS[res.fish?.rarity] ?? "#eaf6ff";
+        const star = res.fish?.rarity === "legendary" ? "⭐ " : "";
+        status.setText(`${star}Caught: ${res.fish?.name ?? "Fish"}!`).setColor(color);
+        this.playSfx?.("sfx-purchase", 0.5);
+      }
+      this.onBagSynced?.();
+    };
+
+    const land = async () => {
+      if (st.done) return;
+      st.done = true;
+      this.events.off("update", tick, this);
+      fillBar.setDisplaySize(barW - 6, trackH);
+      status.setText("Reeling in...").setColor("#bfe9ff");
+      this.playSfx?.("sfx-fish-bite", 0.5);
+      try {
+        const res = await this.claimFishingCatch();
+        if (res) applyResult(res);
+      } catch (err) {
+        status.setText(err?.message ?? "The line snapped.").setColor("#ff8a7a");
+      }
+      finish(1600);
+    };
+
+    const tick = (_t, deltaMs) => {
+      if (st.done) return;
+      const dt = Math.min(0.05, deltaMs / 1000);
+
+      // Player-controlled zone: hold = climb, release = fall. Clamp at the rails.
+      st.zoneVel += (st.holding ? -1080 : 880) * dt;
+      st.zoneVel = Math.max(-560, Math.min(560, st.zoneVel));
+      st.zoneY += st.zoneVel * dt;
+      const zMin = trackTop + zoneHalf, zMax = trackBottom - zoneHalf;
+      if (st.zoneY < zMin) { st.zoneY = zMin; st.zoneVel = 0; }
+      if (st.zoneY > zMax) { st.zoneY = zMax; st.zoneVel = 0; }
+      zone.y = st.zoneY;
+
+      // Fish wanders toward a target, with occasional sudden darts.
+      st.retargetIn -= dt;
+      if (st.retargetIn <= 0) {
+        const [lo, hi] = diff.retarget;
+        st.retargetIn = lo + Math.random() * (hi - lo);
+        st.fishTarget = trackTop + fishR + Math.random() * (trackH - fishR * 2);
+        st.curSpeed = (Math.random() < diff.dart) ? st.fishSpeed * 2.2 : st.fishSpeed;
+      }
+      const step = (st.curSpeed ?? st.fishSpeed) * dt;
+      const dy = st.fishTarget - st.fishY;
+      st.fishY += Math.max(-step, Math.min(step, dy));
+      fish.y = st.fishY;
+
+      // Overlap → fill; otherwise drain.
+      const inZone = st.fishY >= st.zoneY - zoneHalf && st.fishY <= st.zoneY + zoneHalf;
+      st.progress += (inZone ? diff.fill : -diff.drain) * dt;
+      st.progress = Math.max(0, Math.min(1, st.progress));
+      zone.setFillStyle(inZone ? 0x2ecc71 : 0x6fdc8c, inZone ? 0.45 : 0.22);
+      fillBar.setDisplaySize(barW - 6, trackH * st.progress);
+      fillBar.setFillStyle(st.progress > 0.66 ? 0x6fdc8c : st.progress > 0.33 ? 0xffd34d : 0xff8a7a, 1);
+
+      if (st.progress >= 1) { land(); return; }
+      if (st.progress <= 0) { escape(); }
+    };
+
+    const onDown = () => { st.holding = true; };
+    const onUp = () => { st.holding = false; };
 
     const cleanup = () => {
       st.done = true;
-      st.sweep?.stop();
-      this.input.keyboard.off("keydown-SPACE", onPress);
-      this.input.off("pointerdown", onPress);
+      this.events.off("update", tick, this);
+      this.input.keyboard.off("keydown-SPACE", onDown);
+      this.input.keyboard.off("keyup-SPACE", onUp);
+      this.input.off("pointerdown", onDown);
+      this.input.off("pointerup", onUp);
       objs.forEach((o) => o.destroy());
       this.isFishing = false;
     };
 
-    const startPhase = () => {
-      if (st.done) return;
-      st.locked = false;
-      status.setText(`Cast  ${st.phase + 1} / ${st.total}`).setColor("#eaf6ff");
-      const gw = greenWidths[st.phase] ?? 42;
-      const gx0 = trackX0 + 10 + Math.random() * (trackW - gw - 20);
-      st.greenX0 = gx0;
-      st.greenX1 = gx0 + gw;
-      st.green?.destroy();
-      st.green = keep(this.add.rectangle(gx0 + gw / 2, trackY, gw, trackH - 10, 0x2ecc71, 0.92)
-        .setScrollFactor(0).setDepth(D + 2));
-      st.marker?.destroy();
-      st.marker = keep(this.add.rectangle(trackX0 + 3, trackY, 6, trackH + 12, 0xffe066, 1)
-        .setScrollFactor(0).setDepth(D + 3));
-      const dur = Math.max(470, 720 - st.phase * 120);
-      st.sweep = this.tweens.add({
-        targets: st.marker, x: trackX1 - 3, duration: dur, yoyo: true, repeat: -1, ease: "Sine.InOut"
-      });
-    };
-
-    const escape = () => {
-      if (st.done) return;
-      st.sweep?.stop();
-      st.green?.setFillStyle(0xc0392b, 0.9);
-      status.setText("The fish got away!").setColor("#ff8a7a");
-      this.playSfx?.("sfx-fish-splash", 0.6);
-      this.time.delayedCall(1100, cleanup);
-    };
-
-    const land = async () => {
-      st.sweep?.stop();
-      st.marker?.destroy();
-      st.green?.destroy();
-      status.setText("Reeling in...").setColor("#bfe9ff");
-      try {
-        const res = await this.claimFishingCatch();
-        if (st.done) return;
-        // Drop the fish into the bag: wallet = server-authoritative, guest = local.
-        if (this.bag?.serverMode) {
-          if (res.bag) this.bag._applyBag(res.bag);
-        } else if (res.fish?.key) {
-          this.bag?.add(res.fish.key);
-        }
-        this.onBagSynced?.();
-        const color = RARITY_COLORS[res.fish?.rarity] ?? "#eaf6ff";
-        status.setText(`Caught: ${res.fish?.name ?? "Fish"}!`).setColor(color);
-        this.playSfx?.("sfx-purchase", 0.5);
-      } catch (err) {
-        if (st.done) return;
-        status.setText(err?.message ?? "The line snapped.").setColor("#ff8a7a");
-      }
-      this.time.delayedCall(1500, cleanup);
-    };
-
-    const onPress = () => {
-      if (st.locked || st.done) return;
-      st.locked = true;
-      const mx = st.marker?.x ?? -1;
-      const hit = mx >= st.greenX0 && mx <= st.greenX1;
-      if (!hit) { escape(); return; }
-      st.sweep?.stop();
-      st.green?.setFillStyle(0x7CFC00, 1);
-      this.playSfx?.("sfx-fish-bite", 0.5);
-      st.phase += 1;
-      if (st.phase >= st.total) { land(); return; }
-      this.time.delayedCall(360, startPhase);
-    };
-
-    this.input.keyboard.on("keydown-SPACE", onPress);
-    this.input.on("pointerdown", onPress);
-    startPhase();
+    this.input.keyboard.on("keydown-SPACE", onDown);
+    this.input.keyboard.on("keyup-SPACE", onUp);
+    this.input.on("pointerdown", onDown);
+    this.input.on("pointerup", onUp);
+    this.events.on("update", tick, this);
   }
 
   async claimFishingCatch() {

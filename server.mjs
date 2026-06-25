@@ -1381,7 +1381,8 @@ const FISH_TABLE = [
   { key: "fish-sardine", name: "River Sardine", rarity: "common",    weight: 58 },
   { key: "fish-trout",   name: "Trout",         rarity: "uncommon",  weight: 27 },
   { key: "fish-salmon",  name: "Salmon",        rarity: "rare",      weight: 12 },
-  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", weight: 3 }
+  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", weight: 3 },
+  { key: "fish-ancient", name: "Ancient Leviathan", rarity: "legendary", weight: 1 }
 ];
 const FISH_WEIGHT_TOTAL = FISH_TABLE.reduce((sum, f) => sum + f.weight, 0);
 function rollFish() {
@@ -1389,6 +1390,25 @@ function rollFish() {
   for (const f of FISH_TABLE) { if ((r -= f.weight) <= 0) return f; }
   return FISH_TABLE[0];
 }
+
+// Surprise catches. Most hooks land a fish, but sometimes the line drags up a
+// treasure (bonus coins) or worthless junk (flavour + a couple of coins).
+const JUNK_TABLE = [
+  { name: "Old Boot",        emoji: "🥾" },
+  { name: "Soggy Sock",      emoji: "🧦" },
+  { name: "Rusty Can",       emoji: "🥫" },
+  { name: "Tangle of Weeds", emoji: "🌿" },
+  { name: "Broken Bottle",   emoji: "🍾" }
+];
+function rollTreasureCoins() { return 45 + Math.floor(Math.random() * 175); } // 45..219
+function rollCatchOutcome() {
+  const r = Math.random();
+  if (r < 0.10) return "treasure"; // 10% — bonus coins
+  if (r < 0.20) return "junk";     // 10% — flavour + a few coins
+  return "fish";                   // 80% — rolls FISH_TABLE
+}
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function clampCoins(v) { return Math.max(0, Math.floor(Number(v) || 0)); }
 const fishingCooldownByProfile = new Map();
 const FISHING_MIN_INTERVAL_MS = 2500;
 
@@ -1825,23 +1845,39 @@ const server = createServer(async (req, res) => {
         return;
       }
       fishingCooldownByProfile.set(profileId, now);
-      const fish = rollFish();
-      // Wallet bags are server-owned → add the fish authoritatively and return it.
-      // Guests own their bag client-side → just return the rolled fish to add locally.
-      let bag = null;
+      // Roll the outcome: fish (goes to the bag), treasure (bonus coins), or junk
+      // (flavour + a few coins). Wallet profiles are server-authoritative, so we
+      // mutate + return the new bag/coins; guests apply the result client-side.
+      const outcome = rollCatchOutcome();
+      const buildResult = (profile) => {
+        if (outcome === "treasure") {
+          const gained = rollTreasureCoins();
+          if (profile) profile.coins = clampCoins(profile.coins) + gained;
+          return { type: "treasure", gained };
+        }
+        if (outcome === "junk") {
+          const junk = pick(JUNK_TABLE);
+          const gained = 1 + Math.floor(Math.random() * 5);
+          if (profile) profile.coins = clampCoins(profile.coins) + gained;
+          return { type: "junk", junk, gained };
+        }
+        const fish = rollFish();
+        if (profile) bagAdd(profile.bag, fish.key, 1);
+        return { type: "fish", fish: { key: fish.key, name: fish.name, rarity: fish.rarity } };
+      };
+
+      let result;
       if (isWalletProfile(profileId)) {
-        const saved = await withProfileLock(profileId, async () => {
+        result = await withProfileLock(profileId, async () => {
           const profile = await loadProfileForMutation(profileId);
-          bagAdd(profile.bag, fish.key, 1);
-          return (await writeProfile(profileId, profile)).profile;
+          const r = buildResult(profile);
+          const saved = (await writeProfile(profileId, profile)).profile;
+          return { ...r, bag: saved.bag, coins: saved.coins };
         });
-        bag = saved?.bag ?? null;
+      } else {
+        result = { ...buildResult(null), bag: null };
       }
-      sendJson(res, 200, {
-        ok: true,
-        fish: { key: fish.key, name: fish.name, rarity: fish.rarity },
-        bag
-      });
+      sendJson(res, 200, { ok: true, ...result });
       return;
     }
 

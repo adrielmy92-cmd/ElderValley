@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=19";
-import { itemData, isConsumable } from "./Inventory.js?v=17";
+import { RARITY } from "../data/alchemist-items.js?v=20";
+import { itemData, isConsumable } from "./Inventory.js?v=18";
 
 const DEPTH = 9000;
 const STAT_LABELS = {

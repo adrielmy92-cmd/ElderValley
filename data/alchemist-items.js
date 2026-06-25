@@ -80,5 +80,6 @@ export const ALCHEMIST_ITEMS = [
   { key: "fish-sardine", name: "River Sardine", rarity: "common",    type: "fish", emoji: "🐟", price: 14,  effect: "A common river fish" },
   { key: "fish-trout",   name: "Trout",         rarity: "uncommon",  type: "fish", emoji: "🐟", price: 32,  effect: "A freshwater catch" },
   { key: "fish-salmon",  name: "Salmon",        rarity: "rare",      type: "fish", emoji: "🐠", price: 70,  effect: "A rare, prized fish" },
-  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", type: "fish", emoji: "🐡", price: 220, effect: "A legendary catch" }
+  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", type: "fish", emoji: "🐡", price: 220, effect: "A legendary catch" },
+  { key: "fish-ancient", name: "Ancient Leviathan", rarity: "legendary", type: "fish", emoji: "🐉", price: 900, effect: "A near-mythical trophy of the deep" }
 ];
