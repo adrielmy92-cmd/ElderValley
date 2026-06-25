@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=18";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=19";
 
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {
@@ -101,6 +101,8 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadAudio("sfx-sell",             "./assets/audio/sfx-sell.mp3");
     this.loadAudio("sfx-enchant-success",  "./assets/audio/sfx-enchant-success.mp3");
     this.loadAudio("sfx-enchant-shatter",  "./assets/audio/sfx-enchant-shatter.mp3");
+    this.loadAudio("sfx-fish-bite",        "./assets/audio/sfx-fish-bite.mp3");
+    this.loadAudio("sfx-fish-splash",      "./assets/audio/sfx-fish-splash.mp3");
     this.loadAudio("sword-hit-1",          "./assets/audio/sword-hit-1.mp3");
     this.loadAudio("sword-hit-2",          "./assets/audio/sword-hit-2.mp3");
     this.loadAudio("forge-fire",           "./assets/audio/forge-fire.ogg");

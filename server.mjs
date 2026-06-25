@@ -1373,14 +1373,15 @@ const XP_REWARDS = { golem: 500, beeQueen: 600, troll: 80, beeSoldier: 25 };
 // of troll/golem kills funds a basic weapon and bosses meaningfully bankroll gear.
 const COIN_REWARDS = { golem: 450, beeQueen: 520, troll: 35, beeSoldier: 6 };
 
-// Fishing — a peaceful coin faucet at the village river. The catch minigame runs on
-// the client; the server rolls the fish + awards coins authoritatively (so wallet
-// profiles actually keep them) with a short per-profile cooldown against scripted spam.
+// Fishing — a peaceful gathering loop at the village river. The catch minigame runs
+// on the client; the server rolls the fish authoritatively and drops it in the bag
+// (wallet profiles only — guests hold it client-side). Short per-profile cooldown
+// against scripted spam. Fish keys must match data/alchemist-items.js.
 const FISH_TABLE = [
-  { name: "Sardinha",      rarity: "common",    weight: 58, coins: 14 },
-  { name: "Truta",         rarity: "uncommon",  weight: 27, coins: 32 },
-  { name: "Salmão",        rarity: "rare",      weight: 12, coins: 70 },
-  { name: "Peixe Dourado", rarity: "legendary", weight: 3,  coins: 220 }
+  { key: "fish-sardine", name: "River Sardine", rarity: "common",    weight: 58 },
+  { key: "fish-trout",   name: "Trout",         rarity: "uncommon",  weight: 27 },
+  { key: "fish-salmon",  name: "Salmon",        rarity: "rare",      weight: 12 },
+  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", weight: 3 }
 ];
 const FISH_WEIGHT_TOTAL = FISH_TABLE.reduce((sum, f) => sum + f.weight, 0);
 function rollFish() {
@@ -1825,12 +1826,21 @@ const server = createServer(async (req, res) => {
       }
       fishingCooldownByProfile.set(profileId, now);
       const fish = rollFish();
-      const saved = await grantCoinsToProfileId(profileId, fish.coins, "fishing");
+      // Wallet bags are server-owned → add the fish authoritatively and return it.
+      // Guests own their bag client-side → just return the rolled fish to add locally.
+      let bag = null;
+      if (isWalletProfile(profileId)) {
+        const saved = await withProfileLock(profileId, async () => {
+          const profile = await loadProfileForMutation(profileId);
+          bagAdd(profile.bag, fish.key, 1);
+          return (await writeProfile(profileId, profile)).profile;
+        });
+        bag = saved?.bag ?? null;
+      }
       sendJson(res, 200, {
         ok: true,
-        fish: { name: fish.name, rarity: fish.rarity },
-        gained: fish.coins,
-        coins: saved?.coins ?? null
+        fish: { key: fish.key, name: fish.name, rarity: fish.rarity },
+        bag
       });
       return;
     }

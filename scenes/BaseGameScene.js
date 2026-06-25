@@ -5,7 +5,7 @@ import ChatSystem from "../systems/ChatSystem.js?v=220";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=245";
 import MobileControls from "../systems/MobileControls.js?v=12";
 import Inventory, { itemData } from "../systems/Inventory.js?v=17";
-import InventoryUI from "../systems/InventoryUI.js?v=20";
+import InventoryUI from "../systems/InventoryUI.js?v=21";
 import Leveling from "../systems/Leveling.js?v=14";
 
 export default class BaseGameScene extends Phaser.Scene {
@@ -1454,13 +1454,13 @@ export default class BaseGameScene extends Phaser.Scene {
 
     keep(this.add.rectangle(cx, cy, cam.width, cam.height, 0x05070a, 0.62).setScrollFactor(0).setDepth(D));
     keep(this.add.rectangle(cx, cy, 470, 248, 0x132633, 0.98).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(3, 0x2f7d9a, 1));
-    keep(this.add.text(cx, cy - 96, "🎣  Pesca", {
+    keep(this.add.text(cx, cy - 96, "🎣  Fishing", {
       fontFamily: "monospace", fontSize: "22px", color: "#bfe9ff", stroke: "#06141c", strokeThickness: 4
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
     const status = keep(this.add.text(cx, cy - 64, "", {
       fontFamily: "monospace", fontSize: "15px", color: "#eaf6ff", stroke: "#06141c", strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
-    keep(this.add.text(cx, cy + 92, "ESPAÇO ou clique para fisgar", {
+    keep(this.add.text(cx, cy + 92, "SPACE or click to hook", {
       fontFamily: "monospace", fontSize: "13px", color: "#8fb4c6", stroke: "#06141c", strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
 
@@ -1486,7 +1486,7 @@ export default class BaseGameScene extends Phaser.Scene {
     const startPhase = () => {
       if (st.done) return;
       st.locked = false;
-      status.setText(`Fisgada  ${st.phase + 1} / ${st.total}`).setColor("#eaf6ff");
+      status.setText(`Cast  ${st.phase + 1} / ${st.total}`).setColor("#eaf6ff");
       const gw = greenWidths[st.phase] ?? 42;
       const gx0 = trackX0 + 10 + Math.random() * (trackW - gw - 20);
       st.greenX0 = gx0;
@@ -1507,8 +1507,8 @@ export default class BaseGameScene extends Phaser.Scene {
       if (st.done) return;
       st.sweep?.stop();
       st.green?.setFillStyle(0xc0392b, 0.9);
-      status.setText("O peixe escapou!").setColor("#ff8a7a");
-      this.playSfx?.("sfx-enchant-shatter", 0.4);
+      status.setText("The fish got away!").setColor("#ff8a7a");
+      this.playSfx?.("sfx-fish-splash", 0.6);
       this.time.delayedCall(1100, cleanup);
     };
 
@@ -1516,16 +1516,23 @@ export default class BaseGameScene extends Phaser.Scene {
       st.sweep?.stop();
       st.marker?.destroy();
       st.green?.destroy();
-      status.setText("Puxando a linha...").setColor("#bfe9ff");
+      status.setText("Reeling in...").setColor("#bfe9ff");
       try {
         const res = await this.claimFishingCatch();
         if (st.done) return;
+        // Drop the fish into the bag: wallet = server-authoritative, guest = local.
+        if (this.bag?.serverMode) {
+          if (res.bag) this.bag._applyBag(res.bag);
+        } else if (res.fish?.key) {
+          this.bag?.add(res.fish.key);
+        }
+        this.onBagSynced?.();
         const color = RARITY_COLORS[res.fish?.rarity] ?? "#eaf6ff";
-        status.setText(`Pescou: ${res.fish?.name ?? "Peixe"}!  +${res.gained ?? 0}`).setColor(color);
+        status.setText(`Caught: ${res.fish?.name ?? "Fish"}!`).setColor(color);
         this.playSfx?.("sfx-purchase", 0.5);
       } catch (err) {
         if (st.done) return;
-        status.setText(err?.message ?? "A linha arrebentou.").setColor("#ff8a7a");
+        status.setText(err?.message ?? "The line snapped.").setColor("#ff8a7a");
       }
       this.time.delayedCall(1500, cleanup);
     };
@@ -1538,7 +1545,7 @@ export default class BaseGameScene extends Phaser.Scene {
       if (!hit) { escape(); return; }
       st.sweep?.stop();
       st.green?.setFillStyle(0x7CFC00, 1);
-      this.playSfx?.("sfx-enchant-success", 0.4);
+      this.playSfx?.("sfx-fish-bite", 0.5);
       st.phase += 1;
       if (st.phase >= st.total) { land(); return; }
       this.time.delayedCall(360, startPhase);

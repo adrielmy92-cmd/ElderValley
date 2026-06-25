@@ -73,5 +73,12 @@ export const ALCHEMIST_ITEMS = [
   { key: "stormfang",           name: "Stormfang",           rarity: "epic",      price: 800,  effect: "+56 Attack · +18% Attack Speed",      slot: "weapon", stats: { attack: 56, attackSpeed: 0.18 } },
   { key: "bone-scimitar",       name: "Bone Scimitar",       rarity: "epic",      price: 820,  effect: "+58 Attack · 7% Lifesteal",           slot: "weapon", stats: { attack: 58, lifesteal: 0.07 } },
   { key: "infernal-edge",       name: "Infernal Edge",       rarity: "legendary", price: 1100, effect: "+68 Attack · +14% Crit · 6% Lifesteal · Burn on hit", slot: "weapon", stats: { attack: 68, crit: 0.14, lifesteal: 0.06 }, proc: { type: "burn", chance: 0.32, dmg: 16, ticks: 4, interval: 500 } },
-  { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+78 Attack · +18% Crit · +18% Attack Speed", slot: "weapon", stats: { attack: 78, crit: 0.18, attackSpeed: 0.18 } }
+  { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+78 Attack · +18% Crit · +18% Attack Speed", slot: "weapon", stats: { attack: 78, crit: 0.18, attackSpeed: 0.18 } },
+
+  // Fish (caught at the river minigame; held in the bag, sellable later). No PNG yet —
+  // the bag renders item.emoji when the texture is missing. `price` = sell value.
+  { key: "fish-sardine", name: "River Sardine", rarity: "common",    type: "fish", emoji: "🐟", price: 14,  effect: "A common river fish" },
+  { key: "fish-trout",   name: "Trout",         rarity: "uncommon",  type: "fish", emoji: "🐟", price: 32,  effect: "A freshwater catch" },
+  { key: "fish-salmon",  name: "Salmon",        rarity: "rare",      type: "fish", emoji: "🐠", price: 70,  effect: "A rare, prized fish" },
+  { key: "fish-golden",  name: "Golden Fish",   rarity: "legendary", type: "fish", emoji: "🐡", price: 220, effect: "A legendary catch" }
 ];

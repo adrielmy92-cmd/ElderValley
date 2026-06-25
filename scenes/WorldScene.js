@@ -1,4 +1,4 @@
-import BaseGameScene from "./BaseGameScene.js?v=266";
+import BaseGameScene from "./BaseGameScene.js?v=267";
 import MarketSystem from "../systems/MarketSystem.js?v=15";
 
 const TILE = 32;
@@ -3338,20 +3338,23 @@ export default class WorldScene extends BaseGameScene {
   addFishingSpots() {
     const bankY = RIVER_TOP - 36; // just north of the water strip, on walkable grass
     const xs = [520, 1480, 2360];
+    // Houses sort at depth (y + 44) and the bank sits south of every house, so use the
+    // same baseline + margin to guarantee the signs render in front of the buildings.
+    const signDepth = bankY + 60;
     this.fishingSpots = [];
     xs.forEach((x, i) => {
       const post = this.add.rectangle(x + 40, bankY - 14, 7, 40, 0x5a4326, 1)
-        .setOrigin(0.5, 1).setDepth(bankY - 2);
+        .setOrigin(0.5, 1).setDepth(signDepth);
       const board = this.add.rectangle(x, bankY - 48, 104, 30, 0x2f6d8a, 1)
-        .setDepth(bankY - 1).setStrokeStyle(2, 0x16323f, 1);
-      const label = this.add.text(x, bankY - 48, "🎣 Pesca", {
+        .setDepth(signDepth + 1).setStrokeStyle(2, 0x16323f, 1);
+      const label = this.add.text(x, bankY - 48, "🎣 Fishing", {
         fontFamily: "monospace", fontSize: "13px", color: "#dff3ff",
         stroke: "#0c1a22", strokeThickness: 3
-      }).setOrigin(0.5).setDepth(bankY);
+      }).setOrigin(0.5).setDepth(signDepth + 2);
       this.interactions.add({
         id: `fishing_spot_${i}`,
         x, y: bankY, promptY: bankY - 84,
-        promptText: "E Pescar", radius: 80,
+        promptText: "E Fish", radius: 80,
         onInteract: () => this.openFishingMinigame()
       });
       this.fishingSpots.push({ post, board, label });

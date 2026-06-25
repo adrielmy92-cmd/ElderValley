@@ -1,4 +1,4 @@
-import { RARITY } from "../data/alchemist-items.js?v=18";
+import { RARITY } from "../data/alchemist-items.js?v=19";
 import { itemData, isConsumable } from "./Inventory.js?v=17";
 
 const DEPTH = 9000;
@@ -308,17 +308,25 @@ export default class InventoryUI {
 
       const isShot = typeof item.shot === "number";
       const isScroll = typeof item.scroll === "string";
+      const isFish = item.type === "fish";
       const consumable = isConsumable(item);
-      const isGear = !consumable && !isShot && !isScroll;
+      const isGear = !consumable && !isShot && !isScroll && !isFish;
       const lvl = isGear ? s.bag.enchantLevel(item.key) : 0;
 
-      const icon = s.add.image(x + 32, ry + (rowH - 7) / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
-      icon.setScale(36 / 256);
+      // Items with a PNG render the image; ones without (e.g. fish) fall back to emoji.
+      let icon;
+      if (s.textures.exists(item.key)) {
+        icon = s.add.image(x + 32, ry + (rowH - 7) / 2, item.key).setScrollFactor(0).setDepth(DEPTH + 3);
+        icon.setScale(36 / 256);
+      } else {
+        icon = s.add.text(x + 32, ry + (rowH - 7) / 2, item.emoji ?? "❓", { fontSize: "26px" })
+          .setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3);
+      }
       this._t(icon);
       const dispName = lvl > 0 ? `${item.name} +${lvl}` : item.name;
       this._t(s.add.text(x + 58, ry + 8, dispName, { fontFamily: "monospace", fontSize: "13px", color: lvl > 0 ? "#ffe08a" : rar.text })
         .setScrollFactor(0).setDepth(DEPTH + 3));
-      const descText = (consumable || isShot || isScroll)
+      const descText = (consumable || isShot || isScroll || isFish)
         ? `${item.effect}  ·  x${count}`
         : (isGear ? this._gearStatLine(item, lvl) : item.effect);
       this._t(s.add.text(x + 58, ry + 26, descText, {
@@ -350,6 +358,10 @@ export default class InventoryUI {
       } else if (consumable) {
         mkBtn(x + w - 18 - 62, 62, "Use", 0x1f6d34, 0x57d36f,
           () => { s.useConsumable?.(item); this._refresh(); });
+      } else if (isFish) {
+        // Fish just sit in the bag (sellable later at a fishmonger) — count only.
+        this._t(s.add.text(x + w - 18, by, `x${count}`, { fontFamily: "monospace", fontSize: "13px", color: rar.text })
+          .setOrigin(1, 0.5).setScrollFactor(0).setDepth(DEPTH + 4));
       } else {
         // gear: Equip + Enchant
         const equipped = s.bag.isEquipped(item.key);
