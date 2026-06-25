@@ -1845,6 +1845,57 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // Fishmonger — sell fish from the bag to the game for coins (the "peixaria").
+    // Wallet bags are server-owned, so the sale is authoritative here; guests sell
+    // client-side and never reach this. `itemKey` sells one stack; omit it to sell all.
+    if (url.pathname === "/api/fishing/sell") {
+      if (req.method !== "POST") {
+        sendJson(res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      const payload = JSON.parse(await readBody(req) || "{}");
+      const profileId = sanitizeText(payload.profileId, 140);
+      if (!profileId) {
+        sendJson(res, 400, { ok: false, error: "Missing profile id" });
+        return;
+      }
+      const auth = requireProfileSession(req, profileId);
+      if (!auth.ok) {
+        sendJson(res, 401, { ok: false, error: "Wallet session required" });
+        return;
+      }
+      if (!isWalletProfile(profileId)) {
+        sendJson(res, 400, { ok: false, error: "Guest sales are handled client-side" });
+        return;
+      }
+      if (!hasActiveWalletPresence(profileId, payload.presenceId)) {
+        sendJson(res, 409, { ok: false, error: "Wallet has no active server presence. Rejoin the game." });
+        return;
+      }
+      const onlyKey = sanitizeText(payload.itemKey, 80) || null;
+      const result = await withProfileLock(profileId, async () => {
+        const profile = await loadProfileForMutation(profileId);
+        const stacks = profile.bag.stacks ?? (profile.bag.stacks = {});
+        let earned = 0;
+        const sold = [];
+        for (const [key, rawCount] of Object.entries(stacks)) {
+          const item = ITEMS_BY_KEY[key];
+          if (!item || item.type !== "fish") continue;
+          if (onlyKey && key !== onlyKey) continue;
+          const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+          if (count <= 0) continue;
+          earned += count * (item.price ?? 0);
+          sold.push({ key, count });
+          delete stacks[key];
+        }
+        profile.coins = Math.max(0, Math.floor(Number(profile.coins ?? 0) || 0)) + earned;
+        const saved = (await writeProfile(profileId, profile)).profile;
+        return { earned, coins: saved.coins, bag: saved.bag, sold };
+      });
+      sendJson(res, 200, { ok: true, ...result });
+      return;
+    }
+
     if (url.pathname.startsWith("/api/work/")) {
       const action = url.pathname.slice("/api/work/".length);
       if (!["start", "status", "task", "finish"].includes(action)) {

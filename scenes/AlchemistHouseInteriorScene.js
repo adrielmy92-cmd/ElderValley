@@ -1,4 +1,4 @@
-import InteriorBaseScene from "./InteriorBaseScene.js?v=248";
+import InteriorBaseScene from "./InteriorBaseScene.js?v=249";
 import ShopSystem from "../systems/ShopSystem.js?v=17";
 import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=19";
 

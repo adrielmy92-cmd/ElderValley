@@ -1471,7 +1471,7 @@ export default class BaseGameScene extends Phaser.Scene {
     const trackY = cy + 2;
     keep(this.add.rectangle(cx, trackY, trackW, trackH, 0x081e2a, 1).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(2, 0x1d5066, 1));
 
-    const greenWidths = [110, 70, 42];
+    const greenWidths = [120, 88, 66];
     const st = { phase: 0, total: 3, locked: false, done: false, green: null, marker: null, sweep: null };
 
     const cleanup = () => {
@@ -1497,7 +1497,7 @@ export default class BaseGameScene extends Phaser.Scene {
       st.marker?.destroy();
       st.marker = keep(this.add.rectangle(trackX0 + 3, trackY, 6, trackH + 12, 0xffe066, 1)
         .setScrollFactor(0).setDepth(D + 3));
-      const dur = Math.max(360, 720 - st.phase * 150);
+      const dur = Math.max(470, 720 - st.phase * 120);
       st.sweep = this.tweens.add({
         targets: st.marker, x: trackX1 - 3, duration: dur, yoyo: true, repeat: -1, ease: "Sine.InOut"
       });
@@ -1566,6 +1566,137 @@ export default class BaseGameScene extends Phaser.Scene {
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.ok) throw new Error(result?.error ?? "The line snapped.");
+    return result;
+  }
+
+  // ─── Fishmonger (peixaria) ───────────────────────────────────────────────
+  // Sell fish from the bag to the game for coins. Wallet sales are authoritative
+  // on the server (/api/fishing/sell); guests sell locally against their bag.
+  _bagFishStacks() {
+    if (!this.bag?.ownedStacks) return [];
+    return this.bag.ownedStacks().filter((e) => e.item?.type === "fish");
+  }
+
+  openFishmonger() {
+    if (this.fishmongerOpen || this.isFishing || this.isWorking) return;
+    if (this.inventoryUI?.isOpen?.() || this.dialog?.active || this.chat?.active) return;
+    this.fishmongerOpen = true;
+    this.player?.setVelocity(0, 0);
+
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+    const D = 9700;
+    const RARITY_COLORS = { common: "#cdd6cf", uncommon: "#6fdc8c", rare: "#5fb0ff", epic: "#d8b0ff", legendary: "#ffd34d" };
+    let objs = [];
+    const keep = (o) => { objs.push(o); return o; };
+
+    const cleanup = () => {
+      this.input.keyboard.off("keydown-ESC", cleanup);
+      objs.forEach((o) => o.destroy());
+      objs = [];
+      this.fishmongerOpen = false;
+    };
+
+    const render = () => {
+      objs.forEach((o) => o.destroy());
+      objs = [];
+      keep(this.add.rectangle(cx, cy, cam.width, cam.height, 0x05070a, 0.62).setScrollFactor(0).setDepth(D)
+        .setInteractive());
+      keep(this.add.rectangle(cx, cy, 520, 420, 0x132633, 0.98).setScrollFactor(0).setDepth(D + 1).setStrokeStyle(3, 0x2f7d9a, 1));
+      keep(this.add.text(cx, cy - 178, "🐟  Fishmonger", {
+        fontFamily: "monospace", fontSize: "22px", color: "#bfe9ff", stroke: "#06141c", strokeThickness: 4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+      keep(this.add.text(cx, cy - 150, "Sell your catch for coins", {
+        fontFamily: "monospace", fontSize: "12px", color: "#8fb4c6"
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+
+      // Close (X)
+      const xb = keep(this.add.text(cx + 240, cy - 196, "✕", {
+        fontFamily: "monospace", fontSize: "20px", color: "#cfe0ea"
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setInteractive({ useHandCursor: true }));
+      xb.on("pointerdown", cleanup);
+
+      const stacks = this._bagFishStacks();
+      if (stacks.length === 0) {
+        keep(this.add.text(cx, cy, "No fish to sell.\nCatch some at the river 🎣", {
+          fontFamily: "monospace", fontSize: "14px", color: "#7488a0", align: "center", lineSpacing: 6
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2));
+        return;
+      }
+
+      const rowH = 46;
+      const top = cy - 118;
+      let total = 0;
+      stacks.forEach((entry, i) => {
+        const { item, count } = entry;
+        const ry = top + i * rowH;
+        const value = count * (item.price ?? 0);
+        total += value;
+        const rar = RARITY_COLORS[item.rarity] ?? "#cdd6cf";
+        keep(this.add.text(cx - 220, ry, item.emoji ?? "🐟", { fontSize: "24px" }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2));
+        keep(this.add.text(cx - 184, ry - 8, item.name, { fontFamily: "monospace", fontSize: "14px", color: rar }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2));
+        keep(this.add.text(cx - 184, ry + 9, `x${count}  ·  ${item.price} each`, { fontFamily: "monospace", fontSize: "11px", color: "#9aa8bc" }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2));
+        keep(this.add.text(cx + 130, ry, `${value}`, { fontFamily: "monospace", fontSize: "14px", color: "#ffd34d" }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 2));
+
+        const sb = keep(this.add.text(cx + 200, ry, "Sell", {
+          fontFamily: "Georgia, serif", fontSize: "13px", color: "#eafff0",
+          backgroundColor: "#1f6d34", padding: { left: 10, right: 10, top: 4, bottom: 4 }
+        }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3).setInteractive({ useHandCursor: true }));
+        sb.on("pointerdown", () => sell(item.key));
+      });
+
+      // Sell All
+      keep(this.add.text(cx - 200, cy + 168, `Total: ${total} coins`, {
+        fontFamily: "monospace", fontSize: "14px", color: "#ffd34d"
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2));
+      const allBtn = keep(this.add.text(cx + 180, cy + 168, "Sell All", {
+        fontFamily: "Georgia, serif", fontSize: "15px", color: "#eafff0",
+        backgroundColor: "#246b9a", padding: { left: 14, right: 14, top: 6, bottom: 6 }
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setInteractive({ useHandCursor: true }));
+      allBtn.on("pointerdown", () => sell(null));
+    };
+
+    const sell = async (itemKey) => {
+      const stacks = this._bagFishStacks().filter((e) => !itemKey || e.item.key === itemKey);
+      if (stacks.length === 0) return;
+      if (this.bag?.serverMode) {
+        try {
+          const res = await this.sellFishToGame(itemKey);
+          if (typeof res.coins === "number") this.setCoins(res.coins);
+          if (res.bag) this.bag._applyBag(res.bag);
+          this.onBagSynced?.();
+        } catch (err) {
+          this.flashHudMessage?.(err?.message ?? "Sale failed");
+          return;
+        }
+      } else {
+        // Guest: bag + coins are client-owned — sell locally.
+        let earned = 0;
+        stacks.forEach(({ item, count }) => { earned += count * (item.price ?? 0); this.bag.remove(item.key, count); });
+        this.setCoins(this.getCoins() + earned);
+        this.savePlayerProfileSoon?.();
+        this.onBagSynced?.();
+      }
+      this.playSfx?.("sfx-sell", 0.5);
+      if (this.fishmongerOpen) render();
+    };
+
+    this.input.keyboard.on("keydown-ESC", cleanup);
+    render();
+  }
+
+  async sellFishToGame(itemKey) {
+    const profileId = this.getPlayerProfileId();
+    const body = { profileId, presenceId: this.multiplayer?.getPresenceId?.() ?? "" };
+    if (itemKey) body.itemKey = itemKey;
+    const response = await fetch("/api/fishing/sell", {
+      method: "POST",
+      headers: this.getSessionHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) throw new Error(result?.error ?? "Sale failed");
     return result;
   }
 
@@ -3006,7 +3137,7 @@ export default class BaseGameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.isFishing) {
+    if (this.isFishing || this.fishmongerOpen) {
       this.player.setVelocity(0, 0);
       this.interactions.prompt?.setVisible(false);
       return;

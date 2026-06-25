@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=279";
+import WorldScene from "./WorldScene.js?v=280";
 
 const TILE = 32;
 
@@ -39,6 +39,7 @@ export default class CityScene extends WorldScene {
     this.addCityWorldBounds();
     this.loadManualCollisionLayout([]);
     this.addCityGuards();
+    this.addFishmonger();
     this.createHud();
     this.createDayNightCycle();
     this.createFenceEditor();
@@ -99,6 +100,24 @@ export default class CityScene extends WorldScene {
       promptText: "E Return to Village",
       radius: 82,
       onInteract: () => this.fadeTo("WorldScene", { spawnKey: "cityGate" })
+    });
+  }
+
+  // Fishmonger stall — sell fish from the bag to the game for coins (the peixaria).
+  // A no-collision sign + interaction radius; opens the Fishmonger UI on E.
+  addFishmonger() {
+    const x = 560;
+    const y = 560;
+    this.add.rectangle(x + 44, y - 16, 8, 44, 0x5a4326, 1).setOrigin(0.5, 1).setDepth(y + 60);
+    this.add.rectangle(x, y - 52, 132, 32, 0x2f6d8a, 1).setDepth(y + 61).setStrokeStyle(2, 0x16323f, 1);
+    this.add.text(x, y - 52, "🐟 Fishmonger", {
+      fontFamily: "monospace", fontSize: "13px", color: "#dff3ff", stroke: "#0c1a22", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(y + 62);
+    this.interactions.add({
+      id: "city_fishmonger",
+      x, y, promptY: y - 88,
+      promptText: "E Sell Fish", radius: 82,
+      onInteract: () => this.openFishmonger()
     });
   }
 
