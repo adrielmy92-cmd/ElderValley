@@ -1,4 +1,4 @@
-import WalletSystem from "../systems/WalletSystem.js?v=226";
+import WalletSystem from "../systems/WalletSystem.js?v=227";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -71,7 +71,7 @@ export default class TitleScene extends Phaser.Scene {
 
   startTitleMusic() {
     this.stopTitleMusic(true);
-    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=140");
+    this.titleMusic = new Audio("./assets/audio/title-theme.mp3?v=141");
     this.titleMusic.loop = true;
     this.titleMusic.autoplay = true;
     this.titleMusic.preload = "auto";

@@ -75,6 +75,15 @@ export const ALCHEMIST_ITEMS = [
   { key: "infernal-edge",       name: "Infernal Edge",       rarity: "legendary", price: 1100, effect: "+68 Attack · +14% Crit · 6% Lifesteal · Burn on hit", slot: "weapon", charClass: "warrior", stats: { attack: 68, crit: 0.14, lifesteal: 0.06 }, proc: { type: "burn", chance: 0.32, dmg: 16, ticks: 4, interval: 500 } },
   { key: "starfall-greatsword", name: "Starfall Greatsword", rarity: "legendary", price: 1300, effect: "+78 Attack · +18% Crit · +18% Attack Speed", slot: "weapon", charClass: "warrior", stats: { attack: 78, crit: 0.18, attackSpeed: 0.18 } },
 
+  // Staves (mage weapons, slot: "weapon", charClass: "mage"). Sold at the Forge; the
+  // shop hides them from the warrior. `attack` powers the mage's spell damage.
+  { key: "wildgrove-staff",   name: "Wildgrove Staff",   rarity: "common",    price: 140,  effect: "+22 Spell Power · +12 Mana · +2 HP/s Regen",        slot: "weapon", charClass: "mage", stats: { attack: 22, maxMp: 12, hpRegen: 2 } },
+  { key: "frostspire-staff",  name: "Frostspire Staff",  rarity: "uncommon",  price: 320,  effect: "+32 Spell Power · +18 Mana · +8% Crit",             slot: "weapon", charClass: "mage", stats: { attack: 32, maxMp: 18, crit: 0.08 } },
+  { key: "plaguethorn-staff", name: "Plaguethorn Staff", rarity: "rare",      price: 540,  effect: "+44 Spell Power · +14 Mana · Poison on hit",        slot: "weapon", charClass: "mage", stats: { attack: 44, maxMp: 14 }, proc: { type: "poison", chance: 0.30, dmg: 12, ticks: 5, interval: 600 } },
+  { key: "emberheart-staff",  name: "Emberheart Staff",  rarity: "rare",      price: 580,  effect: "+46 Spell Power · +12 Mana · Burn on hit",          slot: "weapon", charClass: "mage", stats: { attack: 46, maxMp: 12 }, proc: { type: "burn", chance: 0.32, dmg: 16, ticks: 4, interval: 500 } },
+  { key: "voidcaller-staff",  name: "Voidcaller Staff",  rarity: "epic",      price: 760,  effect: "+56 Spell Power · +20 Mana · +15% Crit",            slot: "weapon", charClass: "mage", stats: { attack: 56, maxMp: 20, crit: 0.15 } },
+  { key: "stormcrystal-staff",name: "Stormcrystal Staff",rarity: "legendary", price: 1300, effect: "+76 Spell Power · +24 Mana · +16% Crit · +16% Atk Speed", slot: "weapon", charClass: "mage", stats: { attack: 76, maxMp: 24, crit: 0.16, attackSpeed: 0.16 } },
+
   // Fish (caught at the river minigame; held in the bag, sellable later). No PNG yet —
   // the bag renders item.emoji when the texture is missing. `price` = sell value.
   { key: "fish-sardine", name: "River Sardine", rarity: "common",    type: "fish", emoji: "🐟", price: 9,   effect: "A common river fish" },
