@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=22";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=23";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no
@@ -9,7 +9,8 @@ const DEPTH = 9000;
 export default class ShopSystem {
   constructor(scene, { items = ALCHEMIST_ITEMS, title = "Alchemist's Wares", subtitle = "Rare bands and charms for the worthy" } = {}) {
     this.scene = scene;
-    this.items = items;
+    // Hide weapons the current character can't use (mage sees staves, warrior swords).
+    this.items = items.filter((i) => scene.bag?.canUse?.(i) ?? true);
     this.title = title;
     this.subtitle = subtitle;
     this.objs = [];

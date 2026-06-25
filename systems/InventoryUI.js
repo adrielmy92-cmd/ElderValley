@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=22";
-import { itemData, isConsumable } from "./Inventory.js?v=20";
+import { RARITY } from "../data/alchemist-items.js?v=23";
+import { itemData, isConsumable } from "./Inventory.js?v=21";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -203,7 +203,7 @@ export default class InventoryUI {
 
   _equipSlot(slotKey, label, cx, cy, size, locked) {
     const s = this.scene;
-    const key = s.bag.equipped[slotKey];
+    const key = s.bag.equippedForUi ? s.bag.equippedForUi(slotKey) : s.bag.equipped[slotKey];
     const item = key && itemData(key);
     const rar = item ? (RARITY[item.rarity] ?? RARITY.common) : null;
     const half = size / 2;

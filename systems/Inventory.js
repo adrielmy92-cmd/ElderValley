@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=22";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=23";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -32,9 +32,37 @@ export default class Inventory {
   _isWallet() { return String(this._profileId()).toLowerCase().startsWith("wallet:"); }
   _storageKey() { return `eldervalley-bag-${this._profileId()}`; }
 
+  // Weapons are class-specific (mage = staff, warrior = sword) and live in a per-class
+  // equipped slot, so switching characters never carries a weapon across. Rings,
+  // amulet, potions, fish and coins stay shared on the account.
+  _charClass() {
+    const id = this.scene?.player?.characterId ?? this.scene?.registry?.get?.("playerCharacter") ?? "mage-1";
+    return id === "warrior" ? "warrior" : "mage";
+  }
+  _weaponSlotFor(cls) { return cls === "warrior" ? "weaponWarrior" : "weaponMage"; }
+  equippedWeapon() { return this.equipped[this._weaponSlotFor(this._charClass())] ?? null; }
+  equippedForUi(slotKey) { return slotKey === "weapon" ? this.equippedWeapon() : (this.equipped[slotKey] ?? null); }
+  // Can the current character use/equip this item? Non-weapons always; weapons only
+  // when their class matches (legacy swords with no class default to warrior).
+  canUse(item) {
+    if (item?.slot !== "weapon") return true;
+    return (item.charClass ?? "warrior") === this._charClass();
+  }
+  // Normalise an equipped map to the per-class weapon schema, migrating any legacy
+  // single `weapon` slot into the slot matching that weapon's class.
+  _normEquipped(raw) {
+    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, ...(raw ?? {}) };
+    if (eq.weapon) {
+      const item = itemData(eq.weapon);
+      if (item?.slot === "weapon") eq[this._weaponSlotFor(item.charClass === "warrior" ? "warrior" : "mage")] = eq.weapon;
+    }
+    delete eq.weapon;
+    return eq;
+  }
+
   load() {
     this.stacks = {};
-    this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null };
+    this.equipped = this._normEquipped(null);
     this.enchants = {};
     if (this._isWallet()) {
       this._mode = "server";
@@ -53,7 +81,7 @@ export default class Inventory {
       const raw = JSON.parse(localStorage.getItem(this._storageKey()) ?? "null");
       if (raw && typeof raw === "object") {
         this.stacks = raw.stacks ?? {};
-        this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null, ...(raw.equipped ?? {}) };
+        this.equipped = this._normEquipped(raw.equipped);
         this.enchants = raw.enchants ?? {};
       }
     } catch { /* ignore */ }
@@ -61,7 +89,7 @@ export default class Inventory {
 
   _applyBag(bag) {
     this.stacks = { ...(bag?.stacks ?? {}) };
-    this.equipped = { weapon: null, ring1: null, ring2: null, amulet: null, ...(bag?.equipped ?? {}) };
+    this.equipped = this._normEquipped(bag?.equipped);
     this.enchants = { ...(bag?.enchants ?? {}) };
     // Keep registry.playerProfile fresh so a scene change re-hydrates the current
     // bag (not the stale login-time one).
@@ -220,7 +248,11 @@ export default class Inventory {
     let slot;
     const t = this.slotTypeFor(item);
     if (t === "amulet") slot = "amulet";
-    else if (t === "weapon") slot = "weapon";
+    else if (t === "weapon") {
+      const cls = item.charClass === "warrior" ? "warrior" : "mage";
+      if (cls !== this._charClass()) return false; // wrong class can't wield this weapon
+      slot = this._weaponSlotFor(cls);
+    }
     else slot = !this.equipped.ring1 ? "ring1" : (!this.equipped.ring2 ? "ring2" : "ring1");
     const prev = this.equipped[slot];
     this.remove(key, 1);
@@ -232,6 +264,7 @@ export default class Inventory {
   }
 
   unequip(slot) {
+    if (slot === "weapon") slot = this._weaponSlotFor(this._charClass());
     const key = this.equipped[slot];
     if (!key) return false;
     this.equipped[slot] = null;
@@ -244,8 +277,9 @@ export default class Inventory {
   // Summed stat bonuses from all equipped pieces (scaled by enchant level).
   bonuses() {
     const sum = {};
-    for (const slot of Object.keys(this.equipped)) {
-      const key = this.equipped[slot];
+    // Only the current class's weapon counts (the other class's weapon is dormant).
+    const keys = [this.equippedWeapon(), this.equipped.ring1, this.equipped.ring2, this.equipped.amulet];
+    for (const key of keys) {
       const item = key && itemData(key);
       if (!item?.stats) continue;
       const mult = 1 + this.enchantLevel(key) * ENCHANT_STEP;
@@ -270,7 +304,7 @@ export default class Inventory {
   // Bag entries with stack count, in catalog order (consumables first there).
   ownedStacks() {
     return ALCHEMIST_ITEMS
-      .filter((i) => this.count(i.key) > 0)
+      .filter((i) => this.count(i.key) > 0 && this.canUse(i))
       .map((i) => ({ item: i, count: this.count(i.key) }));
   }
 }

@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=211";
-import DialogSystem from "../systems/DialogSystem.js?v=147";
-import InteractionSystem from "../systems/InteractionSystem.js?v=147";
-import ChatSystem from "../systems/ChatSystem.js?v=223";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=248";
-import MobileControls from "../systems/MobileControls.js?v=15";
-import Inventory, { itemData } from "../systems/Inventory.js?v=20";
-import InventoryUI from "../systems/InventoryUI.js?v=24";
-import Leveling from "../systems/Leveling.js?v=17";
+import Player from "../player/Player.js?v=212";
+import DialogSystem from "../systems/DialogSystem.js?v=148";
+import InteractionSystem from "../systems/InteractionSystem.js?v=148";
+import ChatSystem from "../systems/ChatSystem.js?v=224";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=249";
+import MobileControls from "../systems/MobileControls.js?v=16";
+import Inventory, { itemData } from "../systems/Inventory.js?v=21";
+import InventoryUI from "../systems/InventoryUI.js?v=25";
+import Leveling from "../systems/Leveling.js?v=18";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -961,7 +961,7 @@ export default class BaseGameScene extends Phaser.Scene {
 
   // The equipped weapon's proc descriptor, or null.
   weaponProc() {
-    const key = this.bag?.equipped?.weapon;
+    const key = this.bag?.equippedWeapon?.();
     const item = key && itemData(key);
     return item?.proc ?? null;
   }
@@ -974,7 +974,7 @@ export default class BaseGameScene extends Phaser.Scene {
     const proc = this.weaponProc();
     if (!proc || !this.DOT_STYLE[proc.type]) return;
     if (Math.random() > (proc.chance ?? 0)) return;
-    const lvl = this.bag?.enchantLevel?.(this.bag.equipped.weapon) ?? 0;
+    const lvl = this.bag?.enchantLevel?.(this.bag.equippedWeapon?.()) ?? 0;
     const dmg = Math.max(1, Math.round((proc.dmg ?? 10) * (1 + 0.12 * lvl)));
     this.applyDot(enemy, dealDamage, { ...proc, dmg });
   }
