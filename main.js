@@ -2,10 +2,10 @@ import BootScene from "./scenes/BootScene.js?v=191";
 import PreloadScene from "./scenes/PreloadScene.js?v=225";
 import GamePreloadScene from "./scenes/GamePreloadScene.js?v=246";
 import TitleScene from "./scenes/TitleScene.js?v=250";
-import WorldScene from "./scenes/WorldScene.js?v=280";
-import VillageWestScene from "./scenes/VillageWestScene.js?v=57";
-import CemeteryScene from "./scenes/CemeteryScene.js?v=47";
-import CityScene from "./scenes/CityScene.js?v=255";
+import WorldScene from "./scenes/WorldScene.js?v=281";
+import VillageWestScene from "./scenes/VillageWestScene.js?v=58";
+import CemeteryScene from "./scenes/CemeteryScene.js?v=48";
+import CityScene from "./scenes/CityScene.js?v=256";
 import HouseInteriorScene from "./scenes/HouseInteriorScene.js?v=247";
 import ShopInteriorScene from "./scenes/ShopInteriorScene.js?v=247";
 import CollectorHouseScene from "./scenes/CollectorHouseScene.js?v=247";
@@ -15,9 +15,9 @@ import ReferenceHouseInteriorScene from "./scenes/ReferenceHouseInteriorScene.js
 import WindmillLoadScene from "./scenes/WindmillLoadScene.js?v=221";
 import WindmillInteriorScene from "./scenes/WindmillInteriorScene.js?v=248";
 import AlchemistHouseInteriorScene from "./scenes/AlchemistHouseInteriorScene.js?v=253";
-import ForestScene from "./scenes/ForestScene.js?v=69";
-import SwampScene from "./scenes/SwampScene.js?v=62";
-import BeeScene from "./scenes/BeeScene.js?v=47";
+import ForestScene from "./scenes/ForestScene.js?v=70";
+import SwampScene from "./scenes/SwampScene.js?v=63";
+import BeeScene from "./scenes/BeeScene.js?v=48";
 
 const isMobileDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 const config = {

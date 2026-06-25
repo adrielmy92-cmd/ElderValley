@@ -3336,10 +3336,10 @@ export default class WorldScene extends BaseGameScene {
   // catch minigame (BaseGameScene.openFishingMinigame). Purely visual posts; no
   // collision — the interaction radius is what matters.
   addFishingSpots() {
-    const bankY = RIVER_TOP - 36; // just north of the water strip, on walkable grass
+    const bankY = RIVER_TOP + 14; // right at the water's edge (river is passable)
     const xs = [520, 1480, 2360];
-    // Houses sort at depth (y + 44) and the bank sits south of every house, so use the
-    // same baseline + margin to guarantee the signs render in front of the buildings.
+    // Water is a background TileSprite (depth -20) and houses sort at (y + 44); this
+    // depth keeps the signs above both, even sitting on the river bank.
     const signDepth = bankY + 60;
     this.fishingSpots = [];
     xs.forEach((x, i) => {

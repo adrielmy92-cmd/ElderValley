@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=280";
+import WorldScene from "./WorldScene.js?v=281";
 
 // Extensão oeste da vila — mapa SEPARADO (carrega via portão, com loading),
 // pra não inflar o WorldScene e não lagar com muita gente.
