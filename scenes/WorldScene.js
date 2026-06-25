@@ -780,7 +780,9 @@ export default class WorldScene extends BaseGameScene {
 
   getEditableHouseLayoutData() {
     const previousLayouts = this.loadEditableHouseLayouts();
-    const visible = this.editableHouses.map(({ def, x, y }) => ({ id: def.id, x, y }));
+    // Combat/boss scenes never set up editable houses — guard so "Save World" there
+    // doesn't throw on undefined (which silently aborted the whole creative save).
+    const visible = (this.editableHouses ?? []).map(({ def, x, y }) => ({ id: def.id, x, y }));
     const hidden = [...(this.hiddenEditableHouseIds ?? new Set())].map((id) => {
       const previous = previousLayouts.find((house) => house.id === id);
       const def = HOUSE_DEFS.find((houseDef) => houseDef.id === id);
