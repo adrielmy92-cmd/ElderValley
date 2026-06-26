@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=27";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=28";
 
 // MMO-style shop overlay: a left item grid + a right detail pane.
 // Self-contained — every object is tracked and destroyed on close, so no

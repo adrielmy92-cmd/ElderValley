@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=27";
-import { itemData, isConsumable } from "./Inventory.js?v=25";
+import { RARITY } from "../data/alchemist-items.js?v=28";
+import { itemData, isConsumable } from "./Inventory.js?v=26";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -96,9 +96,9 @@ export default class InventoryUI {
     const mcx = x + Math.round(w * 0.5);
     const mcy = y + Math.round(equipH * 0.5);
     const SLOT = 62;
-    const colX = Math.min(155, Math.round(w * 0.32)); // side columns clear of the body
-    const rowY = 48;   // vertical gap between the two side slots
-    const capY = 132;  // helmet (top) / boots (bottom)
+    const colX = Math.min(160, Math.round(w * 0.33)); // side columns clear of the body
+    const rowB = 78;   // vertical gap between the three column rows
+    const capY = 150;  // boots (bottom centre)
 
     this._t(s.add.ellipse(mcx, mcy + 80, 108, 22, 0x000000, 0.32).setScrollFactor(0).setDepth(DEPTH + 2));
     const prefix = s.player?.animPrefix ?? "mage-1";
@@ -110,12 +110,14 @@ export default class InventoryUI {
       this._t(mage);
     }
 
-    // symmetric: helmet top + boots bottom (locked); jewelry left, weapon + ring right
-    this._equipSlot("helmet", "Helmet",  mcx,        mcy - capY, SLOT, true);
-    this._equipSlot("amulet", "Amulet",  mcx - colX, mcy - rowY, SLOT, false);
-    this._equipSlot("ring1",  "Ring I",  mcx - colX, mcy + rowY, SLOT, false);
-    this._equipSlot("weapon", "Weapon",  mcx + colX, mcy - rowY, SLOT, false);
-    this._equipSlot("ring2",  "Ring II", mcx + colX, mcy + rowY, SLOT, false);
+    // two symmetric 3-row columns flank the mage; boots locked at the bottom centre.
+    // left: helmet(locked) / amulet / ring I   ·   right: armor / weapon / ring II
+    this._equipSlot("helmet", "Helmet",  mcx - colX, mcy - rowB, SLOT, true);
+    this._equipSlot("amulet", "Amulet",  mcx - colX, mcy,        SLOT, false);
+    this._equipSlot("ring1",  "Ring I",  mcx - colX, mcy + rowB, SLOT, false);
+    this._equipSlot("armor",  "Armor",   mcx + colX, mcy - rowB, SLOT, false);
+    this._equipSlot("weapon", "Weapon",  mcx + colX, mcy,        SLOT, false);
+    this._equipSlot("ring2",  "Ring II", mcx + colX, mcy + rowB, SLOT, false);
     this._equipSlot("boots",  "Boots",   mcx,        mcy + capY, SLOT, true);
 
     // ── stats zone ──

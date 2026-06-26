@@ -2,7 +2,7 @@
 // Prices are in coins (the in-game currency earned from work shifts).
 //
 // Potions: `heal`/`mana` = fraction of max HP/MP restored; `cooldownMs` gates use.
-// Gear: `slot` ("ring" | "amulet" | "weapon") + `stats` (applied when equipped).
+// Gear: `slot` ("ring" | "amulet" | "weapon" | "armor") + `stats` (applied when equipped).
 // All combat stats are wired: maxHp/maxMp (bars), attack, defense, dodge, crit,
 // lifesteal, attackSpeed, hpRegen, xpBonus. Weapons are sold at the Forge, jewelry/
 // potions at the Alchemist.
@@ -55,6 +55,16 @@ export const ALCHEMIST_ITEMS = [
   { key: "frostvein-ring",       name: "Frostvein Ring",      rarity: "uncommon",  price: 150, effect: "+8 Frost Resist",                  slot: "ring",   stats: { defense: 8 } },
   { key: "grovewarden-talisman", name: "Grovewarden Talisman",rarity: "legendary", price: 850, effect: "+30 Max HP · +2 HP/s Regen",       slot: "amulet", stats: { maxHp: 30, hpRegen: 2 } },
   { key: "wraithbone-charm",     name: "Wraithbone Charm",    rarity: "epic",      price: 600, effect: "+12 Shadow Damage · +5% Lifesteal",slot: "amulet", stats: { attack: 12, lifesteal: 0.05 } },
+
+  // Mage robes (equippable armor, slot: "armor", charClass: "mage"). Sold at the
+  // Alchemist; hidden from the warrior. Armor is the chest slot in the paper-doll —
+  // it stacks Defense + Mana + Spell Power with a signature flavor stat per element.
+  { key: "robe-emberweave",   name: "Emberweave Robe",   rarity: "rare",      price: 420, effect: "+12 Defense · +20 Mana · +14 Spell Power",          slot: "armor", charClass: "mage", stats: { defense: 12, maxMp: 20, attack: 14 } },
+  { key: "robe-grovekeeper",  name: "Grovekeeper Robe",  rarity: "rare",      price: 400, effect: "+14 Defense · +30 Max HP · +16 Mana · +2 HP/s Regen", slot: "armor", charClass: "mage", stats: { defense: 14, maxHp: 30, maxMp: 16, hpRegen: 2 } },
+  { key: "robe-frostward",    name: "Frostward Robe",    rarity: "rare",      price: 460, effect: "+16 Defense · +25 Max HP · +18 Mana",               slot: "armor", charClass: "mage", stats: { defense: 16, maxHp: 25, maxMp: 18 } },
+  { key: "robe-stormcaller",  name: "Stormcaller Robe",  rarity: "epic",      price: 640, effect: "+12 Defense · +22 Mana · +18 Spell Power · +8% Atk Speed", slot: "armor", charClass: "mage", stats: { defense: 12, maxMp: 22, attack: 18, attackSpeed: 0.08 } },
+  { key: "robe-shadowmantle", name: "Shadowmantle Robe", rarity: "epic",      price: 680, effect: "+14 Defense · +20 Mana · +12 Spell Power · 6% Lifesteal", slot: "armor", charClass: "mage", stats: { defense: 14, maxMp: 20, attack: 12, lifesteal: 0.06 } },
+  { key: "robe-arcanearchon", name: "Arcane Archon Robe",rarity: "legendary", price: 980, effect: "+18 Defense · +30 Mana · +22 Spell Power · +10% Crit", slot: "armor", charClass: "mage", stats: { defense: 18, maxMp: 30, attack: 22, crit: 0.10 } },
 
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack

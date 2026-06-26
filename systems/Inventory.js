@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=27";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=28";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -47,13 +47,15 @@ export default class Inventory {
   // Can the current character use/equip this item? Non-weapons always; weapons only
   // when their class matches (legacy swords with no class default to warrior).
   canUse(item) {
-    if (item?.slot !== "weapon") return true;
-    return (item.charClass ?? "warrior") === this._charClass();
+    if (item?.slot === "weapon") return (item.charClass ?? "warrior") === this._charClass();
+    // Armor is class-flavoured too (mage robes). Items without a charClass are universal.
+    if (item?.slot === "armor" && item.charClass) return item.charClass === this._charClass();
+    return true;
   }
   // Normalise an equipped map to the per-class weapon schema, migrating any legacy
   // single `weapon` slot into the slot matching that weapon's class.
   _normEquipped(raw) {
-    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, ...(raw ?? {}) };
+    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, armor: null, ...(raw ?? {}) };
     if (eq.weapon) {
       const item = itemData(eq.weapon);
       if (item?.slot === "weapon") eq[this._weaponSlotFor(item.charClass === "warrior" ? "warrior" : "mage")] = eq.weapon;
@@ -225,6 +227,7 @@ export default class Inventory {
   slotTypeFor(item) {
     if (item?.slot === "amulet") return "amulet";
     if (item?.slot === "weapon") return "weapon";
+    if (item?.slot === "armor") return "armor";
     return "ring";
   }
 
@@ -276,6 +279,10 @@ export default class Inventory {
     let slot;
     const t = this.slotTypeFor(item);
     if (t === "amulet") slot = "amulet";
+    else if (t === "armor") {
+      if (!this.canUse(item)) return false; // wrong class can't wear this robe
+      slot = "armor";
+    }
     else if (t === "weapon") {
       const cls = item.charClass === "warrior" ? "warrior" : "mage";
       if (cls !== this._charClass()) return false; // wrong class can't wield this weapon
@@ -306,7 +313,11 @@ export default class Inventory {
   bonuses() {
     const sum = {};
     // Only the current class's weapon counts (the other class's weapon is dormant).
-    const keys = [this.equippedWeapon(), this.equipped.ring1, this.equipped.ring2, this.equipped.amulet];
+    // Armor only contributes if the current class can wear it (class-flavoured robes).
+    const armorKey = this.equipped.armor;
+    const armorItem = armorKey && itemData(armorKey);
+    const armorActive = armorItem && this.canUse(armorItem) ? armorKey : null;
+    const keys = [this.equippedWeapon(), this.equipped.ring1, this.equipped.ring2, this.equipped.amulet, armorActive];
     for (const key of keys) {
       const item = key && itemData(key);
       if (!item?.stats) continue;
