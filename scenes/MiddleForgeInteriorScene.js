@@ -1,5 +1,5 @@
 import InteriorBaseScene from "./InteriorBaseScene.js?v=261";
-import ShopSystem from "../systems/ShopSystem.js?v=29";
+import ShopSystem from "../systems/ShopSystem.js?v=30";
 import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=31";
 
 const W = 1280;

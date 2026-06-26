@@ -14,9 +14,11 @@ export default class ShopSystem {
     this.title = title;
     this.subtitle = subtitle;
     this.objs = [];
+    this.gridObjs = [];
     this.detailObjs = [];
     this.slots = [];
     this.selected = 0;
+    this.page = 0;
     this.open_ = false;
   }
 
@@ -32,6 +34,7 @@ export default class ShopSystem {
     if (this.open_) return;
     this.open_ = true;
     this.selected = 0;
+    this.page = 0;
     this._build();
     this._escHandler = (e) => { if (e.key === "Escape") this.close(); };
     window.addEventListener("keydown", this._escHandler);
@@ -41,6 +44,7 @@ export default class ShopSystem {
     if (!this.open_) return;
     this.open_ = false;
     this._clearDetail();
+    this._clearGrid();
     this.objs.forEach((o) => o.destroy());
     this.objs = [];
     this.slots = [];
@@ -113,38 +117,63 @@ export default class ShopSystem {
     this._renderDetail();
   }
 
+  _clearGrid() {
+    this.gridObjs.forEach((o) => o.destroy());
+    this.gridObjs = [];
+    this.slots = [];
+  }
+
+  _slotByIndex(i) {
+    return this.slots.find((sl) => sl.i === i) ?? null;
+  }
+
   _renderGrid() {
     const s = this.scene;
     const { x, y, w, h } = this._grid;
     const cols = 4;
-    const rows = Math.ceil(this.items.length / cols);
     const gap = 10;
-    const cell = Math.min(Math.floor((w - (cols - 1) * gap) / cols), Math.floor((h - (rows - 1) * gap) / rows));
+    // Comfortable cell size driven by width (capped) — never squeezed to fit
+    // every row in the panel; overflow is paged instead.
+    const cell = Math.min(108, Math.floor((w - (cols - 1) * gap) / cols));
     const gridW = cols * cell + (cols - 1) * gap;
     const ox = x + Math.round((w - gridW) / 2);
 
-    this.slots = [];
-    this.items.forEach((item, i) => {
-      const r = Math.floor(i / cols), c = i % cols;
+    const total = this.items.length;
+    const totalRows = Math.ceil(total / cols);
+    const fitRows = Math.max(1, Math.floor((h - gap) / (cell + gap)));
+    const paged = totalRows > fitRows;
+    // Reserve a strip at the bottom for the pager when needed.
+    const rowsPerPage = paged ? Math.max(1, Math.floor((h - 34 - gap) / (cell + gap))) : fitRows;
+    const perPage = rowsPerPage * cols;
+    this._pages = Math.max(1, Math.ceil(total / perPage));
+    this.page = Math.min(Math.max(0, this.page), this._pages - 1);
+
+    const start = this.page * perPage;
+    const end = Math.min(start + perPage, total);
+
+    this._clearGrid();
+    for (let i = start; i < end; i++) {
+      const item = this.items[i];
+      const local = i - start;
+      const r = Math.floor(local / cols), c = local % cols;
       const sx = ox + c * (cell + gap);
       const sy = y + r * (cell + gap);
       const rar = RARITY[item.rarity] ?? RARITY.common;
 
       const g = s.add.graphics().setScrollFactor(0).setDepth(DEPTH + 2);
-      this._track(g);
+      this._gt(g);
 
       const icon = s.add.image(sx + cell / 2, sy + cell / 2, item.key)
         .setScrollFactor(0).setDepth(DEPTH + 3);
-      const fit = (cell - 22) / 256;
-      icon.setScale(fit);
-      this._track(icon);
+      icon.setScale((cell - 22) / 256);
+      this._gt(icon);
 
       const owned = !this._isConsumable(item) && this.isOwned(item.key);
       if (owned) {
         const oTag = s.add.text(sx + cell - 6, sy + 6, "✓", {
           fontFamily: "monospace", fontSize: "14px", color: "#8fe89a", stroke: "#06120a", strokeThickness: 3
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH + 4);
-        this._track(oTag);
+        this._gt(oTag);
       }
 
       const zone = s.add.zone(sx, sy, cell, cell).setOrigin(0)
@@ -152,11 +181,38 @@ export default class ShopSystem {
       zone.on("pointerover", () => { if (this.selected !== i) this._paintSlot(g, sx, sy, cell, rar, false, true); });
       zone.on("pointerout", () => { if (this.selected !== i) this._paintSlot(g, sx, sy, cell, rar, false, false); });
       zone.on("pointerdown", () => this._select(i));
-      this._track(zone);
+      this._gt(zone);
 
-      this.slots.push({ g, sx, sy, cell, rar });
+      this.slots.push({ g, sx, sy, cell, rar, i });
       this._paintSlot(g, sx, sy, cell, rar, i === this.selected, false);
-    });
+    }
+
+    if (this._pages > 1) this._renderPager(ox, y + h - 18, gridW);
+  }
+
+  _renderPager(cx0, cy, gridW) {
+    const s = this.scene;
+    const cx = cx0 + gridW / 2;
+    const mk = (dx, label, dir) => {
+      const t = s.add.text(cx + dx, cy, label, {
+        fontFamily: "monospace", fontSize: "22px", color: "#ffe1a4", stroke: "#160a04", strokeThickness: 3
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4);
+      this._gt(t);
+      const enabled = dir < 0 ? this.page > 0 : this.page < this._pages - 1;
+      t.setAlpha(enabled ? 1 : 0.3);
+      if (enabled) {
+        const z = s.add.zone(cx + dx, cy, 40, 36).setScrollFactor(0).setDepth(DEPTH + 5)
+          .setInteractive({ useHandCursor: true });
+        z.on("pointerdown", () => { this.page += dir; this._renderGrid(); });
+        this._gt(z);
+      }
+    };
+    mk(-78, "‹", -1);
+    mk(78, "›", 1);
+    const lbl = s.add.text(cx, cy, `${this.page + 1} / ${this._pages}`, {
+      fontFamily: "monospace", fontSize: "13px", color: "#9fb0c4"
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 4);
+    this._gt(lbl);
   }
 
   _paintSlot(g, sx, sy, cell, rar, selected, hover) {
@@ -173,10 +229,10 @@ export default class ShopSystem {
 
   _select(i) {
     if (i === this.selected) return;
-    const prev = this.slots[this.selected];
+    const prev = this._slotByIndex(this.selected);
     if (prev) this._paintSlot(prev.g, prev.sx, prev.sy, prev.cell, prev.rar, false, false);
     this.selected = i;
-    const cur = this.slots[i];
+    const cur = this._slotByIndex(i);
     if (cur) this._paintSlot(cur.g, cur.sx, cur.sy, cur.cell, cur.rar, true, false);
     this._renderDetail();
   }
@@ -312,7 +368,7 @@ export default class ShopSystem {
     this.scene.playSfx?.("sfx-purchase", 0.5);
     if (this.coinText) this.coinText.setText(String(this._coins()));
     this._toast(`Purchased ${item.name}!`, "#bff7c4");
-    const slot = this.slots[this.selected];
+    const slot = this._slotByIndex(this.selected);
     if (consumable) {
       // Consumables stay buyable; just refresh the detail (affordability may change).
       this._renderDetail();
@@ -331,12 +387,12 @@ export default class ShopSystem {
   _refreshOwnedTicks() {
     // Add a tick to the just-bought slot without rebuilding the whole grid.
     const s = this.scene;
-    const slot = this.slots[this.selected];
+    const slot = this._slotByIndex(this.selected);
     if (!slot) return;
     const tag = s.add.text(slot.sx + slot.cell - 6, slot.sy + 6, "✓", {
       fontFamily: "monospace", fontSize: "14px", color: "#8fe89a", stroke: "#06120a", strokeThickness: 3
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH + 4);
-    this._track(tag);
+    this._gt(tag);
   }
 
   _toast(msg, color) {
@@ -403,5 +459,6 @@ export default class ShopSystem {
   }
 
   _track(o) { this.objs.push(o); return o; }
+  _gt(o) { this.gridObjs.push(o); return o; }
   _dt(o) { this.detailObjs.push(o); return o; }
 }
