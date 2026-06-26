@@ -2,7 +2,7 @@
 // Prices are in coins (the in-game currency earned from work shifts).
 //
 // Potions: `heal`/`mana` = fraction of max HP/MP restored; `cooldownMs` gates use.
-// Gear: `slot` ("ring" | "amulet" | "weapon" | "armor" | "helmet") + `stats` (applied when equipped).
+// Gear: `slot` ("ring" | "amulet" | "weapon" | "armor" | "helmet" | "boots") + `stats` (applied when equipped).
 // All combat stats are wired: maxHp/maxMp (bars), attack, defense, dodge, crit,
 // lifesteal, attackSpeed, hpRegen, xpBonus. Weapons are sold at the Forge, jewelry/
 // potions at the Alchemist.
@@ -75,6 +75,16 @@ export const ALCHEMIST_ITEMS = [
   { key: "hat-stormcaller",  name: "Stormcaller Hat",  rarity: "epic",      price: 500, effect: "+8 Defense · +16 Mana · +12 Spell Power · +6% Atk Speed", slot: "helmet", charClass: "mage", stats: { defense: 8, maxMp: 16, attack: 12, attackSpeed: 0.06 } },
   { key: "hat-shadowmantle", name: "Shadowmantle Hat", rarity: "epic",      price: 520, effect: "+9 Defense · +16 Mana · +10 Spell Power · 4% Lifesteal", slot: "helmet", charClass: "mage", stats: { defense: 9, maxMp: 16, attack: 10, lifesteal: 0.04 } },
   { key: "hat-arcanearchon", name: "Arcane Archon Hat",rarity: "legendary", price: 760, effect: "+12 Defense · +22 Mana · +16 Spell Power · +8% Crit", slot: "helmet", charClass: "mage", stats: { defense: 12, maxMp: 22, attack: 16, crit: 0.08 } },
+
+  // Mage boots (equippable footwear, slot: "boots", charClass: "mage"). Sold at the
+  // Alchemist; hidden from the warrior. The feet slot — footwear leans into mobility
+  // (dodge / attack speed) to complete the elemental set with the hat + robe.
+  { key: "boot-grovekeeper",  name: "Grovekeeper Boots",  rarity: "rare",      price: 300, effect: "+8 Defense · +16 Max HP · +12 Mana",            slot: "boots", charClass: "mage", stats: { defense: 8, maxHp: 16, maxMp: 12 } },
+  { key: "boot-emberweave",   name: "Emberweave Boots",   rarity: "rare",      price: 310, effect: "+8 Defense · +14 Mana · +8 Spell Power",         slot: "boots", charClass: "mage", stats: { defense: 8, maxMp: 14, attack: 8 } },
+  { key: "boot-frostward",    name: "Frostward Boots",    rarity: "rare",      price: 330, effect: "+10 Defense · +14 Max HP · +12 Mana",           slot: "boots", charClass: "mage", stats: { defense: 10, maxHp: 14, maxMp: 12 } },
+  { key: "boot-stormcaller",  name: "Stormcaller Boots",  rarity: "epic",      price: 480, effect: "+8 Defense · +14 Mana · +8% Atk Speed",         slot: "boots", charClass: "mage", stats: { defense: 8, maxMp: 14, attackSpeed: 0.08 } },
+  { key: "boot-shadowmantle", name: "Shadowmantle Boots", rarity: "epic",      price: 500, effect: "+9 Defense · +14 Mana · +5% Dodge",            slot: "boots", charClass: "mage", stats: { defense: 9, maxMp: 14, dodge: 0.05 } },
+  { key: "boot-arcanearchon", name: "Arcane Archon Boots",rarity: "legendary", price: 720, effect: "+12 Defense · +20 Mana · +12 Spell Power · +6% Crit", slot: "boots", charClass: "mage", stats: { defense: 12, maxMp: 20, attack: 12, crit: 0.06 } },
 
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack

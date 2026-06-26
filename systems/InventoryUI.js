@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=29";
-import { itemData, isConsumable } from "./Inventory.js?v=27";
+import { RARITY } from "../data/alchemist-items.js?v=30";
+import { itemData, isConsumable } from "./Inventory.js?v=28";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -110,7 +110,7 @@ export default class InventoryUI {
       this._t(mage);
     }
 
-    // two symmetric 3-row columns flank the mage; boots locked at the bottom centre.
+    // two symmetric 3-row columns flank the mage; boots at the bottom centre.
     // left: helmet / amulet / ring I   ·   right: armor / weapon / ring II
     this._equipSlot("helmet", "Helmet",  mcx - colX, mcy - rowB, SLOT, false);
     this._equipSlot("amulet", "Amulet",  mcx - colX, mcy,        SLOT, false);
@@ -118,7 +118,7 @@ export default class InventoryUI {
     this._equipSlot("armor",  "Armor",   mcx + colX, mcy - rowB, SLOT, false);
     this._equipSlot("weapon", "Weapon",  mcx + colX, mcy,        SLOT, false);
     this._equipSlot("ring2",  "Ring II", mcx + colX, mcy + rowB, SLOT, false);
-    this._equipSlot("boots",  "Boots",   mcx,        mcy + capY, SLOT, true);
+    this._equipSlot("boots",  "Boots",   mcx,        mcy + capY, SLOT, false);
 
     // ── stats zone ──
     const sy = y + equipH + gap;

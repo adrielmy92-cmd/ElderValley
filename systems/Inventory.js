@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=29";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=30";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -48,14 +48,17 @@ export default class Inventory {
   // when their class matches (legacy swords with no class default to warrior).
   canUse(item) {
     if (item?.slot === "weapon") return (item.charClass ?? "warrior") === this._charClass();
-    // Armor + headgear are class-flavoured too (mage robes/hats). No charClass = universal.
-    if ((item?.slot === "armor" || item?.slot === "helmet") && item.charClass) return item.charClass === this._charClass();
+    // Armor / headgear / footwear are class-flavoured too (mage robes/hats/boots).
+    // Items without a charClass are universal.
+    if ((item?.slot === "armor" || item?.slot === "helmet" || item?.slot === "boots") && item.charClass) {
+      return item.charClass === this._charClass();
+    }
     return true;
   }
   // Normalise an equipped map to the per-class weapon schema, migrating any legacy
   // single `weapon` slot into the slot matching that weapon's class.
   _normEquipped(raw) {
-    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, ...(raw ?? {}) };
+    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, boots: null, ...(raw ?? {}) };
     if (eq.weapon) {
       const item = itemData(eq.weapon);
       if (item?.slot === "weapon") eq[this._weaponSlotFor(item.charClass === "warrior" ? "warrior" : "mage")] = eq.weapon;
@@ -229,6 +232,7 @@ export default class Inventory {
     if (item?.slot === "weapon") return "weapon";
     if (item?.slot === "armor") return "armor";
     if (item?.slot === "helmet") return "helmet";
+    if (item?.slot === "boots") return "boots";
     return "ring";
   }
 
@@ -280,8 +284,8 @@ export default class Inventory {
     let slot;
     const t = this.slotTypeFor(item);
     if (t === "amulet") slot = "amulet";
-    else if (t === "armor" || t === "helmet") {
-      if (!this.canUse(item)) return false; // wrong class can't wear this robe/hat
+    else if (t === "armor" || t === "helmet" || t === "boots") {
+      if (!this.canUse(item)) return false; // wrong class can't wear this robe/hat/boots
       slot = t;
     }
     else if (t === "weapon") {
@@ -320,7 +324,7 @@ export default class Inventory {
       return it && this.canUse(it) ? key : null;
     };
     const keys = [this.equippedWeapon(), this.equipped.ring1, this.equipped.ring2, this.equipped.amulet,
-      wearable(this.equipped.armor), wearable(this.equipped.helmet)];
+      wearable(this.equipped.armor), wearable(this.equipped.helmet), wearable(this.equipped.boots)];
     for (const key of keys) {
       const item = key && itemData(key);
       if (!item?.stats) continue;
