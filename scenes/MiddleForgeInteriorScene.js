@@ -30,9 +30,14 @@ export default class MiddleForgeInteriorScene extends InteriorBaseScene {
     this.interactions.add({ x: 225, y: 470, promptY: 424, promptText: "E Look", radius: 50,
       onInteract: () => this.dialog.show("Anvil", "Sparks still leap where the last blade was hammered true.") });
 
-    // Blacksmith vendor — the only place to buy weapons.
+    // Blacksmith vendor — all weapons, plus the warrior's heavy metal armor
+    // (helmet/armor/boots). Mage gear stays at the Alchemist.
     this.shop = new ShopSystem(this, {
-      items: ALCHEMIST_ITEMS.filter((i) => i.slot === "weapon"),
+      items: ALCHEMIST_ITEMS.filter(
+        (i) =>
+          i.slot === "weapon" ||
+          (["helmet", "armor", "boots"].includes(i.slot) && i.charClass === "warrior"),
+      ),
       title: "The Forge — Armory",
       subtitle: "Blades forged for those who walk into danger"
     });

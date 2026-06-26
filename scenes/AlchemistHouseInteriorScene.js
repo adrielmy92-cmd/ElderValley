@@ -31,8 +31,16 @@ export default class AlchemistHouseInteriorScene extends InteriorBaseScene {
     this.addAlchemistExit(spawnKey);
     this.addNpc(735, 872, 2, "Alchemist", "Not every potion should be drunk. Some serve only to remind us that curiosity has a price.");
 
-    // Alchemist sells everything except weapons (those are at the Forge).
-    this.shop = new ShopSystem(this, { items: ALCHEMIST_ITEMS.filter((i) => i.slot !== "weapon" && i.type !== "fish") });
+    // Alchemist stocks mage gear + shared jewelry/potions. Weapons go to the
+    // Forge, and so does the warrior's heavy armor (helmet/armor/boots).
+    this.shop = new ShopSystem(this, {
+      items: ALCHEMIST_ITEMS.filter(
+        (i) =>
+          i.slot !== "weapon" &&
+          i.type !== "fish" &&
+          !(["helmet", "armor", "boots"].includes(i.slot) && i.charClass === "warrior"),
+      ),
+    });
     const pos = this.getVendorPos();
     this.addShopVendor(pos.x, pos.y);
   }
