@@ -807,7 +807,7 @@ export default class WorldScene extends BaseGameScene {
       [this.manualFenceStorageKey, this.manualFences.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualFloorStorageKey, this.manualFloors.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualTreeStorageKey, this.manualTrees.map(({ type, x, y }) => ({ type, x, y }))],
-      [this.manualStructureStorageKey, this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }))],
+      [this.manualStructureStorageKey, this.manualStructures.map(({ type, x, y, flipX = false, angle = 0 }) => ({ type, x, y, flipX, angle }))],
       [this.manualWindowLightStorageKey, this.manualWindowLights.map(({ type, x, y }) => ({ type, x, y }))],
       [this.manualCollisionStorageKey, (this.manualCollisionRects ?? []).map(({ type = "rect", x, y, w, h, r }) => (
         type === "circle" ? { type, x, y, r } : { type: "rect", x, y, w, h }
@@ -977,7 +977,7 @@ export default class WorldScene extends BaseGameScene {
       this.clearManualStructures();
       data.forEach((structure) => {
         if (typeof structure?.x === "number" && typeof structure?.y === "number") {
-          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
+          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX), Number(structure.angle) || 0);
         }
       });
       return true;
@@ -1396,6 +1396,7 @@ export default class WorldScene extends BaseGameScene {
     this.selectedFloorType = "stoneA";
     this.selectedStructureType = "fruitStall";
     this.selectedStructureFlipX = false;
+    this.selectedStructureAngle = 0;
     this.selectedWindowLightType = "warmSmall";
     this.selectedHouseType = HOUSE_DEFS[0]?.id ?? null;
     this.selectedEditableHouse = null;
@@ -1710,6 +1711,19 @@ export default class WorldScene extends BaseGameScene {
         animated: true,
         frames: 8,
         frameRate: 7
+      },
+      smoke: {
+        key: "creative-structure-smoke",
+        label: "Smoke",
+        scale: 0.22,
+        colliders: [],
+        depthOffset: 220,
+        snap: 8,
+        originY: 0.5,
+        rotatable: true,
+        animated: true,
+        frames: 8,
+        frameRate: 8
       }
     };
     this.windowLightPieces = {
@@ -1773,6 +1787,8 @@ export default class WorldScene extends BaseGameScene {
       redMaple: Phaser.Input.Keyboard.KeyCodes.R,
       palm: Phaser.Input.Keyboard.KeyCodes.M,
       invert: Phaser.Input.Keyboard.KeyCodes.I,
+      rotateLeft: Phaser.Input.Keyboard.KeyCodes.OPEN_BRACKET,
+      rotateRight: Phaser.Input.Keyboard.KeyCodes.CLOSED_BRACKET,
       remove: Phaser.Input.Keyboard.KeyCodes.DELETE,
       backspace: Phaser.Input.Keyboard.KeyCodes.BACKSPACE
     });
@@ -1998,6 +2014,16 @@ export default class WorldScene extends BaseGameScene {
       this.updateCreativeHud();
     }
 
+    if (this.isStructureEditorActive() && this.structurePieces[this.selectedStructureType]?.rotatable) {
+      let rot = 0;
+      if (Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.rotateLeft)) rot -= 15;
+      if (Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.rotateRight)) rot += 15;
+      if (rot !== 0) {
+        this.selectedStructureAngle = (this.selectedStructureAngle + rot + 360) % 360;
+        this.updateCreativeHud();
+      }
+    }
+
     const removePressed = Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.remove)
       || Phaser.Input.Keyboard.JustDown(this.fenceEditorKeys.backspace);
     if (this.isFenceEditorActive() && removePressed) {
@@ -2115,9 +2141,14 @@ export default class WorldScene extends BaseGameScene {
       const label = this.selectedEditableHouse?.def.label ?? selectedDef?.label ?? "none";
       this.fenceEditorText.setText(`House: ${label} | click place/move | right-click/Delete removes from map`);
     } else if (this.isStructureEditorActive()) {
-      const label = this.structurePieces[this.selectedStructureType]?.label ?? "Fruit Stall";
+      const piece = this.structurePieces[this.selectedStructureType];
+      const label = piece?.label ?? "Fruit Stall";
       const side = this.selectedStructureFlipX ? "flipped" : "normal";
-      this.fenceEditorText.setText(`Structure: ${label} | I flips (${side}) | click to place | right-click/Delete removes`);
+      if (piece?.rotatable) {
+        this.fenceEditorText.setText(`Structure: ${label} | [ ] rotate (${this.selectedStructureAngle}°) | click to place | right-click/Delete removes`);
+      } else {
+        this.fenceEditorText.setText(`Structure: ${label} | I flips (${side}) | click to place | right-click/Delete removes`);
+      }
     } else if (this.isWindowLightEditorActive()) {
       const label = this.windowLightPieces[this.selectedWindowLightType]?.label ?? "Medium Window";
       this.fenceEditorText.setText(`Light: ${label} | glows at night | click to place | right-click/Delete removes`);
@@ -2345,6 +2376,9 @@ export default class WorldScene extends BaseGameScene {
         if (this.isStructureEditorActive() && entry.type === this.selectedStructureType && this.selectedStructureFlipX) {
           icon.setFlipX(true);
         }
+        if (this.isStructureEditorActive() && entry.type === this.selectedStructureType && entry.piece.rotatable) {
+          icon.setAngle(this.selectedStructureAngle);
+        }
       }
 
       const keyText = this.add.text(x + 6, y + 4, entry.hotkey, {
@@ -2418,7 +2452,8 @@ export default class WorldScene extends BaseGameScene {
         this.removeManualStructureAt(point.x, point.y);
         return;
       }
-      this.placeManualStructure(this.selectedStructureType, point.x, point.y, true, this.selectedStructureFlipX);
+      const placeAngle = this.structurePieces[this.selectedStructureType]?.rotatable ? this.selectedStructureAngle : 0;
+      this.placeManualStructure(this.selectedStructureType, point.x, point.y, true, this.selectedStructureFlipX, placeAngle);
       return;
     }
 
@@ -2758,7 +2793,7 @@ export default class WorldScene extends BaseGameScene {
     this.saveManualTrees();
   }
 
-  placeManualStructure(type, x, y, shouldSave = true, flipX = false) {
+  placeManualStructure(type, x, y, shouldSave = true, flipX = false, angle = 0) {
     const piece = this.structurePieces[type];
     if (!piece) {
       return;
@@ -2779,10 +2814,13 @@ export default class WorldScene extends BaseGameScene {
     }
 
     const image = (piece.animated ? this.add.sprite(x, y, piece.key, 0) : this.add.image(x, y, piece.key))
-      .setOrigin(0.5, 1)
+      .setOrigin(0.5, piece.originY ?? 1)
       .setDepth(y + piece.depthOffset)
       .setScale(piece.scale ?? 1);
     image.setFlipX(Boolean(flipX));
+    if (piece.rotatable) {
+      image.setAngle(Number(angle) || 0);
+    }
     if (piece.animated) {
       image.play(`${piece.key}-idle`);
     }
@@ -2817,7 +2855,7 @@ export default class WorldScene extends BaseGameScene {
       this.interactions.add(interaction);
     }
 
-    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), image, colliders, glows, interaction });
+    this.manualStructures.push({ type, x, y, flipX: Boolean(flipX), angle: Number(angle) || 0, image, colliders, glows, interaction });
     this.updateDayNightCycle(0);
     if (shouldSave) {
       this.saveManualStructures();
@@ -3122,7 +3160,7 @@ export default class WorldScene extends BaseGameScene {
 
     saved.forEach((structure) => {
       if (typeof structure?.x === "number" && typeof structure?.y === "number") {
-        this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
+        this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX), Number(structure.angle) || 0);
       }
     });
     this.syncCreativeCollection(
@@ -3132,14 +3170,14 @@ export default class WorldScene extends BaseGameScene {
       () => this.clearManualStructures(),
       (structure) => {
         if (typeof structure?.x === "number" && typeof structure?.y === "number") {
-          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX));
+          this.placeManualStructure(structure.type, structure.x, structure.y, false, Boolean(structure.flipX), Number(structure.angle) || 0);
         }
       }
     );
   }
 
   saveManualStructures() {
-    const data = this.manualStructures.map(({ type, x, y, flipX = false }) => ({ type, x, y, flipX }));
+    const data = this.manualStructures.map(({ type, x, y, flipX = false, angle = 0 }) => ({ type, x, y, flipX, angle }));
     this.setCreativeDirty(true);
     this.saveSharedStorage(this.manualStructureStorageKey, data)
       .catch((error) => this.handleCreativeSaveError(error));
