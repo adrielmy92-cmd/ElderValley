@@ -116,7 +116,7 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=10", 128, 128);
     this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=154");
     this.loadSheet("alchemy-vendor", "./assets/sprites/alchemy-vendor-sheet.png?v=9", 108, 108);
-    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=9`));
+    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=10`));
     this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=10");
     this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=10");
     this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=10");
