@@ -2,7 +2,7 @@
 // Prices are in coins (the in-game currency earned from work shifts).
 //
 // Potions: `heal`/`mana` = fraction of max HP/MP restored; `cooldownMs` gates use.
-// Gear: `slot` ("ring" | "amulet" | "weapon" | "armor") + `stats` (applied when equipped).
+// Gear: `slot` ("ring" | "amulet" | "weapon" | "armor" | "helmet") + `stats` (applied when equipped).
 // All combat stats are wired: maxHp/maxMp (bars), attack, defense, dodge, crit,
 // lifesteal, attackSpeed, hpRegen, xpBonus. Weapons are sold at the Forge, jewelry/
 // potions at the Alchemist.
@@ -65,6 +65,16 @@ export const ALCHEMIST_ITEMS = [
   { key: "robe-stormcaller",  name: "Stormcaller Robe",  rarity: "epic",      price: 640, effect: "+12 Defense · +22 Mana · +18 Spell Power · +8% Atk Speed", slot: "armor", charClass: "mage", stats: { defense: 12, maxMp: 22, attack: 18, attackSpeed: 0.08 } },
   { key: "robe-shadowmantle", name: "Shadowmantle Robe", rarity: "epic",      price: 680, effect: "+14 Defense · +20 Mana · +12 Spell Power · 6% Lifesteal", slot: "armor", charClass: "mage", stats: { defense: 14, maxMp: 20, attack: 12, lifesteal: 0.06 } },
   { key: "robe-arcanearchon", name: "Arcane Archon Robe",rarity: "legendary", price: 980, effect: "+18 Defense · +30 Mana · +22 Spell Power · +10% Crit", slot: "armor", charClass: "mage", stats: { defense: 18, maxMp: 30, attack: 22, crit: 0.10 } },
+
+  // Mage hats (equippable headgear, slot: "helmet", charClass: "mage"). Sold at the
+  // Alchemist; hidden from the warrior. The head slot — lighter than the chest robe,
+  // pairs with the matching robe element for a themed set.
+  { key: "hat-grovekeeper",  name: "Grovekeeper Hat",  rarity: "rare",      price: 320, effect: "+8 Defense · +18 Max HP · +14 Mana · +1 HP/s Regen", slot: "helmet", charClass: "mage", stats: { defense: 8, maxHp: 18, maxMp: 14, hpRegen: 1 } },
+  { key: "hat-emberweave",   name: "Emberweave Hat",   rarity: "rare",      price: 330, effect: "+8 Defense · +16 Mana · +10 Spell Power",          slot: "helmet", charClass: "mage", stats: { defense: 8, maxMp: 16, attack: 10 } },
+  { key: "hat-frostward",    name: "Frostward Hat",    rarity: "rare",      price: 350, effect: "+10 Defense · +16 Max HP · +14 Mana",              slot: "helmet", charClass: "mage", stats: { defense: 10, maxHp: 16, maxMp: 14 } },
+  { key: "hat-stormcaller",  name: "Stormcaller Hat",  rarity: "epic",      price: 500, effect: "+8 Defense · +16 Mana · +12 Spell Power · +6% Atk Speed", slot: "helmet", charClass: "mage", stats: { defense: 8, maxMp: 16, attack: 12, attackSpeed: 0.06 } },
+  { key: "hat-shadowmantle", name: "Shadowmantle Hat", rarity: "epic",      price: 520, effect: "+9 Defense · +16 Mana · +10 Spell Power · 4% Lifesteal", slot: "helmet", charClass: "mage", stats: { defense: 9, maxMp: 16, attack: 10, lifesteal: 0.04 } },
+  { key: "hat-arcanearchon", name: "Arcane Archon Hat",rarity: "legendary", price: 760, effect: "+12 Defense · +22 Mana · +16 Spell Power · +8% Crit", slot: "helmet", charClass: "mage", stats: { defense: 12, maxMp: 22, attack: 16, crit: 0.08 } },
 
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack

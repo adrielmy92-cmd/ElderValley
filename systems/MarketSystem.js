@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=28";
+import { ALCHEMIST_ITEMS, RARITY } from "../data/alchemist-items.js?v=29";
 
 // Player marketplace overlay (asynchronous listings, server-authoritative).
 // Mirrors ShopSystem's self-contained pattern — every object lives in this.objs

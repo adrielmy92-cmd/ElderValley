@@ -1,5 +1,5 @@
-import { RARITY } from "../data/alchemist-items.js?v=28";
-import { itemData, isConsumable } from "./Inventory.js?v=26";
+import { RARITY } from "../data/alchemist-items.js?v=29";
+import { itemData, isConsumable } from "./Inventory.js?v=27";
 
 const DEPTH = 9000;
 const STAT_LABELS = {
@@ -111,8 +111,8 @@ export default class InventoryUI {
     }
 
     // two symmetric 3-row columns flank the mage; boots locked at the bottom centre.
-    // left: helmet(locked) / amulet / ring I   ·   right: armor / weapon / ring II
-    this._equipSlot("helmet", "Helmet",  mcx - colX, mcy - rowB, SLOT, true);
+    // left: helmet / amulet / ring I   ·   right: armor / weapon / ring II
+    this._equipSlot("helmet", "Helmet",  mcx - colX, mcy - rowB, SLOT, false);
     this._equipSlot("amulet", "Amulet",  mcx - colX, mcy,        SLOT, false);
     this._equipSlot("ring1",  "Ring I",  mcx - colX, mcy + rowB, SLOT, false);
     this._equipSlot("armor",  "Armor",   mcx + colX, mcy - rowB, SLOT, false);
