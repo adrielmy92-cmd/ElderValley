@@ -86,6 +86,16 @@ export const ALCHEMIST_ITEMS = [
   { key: "boot-shadowmantle", name: "Shadowmantle Boots", rarity: "epic",      price: 500, effect: "+9 Defense · +14 Mana · +5% Dodge",            slot: "boots", charClass: "mage", stats: { defense: 9, maxMp: 14, dodge: 0.05 } },
   { key: "boot-arcanearchon", name: "Arcane Archon Boots",rarity: "legendary", price: 720, effect: "+12 Defense · +20 Mana · +12 Spell Power · +6% Crit", slot: "boots", charClass: "mage", stats: { defense: 12, maxMp: 20, attack: 12, crit: 0.06 } },
 
+  // Warrior helmets (equippable headgear, slot: "helmet", charClass: "warrior"). Sold at
+  // the Alchemist; hidden from the mage. Heavier than the mage hats — they stack Defense
+  // + Max HP (the warrior's tank stats) with a signature combat stat at higher tiers.
+  { key: "helm-rangerhood", name: "Ranger's Hood",    rarity: "common",    price: 120, effect: "+10 Defense · +20 Max HP",                       slot: "helmet", charClass: "warrior", stats: { defense: 10, maxHp: 20 } },
+  { key: "helm-ironguard",  name: "Ironguard Helm",   rarity: "uncommon",  price: 200, effect: "+16 Defense · +24 Max HP",                       slot: "helmet", charClass: "warrior", stats: { defense: 16, maxHp: 24 } },
+  { key: "helm-frostiron",  name: "Frostiron Helm",   rarity: "rare",      price: 360, effect: "+22 Defense · +30 Max HP · +6 Attack",           slot: "helmet", charClass: "warrior", stats: { defense: 22, maxHp: 30, attack: 6 } },
+  { key: "helm-dawnguard",  name: "Dawnguard Helm",   rarity: "rare",      price: 380, effect: "+24 Defense · +28 Max HP · +2 HP/s Regen",       slot: "helmet", charClass: "warrior", stats: { defense: 24, maxHp: 28, hpRegen: 2 } },
+  { key: "helm-deathskull", name: "Deathskull Helm",  rarity: "epic",      price: 560, effect: "+26 Defense · +36 Max HP · 4% Lifesteal",        slot: "helmet", charClass: "warrior", stats: { defense: 26, maxHp: 36, lifesteal: 0.04 } },
+  { key: "helm-voidcrown",  name: "Voidcrown Helm",   rarity: "legendary", price: 820, effect: "+32 Defense · +44 Max HP · +10 Attack · +6% Crit", slot: "helmet", charClass: "warrior", stats: { defense: 32, maxHp: 44, attack: 10, crit: 0.06 } },
+
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack
   // source (bigger than rings) + a signature stat. Sorted roughly by tier.
