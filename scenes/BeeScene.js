@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=296";
+import WorldScene from "./WorldScene.js?v=297";
 
 const BEE_W = 2752;
 const BEE_H = 1536;
@@ -1064,6 +1064,25 @@ export default class BeeScene extends WorldScene {
       if (!s.active || s.dead) continue;
       const dx = s.x - wx, dy = s.y - wy;
       if (Math.sqrt(dx * dx + dy * dy) <= radius) this._hitSoldier(s, this.spellDamage(BOSS_FIREBALL_DMG * 0.5));
+    }
+  }
+
+  // Entangling Roots pulse: lock the queen (short) and any soldiers in the area.
+  applyRoots(wx, wy, radius) {
+    if (this.beeBoss && !this.beeBoss.dead && this.beeBoss.active) {
+      const dx = this.beeBoss.x - wx, dy = this.beeBoss.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) {
+        this.multiplayer?.sendRootBeeQueen();
+        this.showRootVfx(this.beeBoss.x, this.beeBoss.y, 1.3);
+      }
+    }
+    for (const s of this._soldiers.values()) {
+      if (!s.active || s.dead) continue;
+      const dx = s.x - wx, dy = s.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        this.multiplayer?.sendRootBeeSoldier(s.serverIdx);
+        this.showRootVfx(s.x, s.y, 0.85);
+      }
     }
   }
 

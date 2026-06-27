@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=218";
-import DialogSystem from "../systems/DialogSystem.js?v=154";
-import InteractionSystem from "../systems/InteractionSystem.js?v=154";
-import ChatSystem from "../systems/ChatSystem.js?v=230";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=255";
-import MobileControls from "../systems/MobileControls.js?v=22";
-import Inventory, { itemData } from "../systems/Inventory.js?v=31";
-import InventoryUI from "../systems/InventoryUI.js?v=35";
-import Leveling from "../systems/Leveling.js?v=24";
+import Player from "../player/Player.js?v=219";
+import DialogSystem from "../systems/DialogSystem.js?v=155";
+import InteractionSystem from "../systems/InteractionSystem.js?v=155";
+import ChatSystem from "../systems/ChatSystem.js?v=231";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=256";
+import MobileControls from "../systems/MobileControls.js?v=23";
+import Inventory, { itemData } from "../systems/Inventory.js?v=32";
+import InventoryUI from "../systems/InventoryUI.js?v=36";
+import Leveling from "../systems/Leveling.js?v=25";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -2973,27 +2973,83 @@ export default class BaseGameScene extends Phaser.Scene {
     tick();
   }
 
-  // Entangling Roots [3]: thorny roots erupt from the ground in front of the mage,
-  // dealing area damage over the eruption. Reuses applyLightningDamage (which sends
-  // hits to the server) so it works on every boss/minion. Server-side rooting of the
-  // enemy's movement is phase 2.
+  // Entangling Roots [3]: click-to-target within a limited range around the mage.
+  // Thorny roots erupt from the chosen spot, dealing area damage AND rooting enemies
+  // (movement lock handled server-side). Pressing 3 again cancels targeting.
   castRoots() {
     if (this.isTransitioning) return;
     const now = this.time.now;
-    const COOLDOWN = 10000;
     if (this._rootsCooldownEnd && now < this._rootsCooldownEnd) {
       const slot = this.spellSlots?.[2];
       if (slot) this.tweens.add({ targets: slot.container, alpha: 0.4, duration: 80, yoyo: true, repeat: 2 });
       return;
     }
+    if (this._rootsTargeting) { this.exitRootsTargetMode(); return; }
+    this.enterRootsTargetMode();
+  }
 
-    // Target a spot on the ground in front of the mage, based on facing.
-    const REACH = 104;
-    const dir = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[this.player?.facing] ?? [0, 1];
-    const wx = this.player.x + dir[0] * REACH;
-    const wy = this.player.y + dir[1] * REACH;
+  enterRootsTargetMode() {
+    this._rootsTargeting = true;
+    const RANGE = 280; // max cast distance from the mage — no roots across the map
 
-    this.startRootsCooldown(COOLDOWN);
+    // Clamp the clicked point to within RANGE of the mage.
+    const computeTarget = (pointer) => {
+      const wx = this.cameras.main.scrollX + pointer.x;
+      const wy = this.cameras.main.scrollY + pointer.y;
+      const dx = wx - this.player.x, dy = wy - this.player.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= RANGE || d === 0) return { x: wx, y: wy };
+      return { x: this.player.x + (dx / d) * RANGE, y: this.player.y + (dy / d) * RANGE };
+    };
+
+    // Range ring (world space, follows the mage) + target reticle.
+    this._rootsRangeG = this.add.graphics().setDepth((this.player.depth ?? 0) + 1500);
+    this._rootsCursor = this.add.graphics().setDepth(99999);
+    const redraw = (pointer) => {
+      const t = computeTarget(pointer);
+      this._rootsRangeG.clear();
+      this._rootsRangeG.fillStyle(0x6fbf3a, 0.06); this._rootsRangeG.fillCircle(this.player.x, this.player.y, RANGE);
+      this._rootsRangeG.lineStyle(2, 0x6fbf3a, 0.5); this._rootsRangeG.strokeCircle(this.player.x, this.player.y, RANGE);
+      this._rootsCursor.clear();
+      this._rootsCursor.fillStyle(0x6fbf3a, 0.18); this._rootsCursor.fillCircle(t.x, t.y, 32);
+      this._rootsCursor.lineStyle(2, 0x6fbf3a, 1); this._rootsCursor.strokeCircle(t.x, t.y, 32);
+      this._rootsCursor.lineStyle(1, 0xc4f08a, 0.85); this._rootsCursor.strokeCircle(t.x, t.y, 18);
+    };
+    redraw(this.input.activePointer);
+
+    this._rootsHint = this.add.text(this.scale.width / 2, 80, "Entangling Roots — click a spot in range  (ESC to cancel)",
+      { fontFamily: "monospace", fontSize: "14px", color: "#c4f08a", stroke: "#000", strokeThickness: 3 }
+    ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(99999);
+
+    this._rootsMoveHandler = (pointer) => { if (this._rootsTargeting) redraw(pointer); };
+    this.input.on("pointermove", this._rootsMoveHandler);
+
+    this._rootsClickHandler = (pointer) => {
+      if (!this._rootsTargeting) return;
+      const t = computeTarget(pointer);
+      this.exitRootsTargetMode();
+      this.castRootsAt(t.x, t.y);
+    };
+    this.input.once("pointerdown", this._rootsClickHandler);
+
+    this._rootsCancelKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this._rootsCancelKey.once("down", () => this.exitRootsTargetMode());
+  }
+
+  exitRootsTargetMode() {
+    this._rootsTargeting = false;
+    this._rootsRangeG?.destroy(); this._rootsRangeG = null;
+    this._rootsCursor?.destroy(); this._rootsCursor = null;
+    this._rootsHint?.destroy(); this._rootsHint = null;
+    if (this._rootsMoveHandler) { this.input.off("pointermove", this._rootsMoveHandler); this._rootsMoveHandler = null; }
+    if (this._rootsClickHandler) { this.input.off("pointerdown", this._rootsClickHandler); this._rootsClickHandler = null; }
+  }
+
+  // Erupt the roots at (wx, wy): animation + AoE damage ticks + a one-shot root pulse
+  // (applyRoots tells the server which enemies to lock in place).
+  castRootsAt(wx, wy) {
+    if (this.isTransitioning) return;
+    this.startRootsCooldown(10000);
 
     if (!this.anims.exists("root-attack-anim")) {
       this.anims.create({
@@ -3014,20 +3070,39 @@ export default class BaseGameScene extends Phaser.Scene {
     roots.play("root-attack-anim");
     roots.once("animationcomplete", () => roots.destroy());
 
-    // small dirt burst + shake on eruption
     this.cameras.main.shake(140, 0.004);
     if (this.cache.audio.exists("sfx-roots")) this.sound.play("sfx-roots", { volume: 0.4 });
 
-    // Damage ticks during the raised phase (reuses the lightning AoE path).
     const RADIUS = 86;
-    const TICKS = 3;
-    for (let t = 0; t < TICKS; t++) {
+    // Root pulse once as the roots rise (server applies the movement lock).
+    this.time.delayedCall(300, () => {
+      if (this.isTransitioning || !this.scene.isActive()) return;
+      this.applyRoots?.(wx, wy, RADIUS);
+    });
+    // Damage ticks during the raised phase (reuses the lightning AoE path).
+    for (let t = 0; t < 3; t++) {
       this.time.delayedCall(280 + t * 300, () => {
         if (this.isTransitioning || !this.scene.isActive()) return;
         this.beginCast();
         this.applyLightningDamage?.(wx, wy, RADIUS);
       });
     }
+  }
+
+  // Roots clamped onto a hit enemy (shown to the caster). Plays the eruption then
+  // lingers a beat before fading — roughly matches the server root duration.
+  showRootVfx(x, y, scale = 1) {
+    if (!this.anims.exists("root-attack-anim")) {
+      this.anims.create({ key: "root-attack-anim", frames: this.anims.generateFrameNumbers("root-attack-sheet", { start: 0, end: 23 }), frameRate: 25, repeat: 0 });
+    }
+    const fx = this.add.sprite(x, y + 8, "root-attack-sheet", 0)
+      .setOrigin(0.5, 0.8).setDepth(y + 5).setDisplaySize(96 * scale, 96 * scale);
+    fx.play("root-attack-anim");
+    fx.once("animationcomplete", () => {
+      fx.setFrame(16);
+      this.tweens.add({ targets: fx, alpha: 0, delay: 1400, duration: 500, onComplete: () => fx.destroy() });
+    });
+    return fx;
   }
 
   startRootsCooldown(ms = 10000) {

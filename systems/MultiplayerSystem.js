@@ -1,4 +1,4 @@
-import { getPlayerCharacterProfile } from "../player/Player.js?v=173";
+import { getPlayerCharacterProfile } from "../player/Player.js?v=174";
 
 export default class MultiplayerSystem {
   constructor(scene) {
@@ -509,6 +509,24 @@ export default class MultiplayerSystem {
 
   sendHitBoss(damage) {
     this.send({ type: "hitBoss", damage });
+  }
+
+  // Entangling Roots — ask the server to lock an enemy's movement (server decides
+  // the duration: short for bosses, longer for minions).
+  sendRootBoss() {
+    this.send({ type: "rootBoss" });
+  }
+
+  sendRootTroll(index) {
+    this.send({ type: "rootTroll", index });
+  }
+
+  sendRootBeeQueen() {
+    this.send({ type: "rootBeeQueen" });
+  }
+
+  sendRootBeeSoldier(index) {
+    this.send({ type: "rootBeeSoldier", index });
   }
 
   // Retorna true se este cliente deve controlar o boss AI

@@ -670,6 +670,40 @@ function handleWsPayload(client, payload) {
     return;
   }
 
+  // ── Entangling Roots: lock an enemy's movement. Server decides the duration
+  //    (short on bosses, longer on minions) — client just names the target.
+  if (payload.type === "rootTroll") {
+    if (!client.ready || client.superseded) return;
+    const idx = Math.floor(Number(payload.index ?? -1));
+    if (idx < 0 || idx >= 4) return;
+    const troll = swampTrolls[idx];
+    if (troll && !troll.dead) {
+      troll.rootedUntil = Date.now() + ROOT_MS_MINION;
+      sendToSwamp({ type: "trollSync", trolls: swampTrolls.map(serializeTroll) });
+    }
+    return;
+  }
+
+  if (payload.type === "rootBoss") {
+    if (!client.ready || client.superseded) return;
+    if (bossState.spawned && !bossState.dead) bossState.rootedUntil = Date.now() + ROOT_MS_BOSS;
+    return;
+  }
+
+  if (payload.type === "rootBeeQueen") {
+    if (!client.ready || client.superseded) return;
+    if (!beeState.dead) beeState.rootedUntil = Date.now() + ROOT_MS_BOSS;
+    return;
+  }
+
+  if (payload.type === "rootBeeSoldier") {
+    if (!client.ready || client.superseded) return;
+    const idx = Number(payload.index ?? -1);
+    const s = beeSoldiers.find(x => x.i === idx);
+    if (s && !s.dead) s.rootedUntil = Date.now() + ROOT_MS_MINION;
+    return;
+  }
+
   if (payload.type === "bossEvent") {
     if (!client.ready || client.superseded) {
       return;
@@ -2707,11 +2741,14 @@ function createBossState() {
     meteorCooldown: 8000,
     eruptionCooldown: 10000,
     projectileCooldown: 3000,
+    rootedUntil: 0,
     dead: false,
     spawned: true, // nasce imediatamente
   };
 }
 
+const ROOT_MS_BOSS = 1000;    // Entangling Roots: short lock on bosses (golem/queen)
+const ROOT_MS_MINION = 2500;  // longer lock on minions (trolls/soldiers)
 let bossState = createBossState();
 
 function isInArena(client) {
@@ -2943,6 +2980,9 @@ function tickBoss() {
     b.anim = "golem-walk";
   }
 
+  // Entangling Roots: locked in place (still attacks, just can't reposition).
+  if (now < (b.rootedUntil ?? 0)) { b.vx = 0; b.vy = 0; }
+
   b.x = Math.max(50, Math.min(BOSS_W - 50, b.x + b.vx * (delta / 1000)));
   b.y = Math.max(50, Math.min(BOSS_H - 50, b.y + b.vy * (delta / 1000)));
 }
@@ -2964,6 +3004,7 @@ setInterval(() => {
     anim: b.anim,
     dead: b.dead,
     spawned: b.spawned,
+    rooted: Date.now() < (b.rootedUntil ?? 0),
     countdownMs: (b.dead && b.respawnAt) ? Math.max(0, b.respawnAt - Date.now()) : null,
   });
 }, 100).unref();
@@ -2996,6 +3037,7 @@ function createTrollState(i) {
     i, x: s.x, y: s.y,
     hp: TROLL_MAX_HP, maxHp: TROLL_MAX_HP,
     aggro: false, dead: false,
+    rootedUntil: 0,
     isFiring: false, firingUntil: 0,
     speed: TROLL_SPEED_IDLE,
     waitUntil: 0, walkUntil: 0,
@@ -3044,6 +3086,7 @@ function serializeTroll(t) {
     i: t.i, x: Math.round(t.x), y: Math.round(t.y),
     hp: t.hp, maxHp: t.maxHp,
     dead: t.dead, aggro: t.aggro, flipX: t.flipX,
+    rooted: Date.now() < (t.rootedUntil ?? 0),
   };
 }
 
@@ -3087,13 +3130,16 @@ function tickSwamp() {
       continue;
     }
 
+    // Entangling Roots: locked in place (can still attack, just can't move).
+    const rooted = now < (troll.rootedUntil ?? 0);
+
     const nearest = nearestSwampPlayer(troll.x, troll.y);
 
     if (troll.aggro && nearest) {
       const dx   = (nearest.x ?? 960) - troll.x;
       const dy   = (nearest.y ?? 960) - troll.y;
       const dist = Math.hypot(dx, dy) || 1;
-      if (dist > 8) {
+      if (dist > 8 && !rooted) {
         troll.x += (dx / dist) * troll.speed * (dt / 1000);
         troll.y += (dy / dist) * troll.speed * (dt / 1000);
         troll.flipX = dx < 0;
@@ -3116,8 +3162,8 @@ function tickSwamp() {
     } else {
       const outOfPatrol = troll.x < TROLL_PATROL.x1 || troll.x > TROLL_PATROL.x2
                        || troll.y < TROLL_PATROL.y1 || troll.y > TROLL_PATROL.y2;
-      if (now < troll.waitUntil) {
-        // parado
+      if (rooted || now < troll.waitUntil) {
+        // parado (rooted ou aguardando)
       } else if (now >= troll.walkUntil || outOfPatrol) {
         pickTrollWander(troll, now);
       } else {
@@ -3174,6 +3220,7 @@ function createBeeState() {
     orbitAngle: 0,
     atkCooldown: 2000,
     specialCooldown: 5000,
+    rootedUntil: 0,
     stateUntil: 0,          // ms timestamp — quando o estado atual termina
     diveTarget: null,       // { x, y } para royal dive
     dashWaypoints: null,    // array de { x, y } para frantic dash
@@ -3260,18 +3307,18 @@ function beeSpawnSoldiers(count) {
     const fromX = side ? 80 : BEE_W - 80;
     const fromY = BEE_H * 0.2 + Math.random() * BEE_H * 0.6;
     const idx = beeNextSoldierIdx++;
-    beeSoldiers.push({ i: idx, x: fromX, y: fromY, hp: BEE_SOLDIER_HP, maxHp: BEE_SOLDIER_HP, dead: false, flipX: false, lastAtk: 0, lastSting: 0 });
+    beeSoldiers.push({ i: idx, x: fromX, y: fromY, hp: BEE_SOLDIER_HP, maxHp: BEE_SOLDIER_HP, dead: false, flipX: false, lastAtk: 0, lastSting: 0, rootedUntil: 0 });
     sendToBee({ type: "beeSoldierSpawn", i: idx, fromX: Math.round(fromX), fromY: Math.round(fromY) });
   }
 }
 
 function serializeBee() {
   const b = beeState;
-  return { x: Math.round(b.x), y: Math.round(b.y), hp: b.hp, maxHp: BEE_MAX_HP, phase: b.phase, state: b.state, flipX: b.flipX, dead: b.dead, respawnMs: b.dead ? Math.max(0, b.respawnAt - Date.now()) : null };
+  return { x: Math.round(b.x), y: Math.round(b.y), hp: b.hp, maxHp: BEE_MAX_HP, phase: b.phase, state: b.state, flipX: b.flipX, dead: b.dead, rooted: Date.now() < (b.rootedUntil ?? 0), respawnMs: b.dead ? Math.max(0, b.respawnAt - Date.now()) : null };
 }
 
 function serializeSoldier(s) {
-  return { i: s.i, x: Math.round(s.x), y: Math.round(s.y), hp: s.hp, maxHp: s.maxHp, dead: s.dead, flipX: s.flipX };
+  return { i: s.i, x: Math.round(s.x), y: Math.round(s.y), hp: s.hp, maxHp: s.maxHp, dead: s.dead, flipX: s.flipX, rooted: Date.now() < (s.rootedUntil ?? 0) };
 }
 
 let lastBeeTick = Date.now();
@@ -3282,6 +3329,9 @@ function tickBee() {
   const delta = Math.min(now - lastBeeTick, 200);
   lastBeeTick = now;
   const b = beeState;
+  // Entangling Roots: short lock that stops patrol/chase repositioning (but lets
+  // dive/dash/burst attacks finish, so the queen doesn't freeze mid-special).
+  const rooted = now < (b.rootedUntil ?? 0);
 
   // Respawn
   if (b.dead) {
@@ -3389,6 +3439,7 @@ function tickBee() {
     const pd = Math.hypot(pdx, pdy) || 1;
     if (pd < 30) b.patrolIdx = (b.patrolIdx + 1) % BEE_PATROL_PTS.length;
     else { b.vx = (pdx / pd) * 55; b.vy = (pdy / pd) * 55; }
+    if (rooted) { b.vx = 0; b.vy = 0; }
     b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
     b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
     tickBeeSoldiers(now, delta, players);
@@ -3452,6 +3503,7 @@ function tickBee() {
     b.vx = (odx / od) * cfg.speed; b.vy = (ody / od) * cfg.speed;
   }
 
+  if (rooted) { b.vx = 0; b.vy = 0; }
   b.x = Math.max(80, Math.min(BEE_W - 80, b.x + b.vx * (delta / 1000)));
   b.y = Math.max(80, Math.min(BEE_H - 80, b.y + b.vy * (delta / 1000)));
 
@@ -3470,10 +3522,12 @@ function tickBeeSoldiers(now, delta, players) {
     }
     const sdx = nearX - s.x, sdy = nearY - s.y;
     const sdist = Math.hypot(sdx, sdy) || 1;
-    s.x += (sdx / sdist) * speed * (delta / 1000);
-    s.y += (sdy / sdist) * speed * (delta / 1000);
-    s.x = Math.max(30, Math.min(BEE_W - 30, s.x));
-    s.y = Math.max(30, Math.min(BEE_H - 30, s.y));
+    if (!(now < (s.rootedUntil ?? 0))) { // Entangling Roots: locked in place
+      s.x += (sdx / sdist) * speed * (delta / 1000);
+      s.y += (sdy / sdist) * speed * (delta / 1000);
+      s.x = Math.max(30, Math.min(BEE_W - 30, s.x));
+      s.y = Math.max(30, Math.min(BEE_H - 30, s.y));
+    }
     s.flipX = sdx < 0;
 
     // Dano por contato

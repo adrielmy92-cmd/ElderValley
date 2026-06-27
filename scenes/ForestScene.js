@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=296";
+import WorldScene from "./WorldScene.js?v=297";
 
 const ARENA_W = 1920;
 const ARENA_H = 1920;
@@ -390,6 +390,17 @@ export default class ForestScene extends WorldScene {
       this.showDamageNumber(this.bossGolem.x, this.bossGolem.y - 40, dmg);
       this.multiplayer?.sendHitBoss(dmg);
       this.maybeProcDot(this.bossGolem, (d) => this.multiplayer?.sendHitBoss(d));
+    }
+  }
+
+  // Entangling Roots pulse: lock the boss in place if it's in the area (server
+  // decides the short boss root duration).
+  applyRoots(wx, wy, radius) {
+    if (!this.bossGolem || this.bossDead || !this.bossHitzone?.body?.enable) return;
+    const dx = this.bossGolem.x - wx, dy = this.bossGolem.y - wy;
+    if (Math.sqrt(dx * dx + dy * dy) <= radius + 40) {
+      this.multiplayer?.sendRootBoss();
+      this.showRootVfx(this.bossGolem.x, this.bossGolem.y, 1.5);
     }
   }
 

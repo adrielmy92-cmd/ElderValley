@@ -1,4 +1,4 @@
-import WorldScene from "./WorldScene.js?v=296";
+import WorldScene from "./WorldScene.js?v=297";
 
 const SWAMP_W = 1920;
 const SWAMP_H = 1920;
@@ -389,6 +389,18 @@ export default class SwampScene extends WorldScene {
       const dx = troll.x - wx, dy = troll.y - wy;
       if (Math.sqrt(dx * dx + dy * dy) <= radius) {
         this._hitTroll(troll, this.spellDamage(150));
+      }
+    });
+  }
+
+  // Entangling Roots pulse: lock every troll in the area in place (server-side).
+  applyRoots(wx, wy, radius) {
+    this.swampTrolls?.forEach(troll => {
+      if (!troll.active || troll.dead) return;
+      const dx = troll.x - wx, dy = troll.y - wy;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+        this.multiplayer?.sendRootTroll(troll.trollIndex);
+        this.showRootVfx(troll.x, troll.y, 1);
       }
     });
   }
