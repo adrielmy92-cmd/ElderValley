@@ -96,6 +96,26 @@ export const ALCHEMIST_ITEMS = [
   { key: "helm-deathskull", name: "Deathskull Helm",  rarity: "epic",      price: 560, effect: "+26 Defense · +36 Max HP · 4% Lifesteal",        slot: "helmet", charClass: "warrior", stats: { defense: 26, maxHp: 36, lifesteal: 0.04 } },
   { key: "helm-voidcrown",  name: "Voidcrown Helm",   rarity: "legendary", price: 820, effect: "+32 Defense · +44 Max HP · +10 Attack · +6% Crit", slot: "helmet", charClass: "warrior", stats: { defense: 32, maxHp: 44, attack: 10, crit: 0.06 } },
 
+  // Warrior body armor (equippable, slot: "armor", charClass: "warrior"). Forged at the
+  // Blacksmith; hidden from the mage. Biggest defensive piece — heavy Defense + Max HP.
+  // Same 6 elements as the warrior helmets (sets).
+  { key: "plate-ranger",     name: "Ranger's Leathers",  rarity: "common",    price: 200,  effect: "+14 Defense · +28 Max HP",                          slot: "armor", charClass: "warrior", stats: { defense: 14, maxHp: 28 } },
+  { key: "plate-ironguard",  name: "Ironguard Plate",    rarity: "uncommon",  price: 320,  effect: "+22 Defense · +36 Max HP",                          slot: "armor", charClass: "warrior", stats: { defense: 22, maxHp: 36 } },
+  { key: "plate-frostiron",  name: "Frostiron Plate",    rarity: "rare",      price: 480,  effect: "+30 Defense · +44 Max HP · +8 Attack",              slot: "armor", charClass: "warrior", stats: { defense: 30, maxHp: 44, attack: 8 } },
+  { key: "plate-dawnguard",  name: "Dawnguard Plate",    rarity: "rare",      price: 500,  effect: "+32 Defense · +42 Max HP · +3 HP/s Regen",          slot: "armor", charClass: "warrior", stats: { defense: 32, maxHp: 42, hpRegen: 3 } },
+  { key: "plate-deathskull", name: "Deathskull Plate",   rarity: "epic",      price: 700,  effect: "+36 Defense · +52 Max HP · 6% Lifesteal",           slot: "armor", charClass: "warrior", stats: { defense: 36, maxHp: 52, lifesteal: 0.06 } },
+  { key: "plate-voidcrown",  name: "Voidcrown Plate",    rarity: "legendary", price: 1000, effect: "+44 Defense · +64 Max HP · +12 Attack · +8% Crit", slot: "armor", charClass: "warrior", stats: { defense: 44, maxHp: 64, attack: 12, crit: 0.08 } },
+
+  // Warrior boots (equippable, slot: "boots", charClass: "warrior"). Forged at the
+  // Blacksmith; hidden from the mage. Smaller piece — Defense + Max HP with a mobility
+  // flavor (dodge / attack speed) at higher tiers. Same 6 elements (sets).
+  { key: "greave-ranger",     name: "Ranger's Boots",      rarity: "common",    price: 180, effect: "+10 Defense · +20 Max HP",                       slot: "boots", charClass: "warrior", stats: { defense: 10, maxHp: 20 } },
+  { key: "greave-ironguard",  name: "Ironguard Greaves",   rarity: "uncommon",  price: 280, effect: "+16 Defense · +24 Max HP",                       slot: "boots", charClass: "warrior", stats: { defense: 16, maxHp: 24 } },
+  { key: "greave-frostiron",  name: "Frostiron Greaves",   rarity: "rare",      price: 360, effect: "+22 Defense · +28 Max HP",                       slot: "boots", charClass: "warrior", stats: { defense: 22, maxHp: 28 } },
+  { key: "greave-dawnguard",  name: "Dawnguard Greaves",   rarity: "rare",      price: 380, effect: "+24 Defense · +26 Max HP · +2 HP/s Regen",       slot: "boots", charClass: "warrior", stats: { defense: 24, maxHp: 26, hpRegen: 2 } },
+  { key: "greave-deathskull", name: "Deathskull Greaves",  rarity: "epic",      price: 520, effect: "+26 Defense · +34 Max HP · +5% Dodge",            slot: "boots", charClass: "warrior", stats: { defense: 26, maxHp: 34, dodge: 0.05 } },
+  { key: "greave-voidcrown",  name: "Voidcrown Greaves",   rarity: "legendary", price: 720, effect: "+32 Defense · +44 Max HP · +6% Crit · +6% Atk Speed", slot: "boots", charClass: "warrior", stats: { defense: 32, maxHp: 44, crit: 0.06, attackSpeed: 0.06 } },
+
   // Weapons (equippable, slot: "weapon"). Sold at the Forge. Stat-only (no on-character
   // visual). Icons are real cut-out PNGs in assets/items/. Weapons are the main Attack
   // source (bigger than rings) + a signature stat. Sorted roughly by tier.

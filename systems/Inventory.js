@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=31";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=32";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;

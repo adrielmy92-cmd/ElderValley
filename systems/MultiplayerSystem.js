@@ -1,4 +1,4 @@
-import { getPlayerCharacterProfile } from "../player/Player.js?v=171";
+import { getPlayerCharacterProfile } from "../player/Player.js?v=172";
 
 export default class MultiplayerSystem {
   constructor(scene) {
