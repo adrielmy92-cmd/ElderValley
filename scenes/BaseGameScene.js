@@ -1,12 +1,12 @@
-import Player from "../player/Player.js?v=217";
-import DialogSystem from "../systems/DialogSystem.js?v=153";
-import InteractionSystem from "../systems/InteractionSystem.js?v=153";
-import ChatSystem from "../systems/ChatSystem.js?v=229";
-import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=254";
-import MobileControls from "../systems/MobileControls.js?v=21";
-import Inventory, { itemData } from "../systems/Inventory.js?v=30";
-import InventoryUI from "../systems/InventoryUI.js?v=34";
-import Leveling from "../systems/Leveling.js?v=23";
+import Player from "../player/Player.js?v=218";
+import DialogSystem from "../systems/DialogSystem.js?v=154";
+import InteractionSystem from "../systems/InteractionSystem.js?v=154";
+import ChatSystem from "../systems/ChatSystem.js?v=230";
+import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=255";
+import MobileControls from "../systems/MobileControls.js?v=22";
+import Inventory, { itemData } from "../systems/Inventory.js?v=31";
+import InventoryUI from "../systems/InventoryUI.js?v=35";
+import Leveling from "../systems/Leveling.js?v=24";
 
 export default class BaseGameScene extends Phaser.Scene {
   init(data = {}) {
@@ -643,7 +643,8 @@ export default class BaseGameScene extends Phaser.Scene {
     const SLOT_W = 52, SLOT_H = 44, GAP = 6;
     const spells = [
       { key: "1", name: "Fire", bgColor: 0x5c1a00, borderColor: 0xff6a00, iconColors: ["#ff6a00", "#ffb829", "#fff4a3"], label: "Fire" },
-      { key: "2", name: "Arcane Lightning", bgColor: 0x001a3a, borderColor: 0x29b6f6, iconColors: ["#1a8fff", "#a8f4ff", "#ffffff"], label: "Lightning" }
+      { key: "2", name: "Arcane Lightning", bgColor: 0x001a3a, borderColor: 0x29b6f6, iconColors: ["#1a8fff", "#a8f4ff", "#ffffff"], label: "Lightning" },
+      { key: "3", name: "Entangling Roots", bgColor: 0x16280c, borderColor: 0x6fbf3a, iconColors: ["#6b4a2a", "#6fbf3a", "#c4f08a"], label: "Roots" }
     ];
 
     this.spellSlots = spells.map((spell, i) => {
@@ -668,13 +669,21 @@ export default class BaseGameScene extends Phaser.Scene {
         iconG.fillStyle(0xf05a16, 1); iconG.fillRect(20, 18, 12, 8);
         iconG.fillStyle(0xffb629, 1); iconG.fillRect(22, 14, 8, 8);
         iconG.fillStyle(0xfff4a3, 1); iconG.fillRect(24, 12, 4, 6);
-      } else {
+      } else if (i === 1) {
         // lightning icon
         iconG.fillStyle(0x006fe0, 1); iconG.fillRect(18, 17, 16, 4);
         iconG.fillStyle(0x29b6f6, 1); iconG.fillRect(20, 16, 12, 3);
         iconG.fillStyle(0xffffff, 1);
         iconG.fillRect(22, 17, 8, 1);
         iconG.fillRect(18, 13, 6, 3); iconG.fillRect(28, 20, 6, 3);
+      } else {
+        // roots icon: brown thorny stalks sprouting up with green tips
+        iconG.fillStyle(0x6b4a2a, 1);
+        iconG.fillRect(25, 18, 3, 12); iconG.fillRect(21, 22, 3, 8); iconG.fillRect(29, 21, 3, 9);
+        iconG.fillStyle(0x4e3418, 1); iconG.fillRect(20, 29, 14, 3);
+        iconG.fillStyle(0x6fbf3a, 1);
+        iconG.fillRect(25, 14, 3, 4); iconG.fillRect(21, 19, 3, 3); iconG.fillRect(29, 18, 3, 3);
+        iconG.fillStyle(0xc4f08a, 1); iconG.fillRect(25, 12, 3, 2);
       }
 
       const nameLabel = this.add.text(SLOT_W / 2, SLOT_H - 10, spell.label, {
@@ -2964,6 +2973,85 @@ export default class BaseGameScene extends Phaser.Scene {
     tick();
   }
 
+  // Entangling Roots [3]: thorny roots erupt from the ground in front of the mage,
+  // dealing area damage over the eruption. Reuses applyLightningDamage (which sends
+  // hits to the server) so it works on every boss/minion. Server-side rooting of the
+  // enemy's movement is phase 2.
+  castRoots() {
+    if (this.isTransitioning) return;
+    const now = this.time.now;
+    const COOLDOWN = 10000;
+    if (this._rootsCooldownEnd && now < this._rootsCooldownEnd) {
+      const slot = this.spellSlots?.[2];
+      if (slot) this.tweens.add({ targets: slot.container, alpha: 0.4, duration: 80, yoyo: true, repeat: 2 });
+      return;
+    }
+
+    // Target a spot on the ground in front of the mage, based on facing.
+    const REACH = 104;
+    const dir = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[this.player?.facing] ?? [0, 1];
+    const wx = this.player.x + dir[0] * REACH;
+    const wy = this.player.y + dir[1] * REACH;
+
+    this.startRootsCooldown(COOLDOWN);
+
+    if (!this.anims.exists("root-attack-anim")) {
+      this.anims.create({
+        key: "root-attack-anim",
+        frames: this.anims.generateFrameNumbers("root-attack-sheet", { start: 0, end: 23 }),
+        frameRate: 25,
+        repeat: 0
+      });
+    }
+
+    const DISPLAY = 188;
+    const DEPTH = wy + 2000;
+    // Anchored near its base (origin low) so the roots read as bursting out of the floor.
+    const roots = this.add.sprite(wx, wy + 24, "root-attack-sheet", 0)
+      .setDepth(DEPTH)
+      .setDisplaySize(DISPLAY, DISPLAY)
+      .setOrigin(0.5, 0.82);
+    roots.play("root-attack-anim");
+    roots.once("animationcomplete", () => roots.destroy());
+
+    // small dirt burst + shake on eruption
+    this.cameras.main.shake(140, 0.004);
+    if (this.cache.audio.exists("sfx-roots")) this.sound.play("sfx-roots", { volume: 0.4 });
+
+    // Damage ticks during the raised phase (reuses the lightning AoE path).
+    const RADIUS = 86;
+    const TICKS = 3;
+    for (let t = 0; t < TICKS; t++) {
+      this.time.delayedCall(280 + t * 300, () => {
+        if (this.isTransitioning || !this.scene.isActive()) return;
+        this.beginCast();
+        this.applyLightningDamage?.(wx, wy, RADIUS);
+      });
+    }
+  }
+
+  startRootsCooldown(ms = 10000) {
+    const slot = this.spellSlots?.[2];
+    if (!slot) return;
+    const SLOT_W = this._spellSlotW ?? 52;
+    const SLOT_H = 44;
+    const { cdOverlay, cdText } = slot;
+    this._rootsCooldownEnd = this.time.now + ms;
+    const tick = () => {
+      const remaining = this._rootsCooldownEnd - this.time.now;
+      if (remaining <= 0) { cdOverlay.clear(); cdText.setAlpha(0); return; }
+      const pct = remaining / ms;
+      cdOverlay.clear();
+      cdOverlay.fillStyle(0x000000, 0.62);
+      cdOverlay.fillRoundedRect(1, 1, SLOT_W - 2, SLOT_H - 2, 5);
+      cdOverlay.lineStyle(2, 0x6fbf3a, pct);
+      cdOverlay.strokeRoundedRect(1, 1, SLOT_W - 2, SLOT_H - 2, 5);
+      cdText.setText(Math.ceil(remaining / 1000).toString()).setAlpha(1);
+      this.time.delayedCall(100, tick);
+    };
+    tick();
+  }
+
   enterLightningTargetMode() {
     if (this._lightningTargeting) return;
     // verifica cooldown
@@ -3274,6 +3362,14 @@ export default class BaseGameScene extends Phaser.Scene {
       } else {
         this.enterLightningTargetMode();
       }
+      return;
+    }
+
+    // Mage ability [3] = Entangling Roots: thorny roots erupt in front of the mage,
+    // dealing area damage (and rooting enemies — handled server-side, phase 2).
+    if (!this.dialog.active && !this.player?.profile?.melee && Phaser.Input.Keyboard.JustDown(this.interactKeys.ability3)) {
+      this.castRoots();
+      this.player.update(this.cursors, this.wasd, true);
       return;
     }
 

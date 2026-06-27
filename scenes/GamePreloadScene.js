@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=32";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=33";
 
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {
@@ -15,54 +15,55 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.drawLoadingUi();
 
     this.loadImage("reference-house", "./assets/sprites/reference-house.png");
-    this.loadImage("blacksmith-house", "./assets/sprites/blacksmith-house.png?v=141");
-    this.loadImage("card-shop-house", "./assets/sprites/card-shop-house.png?v=141");
-    this.loadImage("middle-forge-house", "./assets/sprites/middle-forge-house.png?v=141");
-    this.loadImage("forge-interior", "./assets/sprites/forge-interior.png?v=10");
-    this.loadImage("fence-h", "./assets/sprites/fence-pack-h.png?v=141");
-    this.loadImage("fence-v", "./assets/sprites/fence-pack-v.png?v=141");
-    this.loadImage("fence-post", "./assets/sprites/fence-pack-post.png?v=141");
-    this.loadImage("fence-gate", "./assets/sprites/fence-pack-gate.png?v=141");
-    this.loadImage("fence-gate-open", "./assets/sprites/fence-pack-gate-open.png?v=141");
+    this.loadImage("blacksmith-house", "./assets/sprites/blacksmith-house.png?v=142");
+    this.loadImage("card-shop-house", "./assets/sprites/card-shop-house.png?v=142");
+    this.loadImage("middle-forge-house", "./assets/sprites/middle-forge-house.png?v=142");
+    this.loadImage("forge-interior", "./assets/sprites/forge-interior.png?v=11");
+    this.loadImage("fence-h", "./assets/sprites/fence-pack-h.png?v=142");
+    this.loadImage("fence-v", "./assets/sprites/fence-pack-v.png?v=142");
+    this.loadImage("fence-post", "./assets/sprites/fence-pack-post.png?v=142");
+    this.loadImage("fence-gate", "./assets/sprites/fence-pack-gate.png?v=142");
+    this.loadImage("fence-gate-open", "./assets/sprites/fence-pack-gate-open.png?v=142");
 
-    this.loadImage("creative-tree-pine", "./assets/sprites/creative-tree-pine.png?v=141");
-    this.loadImage("creative-tree-flower", "./assets/sprites/creative-tree-flower.png?v=141");
-    this.loadImage("creative-tree-round", "./assets/sprites/creative-tree-round.png?v=141");
-    this.loadImage("creative-tree-ancient", "./assets/sprites/creative-tree-ancient.png?v=141");
-    this.loadImage("creative-tree-twisted", "./assets/sprites/creative-tree-twisted-game.png?v=141");
-    this.loadImage("creative-tree-flower-cone", "./assets/sprites/creative-tree-flower-cone-game.png?v=141");
-    this.loadImage("creative-tree-layered-pine", "./assets/sprites/creative-tree-layered-pine-game.png?v=141");
-    this.loadImage("creative-tree-willow", "./assets/sprites/creative-tree-willow-game.png?v=141");
-    this.loadImage("creative-tree-birch", "./assets/sprites/creative-tree-birch-game.png?v=141");
-    this.loadImage("creative-tree-cypress", "./assets/sprites/creative-tree-cypress-game.png?v=141");
-    this.loadImage("creative-tree-red-maple", "./assets/sprites/creative-tree-red-maple-game.png?v=141");
-    this.loadImage("creative-tree-palm", "./assets/sprites/creative-tree-palm-game.png?v=141");
+    this.loadImage("creative-tree-pine", "./assets/sprites/creative-tree-pine.png?v=142");
+    this.loadImage("creative-tree-flower", "./assets/sprites/creative-tree-flower.png?v=142");
+    this.loadImage("creative-tree-round", "./assets/sprites/creative-tree-round.png?v=142");
+    this.loadImage("creative-tree-ancient", "./assets/sprites/creative-tree-ancient.png?v=142");
+    this.loadImage("creative-tree-twisted", "./assets/sprites/creative-tree-twisted-game.png?v=142");
+    this.loadImage("creative-tree-flower-cone", "./assets/sprites/creative-tree-flower-cone-game.png?v=142");
+    this.loadImage("creative-tree-layered-pine", "./assets/sprites/creative-tree-layered-pine-game.png?v=142");
+    this.loadImage("creative-tree-willow", "./assets/sprites/creative-tree-willow-game.png?v=142");
+    this.loadImage("creative-tree-birch", "./assets/sprites/creative-tree-birch-game.png?v=142");
+    this.loadImage("creative-tree-cypress", "./assets/sprites/creative-tree-cypress-game.png?v=142");
+    this.loadImage("creative-tree-red-maple", "./assets/sprites/creative-tree-red-maple-game.png?v=142");
+    this.loadImage("creative-tree-palm", "./assets/sprites/creative-tree-palm-game.png?v=142");
 
-    this.loadImage("creative-structure-fruit-stall", "./assets/sprites/creative-structure-fruit-stall-game.png?v=141");
-    this.loadImage("creative-structure-knight-statue", "./assets/sprites/creative-structure-knight-statue-game.png?v=141");
-    this.loadImage("creative-structure-fountain", "./assets/sprites/creative-structure-fountain-game.png?v=141");
-    this.loadImage("creative-structure-well", "./assets/sprites/creative-structure-well-game.png?v=141");
-    this.loadImage("creative-structure-lamp-double", "./assets/sprites/creative-structure-lamp-double.png?v=216");
-    this.loadImage("creative-structure-lamp-hanging", "./assets/sprites/creative-structure-lamp-hanging.png?v=216");
-    this.loadImage("creative-structure-lamp-monk", "./assets/sprites/creative-structure-lamp-monk.png?v=216");
-    this.loadImage("creative-structure-lamp-vine", "./assets/sprites/creative-structure-lamp-vine.png?v=216");
-    this.loadImage("creative-structure-general-store", "./assets/sprites/creative-structure-general-store.png?v=10");
-    this.loadSheet("creative-structure-campfire", "./assets/sprites/creative-structure-campfire-sheet.png?v=213", 384, 352);
-    this.loadSheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=185", 96, 96);
-    this.loadSheet("creative-animal-bull", "./assets/sprites/creative-animal-bull-sheet.png?v=185", 96, 96);
-    this.loadSheet("creative-npc-hooded", "./assets/sprites/creative-npc-hooded-sheet.png?v=10", 194, 194);
-    this.loadSheet("creative-npc-skeleton-archer", "./assets/sprites/skeleton-archer-idle-sheet.png?v=10", 132, 132);
-    this.loadSheet("creative-structure-smoke", "./assets/sprites/creative-structure-smoke-sheet.png?v=2", 613, 605);
+    this.loadImage("creative-structure-fruit-stall", "./assets/sprites/creative-structure-fruit-stall-game.png?v=142");
+    this.loadImage("creative-structure-knight-statue", "./assets/sprites/creative-structure-knight-statue-game.png?v=142");
+    this.loadImage("creative-structure-fountain", "./assets/sprites/creative-structure-fountain-game.png?v=142");
+    this.loadImage("creative-structure-well", "./assets/sprites/creative-structure-well-game.png?v=142");
+    this.loadImage("creative-structure-lamp-double", "./assets/sprites/creative-structure-lamp-double.png?v=217");
+    this.loadImage("creative-structure-lamp-hanging", "./assets/sprites/creative-structure-lamp-hanging.png?v=217");
+    this.loadImage("creative-structure-lamp-monk", "./assets/sprites/creative-structure-lamp-monk.png?v=217");
+    this.loadImage("creative-structure-lamp-vine", "./assets/sprites/creative-structure-lamp-vine.png?v=217");
+    this.loadImage("creative-structure-general-store", "./assets/sprites/creative-structure-general-store.png?v=11");
+    this.loadSheet("creative-structure-campfire", "./assets/sprites/creative-structure-campfire-sheet.png?v=214", 384, 352);
+    this.loadSheet("creative-animal-cat", "./assets/sprites/creative-animal-cat-sheet.png?v=186", 96, 96);
+    this.loadSheet("creative-animal-bull", "./assets/sprites/creative-animal-bull-sheet.png?v=186", 96, 96);
+    this.loadSheet("creative-npc-hooded", "./assets/sprites/creative-npc-hooded-sheet.png?v=11", 194, 194);
+    this.loadSheet("creative-npc-skeleton-archer", "./assets/sprites/skeleton-archer-idle-sheet.png?v=11", 132, 132);
+    this.loadSheet("creative-structure-smoke", "./assets/sprites/creative-structure-smoke-sheet.png?v=3", 613, 605);
 
-    this.loadSheet("spell-lightning-sheet", "./assets/sprites/spell-lightning-sheet.png?v=10", 192, 192);
+    this.loadSheet("spell-lightning-sheet", "./assets/sprites/spell-lightning-sheet.png?v=11", 192, 192);
+    this.loadSheet("root-attack-sheet", "./assets/sprites/root-attack-sheet.png?v=2", 256, 256);
 
-    this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=11");
-    this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=11");
-    this.loadImage("bee-map", "./assets/maps/bee-map.jpg?v=10");
-    this.load.video("cemetery-map", "./assets/videos/cemetery-map.mp4?v=10");
-    this.loadSheet("bee-boss-idle-sheet",   "./assets/sprites/bee-boss-idle-sheet.png?v=10", 102, 102);
+    this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=12");
+    this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=12");
+    this.loadImage("bee-map", "./assets/maps/bee-map.jpg?v=11");
+    this.load.video("cemetery-map", "./assets/videos/cemetery-map.mp4?v=11");
+    this.loadSheet("bee-boss-idle-sheet",   "./assets/sprites/bee-boss-idle-sheet.png?v=11", 102, 102);
     this.loadSheet("bee-soldier-sheet",     "./assets/sprites/bee-soldier-sheet.png", 60, 60);
-    this.loadSheet("bee-honey-puddle-sheet","./assets/sprites/bee-honey-puddle-sheet.png?v=10", 192, 192);
+    this.loadSheet("bee-honey-puddle-sheet","./assets/sprites/bee-honey-puddle-sheet.png?v=11", 192, 192);
     this.loadAudio("spell-lightning-cast",   "./assets/audio/spell-lightning-cast.mp3");
     this.loadAudio("spell-lightning-loop",   "./assets/audio/spell-lightning-loop.mp3");
     this.loadAudio("bee-honey-puddle-drop",  "./assets/audio/bee-honey-puddle-drop.mp3");
@@ -79,12 +80,12 @@ export default class GamePreloadScene extends Phaser.Scene {
      "bee-queen-t4","bee-queen-t5","bee-queen-t6",
      "bee-queen-t7","bee-queen-t8","bee-queen-t9"
     ].forEach(k => this.loadAudio(k, `./assets/audio/${k}.mp3`));
-    this.loadSheet("swamp-troll", "./assets/sprites/swamp-troll-sheet.png?v=10", 86, 86);
-    this.loadSheet("swamp-attacks", "./assets/sprites/swamp-attacks-sheet.png?v=10", 192, 160);
+    this.loadSheet("swamp-troll", "./assets/sprites/swamp-troll-sheet.png?v=11", 86, 86);
+    this.loadSheet("swamp-attacks", "./assets/sprites/swamp-attacks-sheet.png?v=11", 192, 160);
     this.loadAudio("swamp-troll-aggro",  "./assets/audio/swamp-troll-aggro.ogg");
     this.loadAudio("swamp-troll-death",  "./assets/audio/swamp-troll-death.ogg");
     this.loadAudio("swamp-troll-hurt",   "./assets/audio/swamp-troll-hurt.wav");
-    this.loadAudio("swamp-ambient",      "./assets/audio/swamp-ambient.ogg?v=11");
+    this.loadAudio("swamp-ambient",      "./assets/audio/swamp-ambient.ogg?v=12");
     this.loadAudio("swamp-bubble-warn",  "./assets/audio/swamp-bubble-warn.ogg");
     this.loadAudio("swamp-bubble-burst", "./assets/audio/swamp-bubble-burst.ogg");
     this.loadAudio("swamp-spike",        "./assets/audio/swamp-spike.ogg");
@@ -108,32 +109,32 @@ export default class GamePreloadScene extends Phaser.Scene {
     this.loadAudio("sword-hit-2",          "./assets/audio/sword-hit-2.mp3");
     this.loadAudio("forge-fire",           "./assets/audio/forge-fire.ogg");
     // Seamless animated village water (6 frames)
-    this.loadSheet("village-water", "./assets/sprites/village-water-sheet.png?v=10", 142, 142);
-    this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=11", 200, 200);
-    this.loadSheet("boss-golem-attack", "./assets/sprites/boss-golem-attack-sheet.png?v=11", 200, 200);
-    this.loadSheet("boss-meteor", "./assets/sprites/boss-meteor-sheet.png?v=10", 128, 128);
-    this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=10", 160, 160);
-    this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=11", 128, 128);
-    this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=155");
-    this.loadSheet("alchemy-vendor", "./assets/sprites/alchemy-vendor-sheet.png?v=10", 108, 108);
-    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=12`));
-    this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=11");
-    this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=11");
-    this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=11");
+    this.loadSheet("village-water", "./assets/sprites/village-water-sheet.png?v=11", 142, 142);
+    this.loadSheet("boss-golem-walk", "./assets/sprites/boss-golem-walk-sheet.png?v=12", 200, 200);
+    this.loadSheet("boss-golem-attack", "./assets/sprites/boss-golem-attack-sheet.png?v=12", 200, 200);
+    this.loadSheet("boss-meteor", "./assets/sprites/boss-meteor-sheet.png?v=11", 128, 128);
+    this.loadSheet("boss-ground-explosion", "./assets/sprites/boss-ground-explosion-sheet.png?v=11", 160, 160);
+    this.loadSheet("boss-rock-proj", "./assets/sprites/boss-rock-proj-sheet.png?v=12", 128, 128);
+    this.loadImage("alchemist-interior", "./assets/sprites/alchemist-interior.png?v=156");
+    this.loadSheet("alchemy-vendor", "./assets/sprites/alchemy-vendor-sheet.png?v=11", 108, 108);
+    ALCHEMIST_ITEMS.forEach((it) => this.loadImage(it.key, `./assets/items/${it.key}.png?v=13`));
+    this.loadImage("volcano-gate-raw", "./assets/sprites/volcano-gate.png?v=12");
+    this.loadImage("swamp-gate-raw",   "./assets/sprites/swamp-gate.png?v=12");
+    this.loadImage("hive-gate-raw",    "./assets/sprites/hive-gate.png?v=12");
     for (let index = 1; index <= 19; index += 1) {
       const padded = String(index).padStart(2, "0");
-      this.loadImage(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=141`);
+      this.loadImage(`creative-floor-${padded}`, `./assets/tilesets/creative-floor-${padded}.png?v=142`);
     }
 
-    this.loadSheet("windmill-house", "./assets/sprites/windmill-house-sheet.png?v=141", 300, 388);
-    this.loadSheet("ghost-green", "./assets/sprites/ghost-green-sheet.png?v=10", 118, 118);
-    this.loadSheet("skeleton", "./assets/sprites/skeleton-sheet.png?v=10", 178, 176);
+    this.loadSheet("windmill-house", "./assets/sprites/windmill-house-sheet.png?v=142", 300, 388);
+    this.loadSheet("ghost-green", "./assets/sprites/ghost-green-sheet.png?v=11", 118, 118);
+    this.loadSheet("skeleton", "./assets/sprites/skeleton-sheet.png?v=11", 178, 176);
     this.loadImage("reference-tree", "./assets/sprites/reference-tree.png");
-    this.loadSheet("silver-npc-sheet", "./assets/sprites/silver-npc-sheet.png?v=141", 48, 68);
-    this.loadSheet("blond-npc-sheet", "./assets/sprites/blond-npc-sheet.png?v=141", 48, 68);
-    this.loadSheet("hooded-sheet", "./assets/sprites/hooded-sheet.png?v=142", 48, 68);
-    this.loadSheet("knight-npc-sheet", "./assets/sprites/knight-npc-sheet.png?v=141", 80, 84);
-    this.loadSheet("knight-npc-idle-sheet", "./assets/sprites/knight-npc-idle-sheet.png?v=141", 80, 84);
+    this.loadSheet("silver-npc-sheet", "./assets/sprites/silver-npc-sheet.png?v=142", 48, 68);
+    this.loadSheet("blond-npc-sheet", "./assets/sprites/blond-npc-sheet.png?v=142", 48, 68);
+    this.loadSheet("hooded-sheet", "./assets/sprites/hooded-sheet.png?v=143", 48, 68);
+    this.loadSheet("knight-npc-sheet", "./assets/sprites/knight-npc-sheet.png?v=142", 80, 84);
+    this.loadSheet("knight-npc-idle-sheet", "./assets/sprites/knight-npc-idle-sheet.png?v=142", 80, 84);
   }
 
   create() {
