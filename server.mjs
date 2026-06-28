@@ -1236,9 +1236,18 @@ function isConsumableItem(item) {
 
 // Validate/clamp an incoming bag against the catalog. Shape:
 // { stacks: {key:count}, equipped: {ring1,ring2,amulet}, enchants: {key:level} }
-function weaponSlotFor(item) { return item?.charClass === "warrior" ? "weaponWarrior" : "weaponMage"; }
+function weaponSlotFor(item) {
+  if (item?.charClass === "warrior") return "weaponWarrior";
+  if (item?.charClass === "ogre") return "weaponOgre";
+  return "weaponMage";
+}
+// Armour/headgear/boots are shared by the melee bruisers: the ogre wears the
+// warrior's plate. Weapons stay class-exclusive (ogre axes vs warrior swords).
+function armorClassFor(selectedCharacter) {
+  return (selectedCharacter === "warrior" || selectedCharacter === "ogre") ? "warrior" : "mage";
+}
 function normalizeBag(raw) {
-  const out = { stacks: {}, equipped: { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, boots: null }, enchants: {} };
+  const out = { stacks: {}, equipped: { weaponMage: null, weaponWarrior: null, weaponOgre: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, boots: null }, enchants: {} };
   if (!raw || typeof raw !== "object") return out;
   const stacks = raw.stacks && typeof raw.stacks === "object" ? raw.stacks : {};
   for (const [key, count] of Object.entries(stacks)) {
@@ -1252,7 +1261,7 @@ function normalizeBag(raw) {
     const it = ITEMS_BY_KEY[eq.weapon];
     if (it?.slot === "weapon") eq[weaponSlotFor(it)] = eq.weapon;
   }
-  for (const slot of ["weaponMage", "weaponWarrior", "ring1", "ring2", "amulet", "armor", "helmet", "boots"]) {
+  for (const slot of ["weaponMage", "weaponWarrior", "weaponOgre", "ring1", "ring2", "amulet", "armor", "helmet", "boots"]) {
     const key = eq[slot];
     const item = key && ITEMS_BY_KEY[key];
     if (!item || isConsumableItem(item)) continue;
@@ -1260,7 +1269,7 @@ function normalizeBag(raw) {
     else if (slot === "armor") { if (item.slot === "armor") out.equipped[slot] = key; }
     else if (slot === "helmet") { if (item.slot === "helmet") out.equipped[slot] = key; }
     else if (slot === "boots") { if (item.slot === "boots") out.equipped[slot] = key; }
-    else if (slot === "weaponMage" || slot === "weaponWarrior") {
+    else if (slot === "weaponMage" || slot === "weaponWarrior" || slot === "weaponOgre") {
       if (item.slot === "weapon" && weaponSlotFor(item) === slot) out.equipped[slot] = key;
     } else if (item.slot !== "amulet" && item.slot !== "weapon" && item.slot !== "armor" && item.slot !== "helmet" && item.slot !== "boots") out.equipped[slot] = key; // ring slots
   }
@@ -1358,8 +1367,7 @@ async function runEconomyAction(action, profileId, payload) {
     if (bagCount(bag, key) <= 0) return fail("Not owned");
     // Class-flavoured gear (mage robes/hats/boots) can't be worn by the wrong class.
     if ((item.slot === "armor" || item.slot === "helmet" || item.slot === "boots") && item.charClass) {
-      const cls = profile?.selectedCharacter === "warrior" ? "warrior" : "mage";
-      if (item.charClass !== cls) return fail("Wrong class for this gear");
+      if (item.charClass !== armorClassFor(profile?.selectedCharacter)) return fail("Wrong class for this gear");
     }
     const slot = item.slot === "amulet" ? "amulet"
       : item.slot === "weapon" ? weaponSlotFor(item)
@@ -1376,7 +1384,7 @@ async function runEconomyAction(action, profileId, payload) {
 
   if (action === "unequip") {
     const slot = sanitizeText(payload.slot, 16);
-    if (!["weaponMage", "weaponWarrior", "ring1", "ring2", "amulet", "armor", "helmet", "boots"].includes(slot)) return fail("Bad slot");
+    if (!["weaponMage", "weaponWarrior", "weaponOgre", "ring1", "ring2", "amulet", "armor", "helmet", "boots"].includes(slot)) return fail("Bad slot");
     const key = bag.equipped[slot];
     if (!key) return fail("Empty slot");
     bag.equipped[slot] = null;
@@ -1534,7 +1542,9 @@ function gearXpBonus(profile) {
   const bag = profile?.bag;
   if (!bag || !bag.equipped) return 0;
   // Only the active character's weapon counts (plus shared jewelry).
-  const wslot = profile?.selectedCharacter === "warrior" ? "weaponWarrior" : "weaponMage";
+  const wslot = profile?.selectedCharacter === "warrior" ? "weaponWarrior"
+    : profile?.selectedCharacter === "ogre" ? "weaponOgre"
+    : "weaponMage";
   const keys = [bag.equipped[wslot], bag.equipped.ring1, bag.equipped.ring2, bag.equipped.amulet, bag.equipped.armor, bag.equipped.helmet, bag.equipped.boots];
   let bonus = 0;
   for (const key of keys) {

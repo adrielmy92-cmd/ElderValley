@@ -43,12 +43,18 @@ export default class Inventory {
     if (id === "ogre") return "ogre";
     return "mage";
   }
-  // The ogre carries its axe in-sprite (no equippable weapon), so it gets its own
-  // always-empty weapon slot — that keeps it from inheriting the mage's weapon.
+  // The ogre carries its axe in-sprite, but its equippable axes are class-exclusive,
+  // so it gets its own weapon slot — that keeps it from inheriting the mage's weapon.
   _weaponSlotFor(cls) {
     if (cls === "warrior") return "weaponWarrior";
     if (cls === "ogre") return "weaponOgre";
     return "weaponMage";
+  }
+  // Armour / headgear / boots are SHARED by the melee bruisers: the ogre wears the
+  // warrior's plate. (Weapons stay split — ogre axes vs warrior swords.)
+  _armorClass() {
+    const c = this._charClass();
+    return c === "ogre" ? "warrior" : c;
   }
   equippedWeapon() { return this.equipped[this._weaponSlotFor(this._charClass())] ?? null; }
   equippedForUi(slotKey) { return slotKey === "weapon" ? this.equippedWeapon() : (this.equipped[slotKey] ?? null); }
@@ -59,7 +65,7 @@ export default class Inventory {
     // Armor / headgear / footwear are class-flavoured too (mage robes/hats/boots).
     // Items without a charClass are universal.
     if ((item?.slot === "armor" || item?.slot === "helmet" || item?.slot === "boots") && item.charClass) {
-      return item.charClass === this._charClass();
+      return item.charClass === this._armorClass();
     }
     return true;
   }
