@@ -312,7 +312,7 @@ export default class TitleScene extends Phaser.Scene {
 
   // $ELDER Solana mint (Pump.fun). Fill in after the launch — leave empty and the
   // CA badge/chip stay hidden until then (no dead Base address shown).
-  static SELECTABLE_CHARACTERS = ["mage-1", "warrior"];
+  static SELECTABLE_CHARACTERS = ["mage-1", "warrior", "ogre"];
   static ELDER_CA = "";
   // Pump.fun coin page. Until the mint is known, link to pump.fun home.
   static PUMPFUN_URL = "https://pump.fun";
@@ -763,7 +763,8 @@ export default class TitleScene extends Phaser.Scene {
   getCharacterCatalog() {
     return [
       { id: "mage-1", name: "Mage", key: "mage-1-idle-sheet", frame: 0, scale: 0.72 },
-      { id: "warrior", name: "Guerreiro", key: "warrior-walk-sheet", frame: 0, scale: 0.74 }
+      { id: "warrior", name: "Guerreiro", key: "warrior-walk-sheet", frame: 0, scale: 0.74 },
+      { id: "ogre", name: "Ogro", key: "ogre-idle-sheet", frame: 0, scale: 0.62 }
     ];
   }
 
@@ -916,7 +917,7 @@ export default class TitleScene extends Phaser.Scene {
     const cardH = 118;
     const contentH = chars.length * cardH + Math.max(0, chars.length - 1) * gap;
     const scroller = this.createScrollArea("characters", listX, listY, listW, listH, contentH);
-    const BASE_CHARACTERS = ["mage-1", "warrior", "adventurer", "dark-wanderer"];
+    const BASE_CHARACTERS = ["mage-1", "warrior", "ogre", "adventurer", "dark-wanderer"];
     const charOwnedMap = chars.map((character) => ({
       character,
       owned: this.loginMode !== "wallet"

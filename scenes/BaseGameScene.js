@@ -1,11 +1,11 @@
-import Player from "../player/Player.js?v=219";
+import Player from "../player/Player.js?v=220";
 import DialogSystem from "../systems/DialogSystem.js?v=155";
 import InteractionSystem from "../systems/InteractionSystem.js?v=155";
 import ChatSystem from "../systems/ChatSystem.js?v=231";
 import MultiplayerSystem from "../systems/MultiplayerSystem.js?v=256";
 import MobileControls from "../systems/MobileControls.js?v=23";
-import Inventory, { itemData } from "../systems/Inventory.js?v=32";
-import InventoryUI from "../systems/InventoryUI.js?v=36";
+import Inventory, { itemData } from "../systems/Inventory.js?v=34";
+import InventoryUI from "../systems/InventoryUI.js?v=37";
 import Leveling from "../systems/Leveling.js?v=25";
 
 export default class BaseGameScene extends Phaser.Scene {

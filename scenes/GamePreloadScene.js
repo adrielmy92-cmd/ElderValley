@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=34";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=35";
 
 export default class GamePreloadScene extends Phaser.Scene {
   constructor() {

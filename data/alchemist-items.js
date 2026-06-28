@@ -144,6 +144,17 @@ export const ALCHEMIST_ITEMS = [
   { key: "voidcaller-staff",  name: "Voidcaller Staff",  rarity: "epic",      price: 760,  effect: "+56 Spell Power · +20 Mana · +15% Crit",            slot: "weapon", charClass: "mage", stats: { attack: 56, maxMp: 20, crit: 0.15 } },
   { key: "stormcrystal-staff",name: "Stormcrystal Staff",rarity: "legendary", price: 1300, effect: "+76 Spell Power · +24 Mana · +16% Crit · +16% Atk Speed", slot: "weapon", charClass: "mage", stats: { attack: 76, maxMp: 24, crit: 0.16, attackSpeed: 0.16 } },
 
+  // Ogre axes (melee weapons, slot: "weapon", charClass: "ogre"). Sold at the Forge; the
+  // shop hides them from mage/warrior. The ogre carries an axe in-sprite, so these are
+  // stat-only (no visual swap) — `attack` feeds the ogre's heavy melee. Brutish curve:
+  // bigger raw Attack than swords, one signature stat each.
+  { key: "ogre-axe-gravewarden",  name: "Gravewarden Axe",  rarity: "common",    price: 130,  effect: "+24 Attack · 5% Lifesteal",                  slot: "weapon", charClass: "ogre", stats: { attack: 24, lifesteal: 0.05 } },
+  { key: "ogre-axe-glacierrend",  name: "Glacierrend",      rarity: "uncommon",  price: 330,  effect: "+36 Attack · +10% Crit",                     slot: "weapon", charClass: "ogre", stats: { attack: 36, crit: 0.10 } },
+  { key: "ogre-axe-magmacleaver", name: "Magmacleaver",     rarity: "rare",      price: 540,  effect: "+48 Attack · Burn on hit",                   slot: "weapon", charClass: "ogre", stats: { attack: 48 }, proc: { type: "burn", chance: 0.32, dmg: 16, ticks: 4, interval: 500 } },
+  { key: "ogre-axe-thornroot",    name: "Thornroot Cleaver",rarity: "rare",      price: 560,  effect: "+46 Attack · +3 HP/s Regen · Poison on hit", slot: "weapon", charClass: "ogre", stats: { attack: 46, hpRegen: 3 }, proc: { type: "poison", chance: 0.30, dmg: 12, ticks: 5, interval: 600 } },
+  { key: "ogre-axe-voidsplitter", name: "Voidsplitter",     rarity: "epic",      price: 780,  effect: "+60 Attack · +16% Crit",                     slot: "weapon", charClass: "ogre", stats: { attack: 60, crit: 0.16 } },
+  { key: "ogre-axe-stormbreaker", name: "Stormbreaker",     rarity: "legendary", price: 1350, effect: "+82 Attack · +18% Crit · +18% Attack Speed", slot: "weapon", charClass: "ogre", stats: { attack: 82, crit: 0.18, attackSpeed: 0.18 } },
+
   // Fish (caught at the river minigame; held in the bag, sellable later). No PNG yet —
   // the bag renders item.emoji when the texture is missing. `price` = sell value.
   { key: "fish-sardine", name: "River Sardine", rarity: "common",    type: "fish", emoji: "🐟", price: 9,   effect: "A common river fish" },

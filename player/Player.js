@@ -46,6 +46,31 @@ const PLAYER_CHARACTERS = {
     speed: 140,
     depthBias: 120
   },
+  ogre: {
+    id: "ogre",
+    label: "Ogro",
+    walkTexture: "ogre-walk-sheet",
+    idleTexture: "ogre-idle-sheet",
+    animatedIdle: true,
+    attackTexture: "ogre-attack-sheet",
+    attackFrames: 8,
+    directionalAttack: true,
+    melee: true,
+    shotType: "soul",
+    meleeReach: 50,
+    meleeRadius: 58,
+    meleeHitDelay: 230,   // o machado é pesado: golpe conecta um pouco mais tarde
+    meleeBase: 62,        // bate mais forte que o guerreiro (50), mas é mais lento
+    spinRadius: 140,
+    spinDamageMult: 2.5,
+    frameWidth: 102,
+    frameHeight: 102,
+    framesPerDirection: 8,
+    walkFrameRate: 9,
+    body: { width: 26, height: 14, offsetX: 38, offsetY: 82 },
+    speed: 128,           // mais lento que o guerreiro (140)
+    depthBias: 120
+  },
   adventurer: {
     id: "adventurer",
     label: "Adventurer",

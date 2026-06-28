@@ -1773,7 +1773,7 @@ function normalizeProfile(profileId, data = {}) {
     selectedCharacter,
     ...activeProjection,
     characters,
-    ownedCharacters: [...new Set(["mage-1", "adventurer", "skeleton-archer", ...(Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : [])])],
+    ownedCharacters: [...new Set(["mage-1", "warrior", "ogre", "adventurer", "skeleton-archer", ...(Array.isArray(data.ownedCharacters) ? data.ownedCharacters.map((item) => sanitizeText(item, 32)).filter(Boolean) : [])])],
     ownedHouses: Array.isArray(data.ownedHouses) ? data.ownedHouses : [],
     items: Array.isArray(data.items) ? data.items : [],
     position: data.position && typeof data.position === "object" ? {

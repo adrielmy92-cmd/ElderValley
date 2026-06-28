@@ -61,6 +61,18 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 82,
       frameHeight: 84
     });
+    this.load.spritesheet("ogre-walk-sheet", "./assets/sprites/ogre-walk-sheet.png?v=1", {
+      frameWidth: 102,
+      frameHeight: 102
+    });
+    this.load.spritesheet("ogre-attack-sheet", "./assets/sprites/ogre-attack-sheet.png?v=1", {
+      frameWidth: 102,
+      frameHeight: 102
+    });
+    this.load.spritesheet("ogre-idle-sheet", "./assets/sprites/ogre-idle-sheet.png?v=1", {
+      frameWidth: 102,
+      frameHeight: 102
+    });
     createPixelArtTextures(this);
   }
 

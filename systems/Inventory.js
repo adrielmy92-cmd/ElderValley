@@ -1,4 +1,4 @@
-import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=34";
+import { ALCHEMIST_ITEMS } from "../data/alchemist-items.js?v=35";
 
 // Each enchant level adds this much of the item's base stats.
 const ENCHANT_STEP = 0.12;
@@ -39,9 +39,17 @@ export default class Inventory {
   // amulet, potions, fish and coins stay shared on the account.
   _charClass() {
     const id = this.scene?.player?.characterId ?? this.scene?.registry?.get?.("playerCharacter") ?? "mage-1";
-    return id === "warrior" ? "warrior" : "mage";
+    if (id === "warrior") return "warrior";
+    if (id === "ogre") return "ogre";
+    return "mage";
   }
-  _weaponSlotFor(cls) { return cls === "warrior" ? "weaponWarrior" : "weaponMage"; }
+  // The ogre carries its axe in-sprite (no equippable weapon), so it gets its own
+  // always-empty weapon slot — that keeps it from inheriting the mage's weapon.
+  _weaponSlotFor(cls) {
+    if (cls === "warrior") return "weaponWarrior";
+    if (cls === "ogre") return "weaponOgre";
+    return "weaponMage";
+  }
   equippedWeapon() { return this.equipped[this._weaponSlotFor(this._charClass())] ?? null; }
   equippedForUi(slotKey) { return slotKey === "weapon" ? this.equippedWeapon() : (this.equipped[slotKey] ?? null); }
   // Can the current character use/equip this item? Non-weapons always; weapons only
@@ -58,10 +66,10 @@ export default class Inventory {
   // Normalise an equipped map to the per-class weapon schema, migrating any legacy
   // single `weapon` slot into the slot matching that weapon's class.
   _normEquipped(raw) {
-    const eq = { weaponMage: null, weaponWarrior: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, boots: null, ...(raw ?? {}) };
+    const eq = { weaponMage: null, weaponWarrior: null, weaponOgre: null, ring1: null, ring2: null, amulet: null, armor: null, helmet: null, boots: null, ...(raw ?? {}) };
     if (eq.weapon) {
       const item = itemData(eq.weapon);
-      if (item?.slot === "weapon") eq[this._weaponSlotFor(item.charClass === "warrior" ? "warrior" : "mage")] = eq.weapon;
+      if (item?.slot === "weapon") eq[this._weaponSlotFor(item.charClass ?? "warrior")] = eq.weapon;
     }
     delete eq.weapon;
     return eq;
@@ -289,7 +297,7 @@ export default class Inventory {
       slot = t;
     }
     else if (t === "weapon") {
-      const cls = item.charClass === "warrior" ? "warrior" : "mage";
+      const cls = item.charClass ?? "warrior"; // mage / warrior / ogre
       if (cls !== this._charClass()) return false; // wrong class can't wield this weapon
       slot = this._weaponSlotFor(cls);
     }
