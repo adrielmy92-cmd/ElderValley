@@ -56,6 +56,8 @@ export default class GamePreloadScene extends Phaser.Scene {
 
     this.loadSheet("spell-lightning-sheet", "./assets/sprites/spell-lightning-sheet.png?v=12", 192, 192);
     this.loadSheet("root-attack-sheet", "./assets/sprites/root-attack-sheet.png?v=3", 256, 256);
+    // Weapon-specific critical-hit bursts (ogre axes). 7x4 grid of 256px frames.
+    this.loadSheet("crit-storm", "./assets/sprites/crit-storm-sheet.png?v=1", 256, 256);
 
     this.loadImage("boss-arena-lava", "./assets/maps/boss-arena-lava.png?v=13");
     this.loadImage("swamp-map", "./assets/maps/swamp-map.png?v=13");

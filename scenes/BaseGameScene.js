@@ -950,7 +950,10 @@ export default class BaseGameScene extends Phaser.Scene {
     // deals CRIT_MULT× damage. _lastCritHit lets each scene style the damage number.
     const critChance = (gear.crit ?? 0) + (this.leveling?.bonusCrit?.() ?? 0);
     this._lastCritHit = critChance > 0 && Math.random() < critChance;
-    if (this._lastCritHit) dmg = Math.round(dmg * (this.CRIT_MULT ?? 2));
+    if (this._lastCritHit) {
+      dmg = Math.round(dmg * (this.CRIT_MULT ?? 2));
+      if (this._meleeBase != null) this._meleeCrit = true; // melee swing landed a crit
+    }
     // Lifesteal: heal a fraction of the damage dealt back to the player.
     const ls = gear.lifesteal ?? 0;
     if (ls > 0 && this.playerHp != null && this.playerHp < this.playerMaxHp) {
@@ -1097,13 +1100,39 @@ export default class BaseGameScene extends Phaser.Scene {
     this._castMult *= mult;
     this._meleeBase = this.player?.profile?.meleeBase ?? 50;
     this._meleeHits = 0;
+    this._meleeCrit = false; // set true by spellDamage() if any struck enemy crit
     this.applyLightningDamage?.(x, y, radius);
     this._meleeBase = null;
     // Sword clash sound + slash effect only when the strike actually connects.
     if (this._meleeHits > 0) {
       this.playSfx(Math.random() < 0.5 ? "sword-hit-1" : "sword-hit-2", 0.5);
       this.showSlashFx(x, y, Math.min(radius, 70));
+      if (this._meleeCrit) this.showWeaponCritFx(x, y);
     }
+  }
+
+  // Weapon-specific critical-hit burst overlaid at the impact point. Only weapons in
+  // this map have one (others just show the white slash). Add the rest as art lands.
+  WEAPON_CRIT_FX = {
+    "ogre-axe-stormbreaker": { key: "crit-storm", frames: 26, scale: 0.72, rate: 32 }
+  };
+
+  showWeaponCritFx(x, y) {
+    const wk = this.bag?.equippedWeapon?.();
+    const fx = wk && this.WEAPON_CRIT_FX[wk];
+    if (!fx || !this.textures.exists(fx.key)) return;
+    const animKey = `wcrit-${fx.key}`;
+    if (!this.anims.exists(animKey)) {
+      this.anims.create({
+        key: animKey,
+        frames: this.anims.generateFrameNumbers(fx.key, { start: 0, end: (fx.frames ?? 26) - 1 }),
+        frameRate: fx.rate ?? 30,
+        repeat: 0
+      });
+    }
+    const s = this.add.sprite(x, y, fx.key, 0).setDepth(9500).setScale(fx.scale ?? 0.7);
+    s.play(animKey);
+    s.once("animationcomplete", () => s.destroy());
   }
 
   // Quick white crescent slash drawn at an impact (no asset).
