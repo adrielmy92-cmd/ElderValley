@@ -1841,9 +1841,11 @@ export default class BaseGameScene extends Phaser.Scene {
     // Dodge: chance to avoid the hit entirely (no damage, no i-frames consumed).
     const dodge = (gear.dodge ?? 0) + (this.leveling?.bonusDodge?.() ?? 0);
     if (dodge > 0 && Math.random() < dodge) { this.showDodgeText?.(); return false; }
-    // Defense: flat damage reduction (at least 1 still lands).
+    // Defense: flat damage reduction, but mitigation is capped at 75% of the hit so
+    // stacked armour can't make you immortal — at least a quarter of every blow lands.
     const defense = gear.defense ?? 0;
-    amount = Math.max(1, Math.round(amount - defense));
+    const mitigated = Math.min(defense, amount * 0.75);
+    amount = Math.max(1, Math.round(amount - mitigated));
     this.playerHp = Math.max(0, this.playerHp - amount);
     this.updatePlayerHpBar();
     // Flash vermelho no player
